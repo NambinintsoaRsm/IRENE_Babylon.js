@@ -33,6 +33,7 @@ export class EtatPanneauDeroulant {
         this.estOuvert = false;
     }
 
+    // pour ouvrir ou fermer le pannel
     basculer() {
         this.estOuvert = !this.estOuvert;
     }
