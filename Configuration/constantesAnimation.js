@@ -5,6 +5,9 @@ export const constantesAnimation = {
     dureeMenuLateral: 450,
     dureePanneauDeroulant: 300,
 
+    symboleOuvert: "▼",
+    symboleFerme: "▶",
+
     hauteursPanneaux: {
         reglages: 225,
         apparence: 400,
