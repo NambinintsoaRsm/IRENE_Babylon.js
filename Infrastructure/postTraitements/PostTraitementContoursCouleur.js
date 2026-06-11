@@ -1,108 +1,55 @@
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
 import { constantesContours } from "../../Configuration/constantesContours.js";
+import { couleurHexaVersRgb01 } from "../../Util/CouleurUtils.js";
+import { creerShaderContoursCouleurSiNecessaire } from "../shaders/ShaderContoursCouleur.js";
 
-import {
-    creerShaderContoursCouleurSiNecessaire
-} from "../shaders/ShaderContoursCouleur.js";
-
-/**
- * Crée et met à jour le post-traitement des contours basés sur la couleur.
- *
- * Il détecte les variations fortes dans l'image rendue.
- * Le seuil vient de Configuration/constantesContours.js.
- */
-export class PostTraitementContoursCouleur {
+export class PostTraitContoursCouleur {
     creer(scene, camera, parametresContours) {
-        if (!scene) {
-            throw new Error("Scène introuvable pour les contours couleur.");
-        }
-
-        if (!camera) {
-            throw new Error("Caméra introuvable pour les contours couleur.");
-        }
-
-        if (!parametresContours) {
-            throw new Error("Paramètres de contours introuvables.");
-        }
-
         const nomShader = creerShaderContoursCouleurSiNecessaire();
 
         const postProcess = new BABYLON.PostProcess(
-            "PostTraitementContoursCouleur",
+            "PostTraitContoursCouleur",
             nomShader.replace("PixelShader", ""),
-            [
-                "screenSize",
-                "colorThreshold",
-                "colorEdgeColor"
-            ],
+            ["screenSize", "edgeWidth", "colorThreshold", "colorEdgeColor"],
             null,
             1.0,
             camera
         );
 
         postProcess.onApply = (effect) => {
-            this.appliquerUniforms({
-                effect,
-                scene,
-                parametresContours
-            });
+            this.appliquerUniforms({ effect, scene, parametresContours });
         };
 
         return postProcess;
     }
 
-    appliquerUniforms({
-                          effect,
-                          scene,
-                          parametresContours
-                      }) {
-        const utiliseCouleur = parametresContours.actif &&
-            parametresContours.typeActif === TypeContour.COULEUR;
+    appliquerUniforms({ effect, scene, parametresContours }) {
+        const utiliseCouleur = this.estContourActif(parametresContours, TypeContour.COULEUR);
+        const epaisseur = Math.min(3, Math.max(1, Number(parametresContours.epaisseur) || 1));
 
-        effect.setFloat2(
-            "screenSize",
-            scene.getEngine().getRenderWidth(),
-            scene.getEngine().getRenderHeight()
-        );
+        effect.setFloat2("screenSize", scene.getEngine().getRenderWidth(), scene.getEngine().getRenderHeight());
+        effect.setFloat("edgeWidth", epaisseur);
+        effect.setFloat("colorThreshold", utiliseCouleur ? constantesContours.seuils[TypeContour.COULEUR] : Number.POSITIVE_INFINITY);
 
-        const seuil = utiliseCouleur
-            ? constantesContours.seuils[TypeContour.COULEUR]
-            : Number.POSITIVE_INFINITY;
-
-        effect.setFloat("colorThreshold", seuil);
-
-        const couleur = this.convertirCouleur(parametresContours.couleur);
-
-        effect.setFloat3(
-            "colorEdgeColor",
-            couleur.r,
-            couleur.g,
-            couleur.b
-        );
+        const couleur = couleurHexaVersRgb01(parametresContours.couleur);
+        effect.setFloat3("colorEdgeColor", couleur.r, couleur.g, couleur.b);
     }
 
-    mettreAJour(postProcess, parametresContours) {
-        if (!postProcess) {
-            return null;
+    estContourActif(parametresContours, typeContour) {
+        if (!parametresContours?.actif) return false;
+        if (typeof parametresContours.estActif === "function") {
+            return parametresContours.estActif(typeContour);
         }
-
-        if (!parametresContours) {
-            throw new Error("Paramètres de contours introuvables.");
+        if (Array.isArray(parametresContours.typesActifs)) {
+            return parametresContours.typesActifs.includes(typeContour);
         }
-
-        return postProcess;
+        return parametresContours.typeActif === typeContour;
     }
 
     supprimer(etatApplication) {
         const postProcess = etatApplication?.contours?.postTraitementContoursCouleur;
-
-        if (postProcess && typeof postProcess.dispose === "function") {
-            postProcess.dispose();
-        }
-
-        if (etatApplication?.contours) {
-            etatApplication.contours.postTraitementContoursCouleur = null;
-        }
+        if (postProcess?.dispose) postProcess.dispose();
+        if (etatApplication?.contours) etatApplication.contours.postTraitementContoursCouleur = null;
     }
 
     appliquer(etatApplication) {
@@ -115,23 +62,9 @@ export class PostTraitementContoursCouleur {
         }
 
         if (!etatApplication.contours.postTraitementContoursCouleur) {
-            etatApplication.contours.postTraitementContoursCouleur = this.creer(
-                scene,
-                camera,
-                parametres
-            );
+            etatApplication.contours.postTraitementContoursCouleur = this.creer(scene, camera, parametres);
         }
 
         return etatApplication.contours.postTraitementContoursCouleur;
-    }
-
-    convertirCouleur(couleurHexa) {
-        const couleur = BABYLON.Color3.FromHexString(couleurHexa);
-
-        return {
-            r: couleur.r,
-            g: couleur.g,
-            b: couleur.b
-        };
     }
 }

@@ -1,40 +1,72 @@
 /**
- * Bloque ou débloque l'interaction avec le modèle 3D
- * lorsque la souris entre ou sort de l'interface.
+ * Gestion stable de l'interaction caméra / GUI.
+ *
+ * Reprise de l'esprit de app.js :
+ * - les zones GUI deviennent pointerBlocker ;
+ * - à chaque frame on vérifie si le pointeur est sur une zone GUI visible ;
+ * - si oui, on détache la caméra ;
+ * - sinon, on la rattache.
+ *
+ * Cette méthode évite que la caméra réagisse pendant le déplacement d'un slider.
  */
 export class ServiceBlocagePointeurGUI {
-    brancherBlocage({
-                        controle,
-                        bloquerCameraUC,
-                        debloquerCameraUC,
-                        serviceCameraBabylon,
-                        etatApplication
-                    }) {
-        if (!controle) {
-            throw new Error("Contrôle GUI introuvable pour le blocage du pointeur.");
+    constructor() {
+        this.cameraBloquee = false;
+        this.observateur = null;
+    }
+
+    brancherZones({
+        camera,
+        canvas,
+        sceneGUI,
+        controles = []
+    }) {
+        if (!camera || !canvas || !sceneGUI || !Array.isArray(controles)) {
+            return;
         }
 
-        controle.onPointerEnterObservable.add(() => {
-            const parametres = bloquerCameraUC.executer();
+        controles.forEach((controle) => this.bloquerInteractionsModele(controle));
 
-            if (etatApplication.camera.cameraBabylon) {
-                serviceCameraBabylon.bloquer(etatApplication.camera.cameraBabylon);
+        if (this.observateur) {
+            sceneGUI.onBeforeRenderObservable.remove(this.observateur);
+            this.observateur = null;
+        }
+
+        this.observateur = sceneGUI.onBeforeRenderObservable.add(() => {
+            const sourisSurGUI = controles.some((controle) => this.sourisSurControleVisible(controle, sceneGUI));
+
+            if (sourisSurGUI && !this.cameraBloquee) {
+                camera.detachControl(canvas);
+                this.cameraBloquee = true;
             }
 
-            return parametres;
-        });
-
-        controle.onPointerOutObservable.add(() => {
-            const parametres = debloquerCameraUC.executer();
-
-            if (etatApplication.camera.cameraBabylon) {
-                serviceCameraBabylon.debloquer(
-                    etatApplication.camera.cameraBabylon,
-                    etatApplication.canvas
-                );
+            if (!sourisSurGUI && this.cameraBloquee) {
+                camera.attachControl(canvas, true);
+                this.cameraBloquee = false;
             }
-
-            return parametres;
         });
+    }
+
+    bloquerInteractionsModele(controle) {
+        if (!controle) return;
+        controle.isPointerBlocker = true;
+        controle.isHitTestVisible = true;
+    }
+
+    sourisSurControleVisible(controle, sceneGUI) {
+        if (!controle || !controle.isVisible) return false;
+
+        const mesure = controle._currentMeasure;
+        if (!mesure) return false;
+
+        const x = sceneGUI.pointerX;
+        const y = sceneGUI.pointerY;
+
+        if (x === undefined || y === undefined) return false;
+
+        return x >= mesure.left &&
+            x <= mesure.left + mesure.width &&
+            y >= mesure.top &&
+            y <= mesure.top + mesure.height;
     }
 }

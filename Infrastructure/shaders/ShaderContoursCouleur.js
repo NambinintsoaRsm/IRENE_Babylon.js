@@ -1,14 +1,8 @@
 /**
  * Déclare le shader utilisé pour afficher les contours liés aux différences de couleur.
  *
- * Ce shader analyse l’image rendue et détecte les variations fortes de couleur
- * afin de mettre en évidence certaines limites visibles sur l’objet.
- *
- * Il est séparé du shader profondeur/normales car il travaille directement
- * à partir de l’image couleur finale.
- *
- * Le seuil de détection et la couleur du contour ne sont pas définis ici.
- * Ils seront envoyés par le post-traitement correspondant.
+ * Ce shader ne doit jamais rendre l'écran transparent.
+ * Quand aucun contour n'est détecté, il renvoie simplement la couleur d'origine.
  */
 
 export const NOM_SHADER_CONTOURS_COULEUR = "colorOnlyContourPixelShader";
@@ -26,8 +20,8 @@ export function creerShaderContoursCouleurSiNecessaire() {
         varying vec2 vUV;
 
         uniform sampler2D textureSampler;
-
         uniform vec2 screenSize;
+        uniform float edgeWidth;
         uniform float colorThreshold;
         uniform vec3 colorEdgeColor;
 
@@ -60,14 +54,20 @@ export function creerShaderContoursCouleurSiNecessaire() {
         }
 
         void main(void) {
-            vec2 texel = vec2(1.0 / screenSize.x, 1.0 / screenSize.y);
+            vec4 couleurOriginale = texture2D(textureSampler, vUV);
 
+            if (colorThreshold > 9999.0) {
+                gl_FragColor = couleurOriginale;
+                return;
+            }
+
+            vec2 texel = vec2(1.0 / screenSize.x, 1.0 / screenSize.y) * max(edgeWidth, 1.0);
             float colorEdge = sobelColor(texel);
 
             if (colorEdge > colorThreshold) {
                 gl_FragColor = vec4(colorEdgeColor, 1.0);
             } else {
-                discard;
+                gl_FragColor = couleurOriginale;
             }
         }
     `;

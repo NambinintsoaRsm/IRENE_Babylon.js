@@ -1,155 +1,386 @@
 import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
+import { lireNombreDepuisValeurCss } from "../../Util/ValeurCssUtils.js";
 
 /**
- * Gère les animations de l'interface :
- * - ouverture / fermeture du menu principal ;
- * - ouverture / fermeture des dropdowns ;
- * - déplacement de la flèche selon la position du menu ;
- * - masquage des sections suivantes pour éviter la surcharge visuelle.
+ * Gère les comportements visuels de l'interface Babylon GUI :
+ * menu latéral, accordéons, panneaux secondaires et flèches.
  */
 export class ServiceAnimationGUI {
-    constructor(serviceDimensionsGUI) {
+    constructor(serviceDimensionsGUI = null, scene = null) {
         this.serviceDimensionsGUI = serviceDimensionsGUI;
+        this.scene = scene;
     }
 
-    basculerMenu({
-                     etatApplication,
-                     menuRect,
-                     flecheRect,
-                     flecheText
-                 }) {
+    definirScene(scene) {
+        this.scene = scene;
+    }
+
+    initialiserMenu({ etatApplication, menuRect, flecheRect, flecheText }) {
+        if (menuRect) {
+            menuRect.isVisible = true;
+            menuRect.isPointerBlocker = true;
+            menuRect.isHitTestVisible = true;
+            menuRect.zIndex = 20;
+        }
+
+        if (flecheRect) {
+            flecheRect.isVisible = true;
+            flecheRect.isPointerBlocker = true;
+            flecheRect.isHitTestVisible = true;
+            flecheRect.zIndex = 100;
+        }
+
         const menu = etatApplication.animation.menuLateral;
+        if (typeof menu.estOuvert !== "boolean") {
+            menu.estOuvert = true;
+        }
+
+        this.appliquerPositionMenu({ etatApplication, menuRect, flecheRect, flecheText });
+    }
+
+    basculerMenu({ etatApplication, menuRect, flecheRect, flecheText }) {
+        this.appliquerPositionMenu({ etatApplication, menuRect, flecheRect, flecheText, animer: true });
+    }
+
+    appliquerPositionMenu({ etatApplication, menuRect, flecheRect, flecheText, animer = false }) {
+        if (!menuRect || !flecheRect) return;
+
         const positionMenu = etatApplication.interface.parametres.positionMenu;
+        const menuOuvert = etatApplication.animation.menuLateral.estOuvert;
+        const largeurMenu = this.obtenirLargeurMenu(etatApplication, menuRect);
 
-        const largeurMenu =
-            etatApplication.gui.dimensionsInitiales.menu?.largeurValeur ??
-            etatApplication.animation.parametres.largeurMenu;
+        let alignement;
+        let gaucheMenu;
+        let gaucheFleche;
 
-        if (positionMenu === PositionMenu.DROITE) {
-            menuRect.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-            flecheRect.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-
-            if (menu.estOuvert) {
-                menuRect.left = "0%";
-                flecheRect.left = `-${largeurMenu}%`;
-            } else {
-                menuRect.left = `${largeurMenu}%`;
-                flecheRect.left = "0%";
-            }
+        if (positionMenu === PositionMenu.GAUCHE || positionMenu === "gauche") {
+            alignement = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            gaucheMenu = menuOuvert ? 0 : -largeurMenu;
+            gaucheFleche = menuOuvert ? largeurMenu : 0;
+        } else {
+            alignement = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+            gaucheMenu = menuOuvert ? 0 : largeurMenu;
+            gaucheFleche = menuOuvert ? -largeurMenu : 0;
         }
 
-        if (positionMenu === PositionMenu.GAUCHE) {
-            menuRect.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-            flecheRect.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        menuRect.horizontalAlignment = alignement;
+        flecheRect.horizontalAlignment = alignement;
 
-            if (menu.estOuvert) {
-                menuRect.left = "0%";
-                flecheRect.left = `${largeurMenu}%`;
-            } else {
-                menuRect.left = `-${largeurMenu}%`;
-                flecheRect.left = "0%";
-            }
+        if (animer) {
+            this.animerPourcentage(menuRect, "left", lireNombreDepuisValeurCss(menuRect.left), gaucheMenu, 450);
+            this.animerPourcentage(flecheRect, "left", lireNombreDepuisValeurCss(flecheRect.left), gaucheFleche, 450);
+        } else {
+            menuRect.left = `${gaucheMenu}%`;
+            flecheRect.left = `${gaucheFleche}%`;
         }
 
-        this.mettreAJourFlecheMenu({
-            flecheText,
-            positionMenu,
-            menuOuvert: menu.estOuvert
-        });
+        this.mettreAJourFlecheMenu({ flecheText, positionMenu, menuOuvert });
+        this.retournerOngletPliageSelonPosition({ flecheRect, positionMenu });
+    }
+
+    obtenirLargeurMenu(etatApplication, menuRect) {
+        const memorisee = etatApplication?.gui?.dimensionsInitiales?.menu?.largeurValeur;
+        if (Number.isFinite(memorisee) && memorisee > 0) return memorisee;
+        return lireNombreDepuisValeurCss(menuRect?.width, 20);
     }
 
     mettreAJourFlecheMenu({ flecheText, positionMenu, menuOuvert }) {
-        if (!flecheText) {
-            return;
-        }
+        if (!flecheText) return;
 
-        const configFleches = constantesInterface.flechesMenu[positionMenu];
+        const fleches = constantesInterface.flechesMenu[positionMenu]
+            ?? constantesInterface.flechesMenu[PositionMenu.DROITE]
+            ?? { ouvert: "▶", ferme: "◀" };
 
-        flecheText.text = menuOuvert
-            ? configFleches.ouvert
-            : configFleches.ferme;
+        flecheText.text = menuOuvert ? fleches.ouvert : fleches.ferme;
     }
 
-    basculerSection({
-                        section,
-                        controleSection,
-                        texteFleche,
-                        hauteurInitiale
-                    }) {
-        if (!section || !controleSection) {
-            throw new Error("Section ou contrôle GUI introuvable.");
+    retournerOngletPliageSelonPosition({ flecheRect, positionMenu }) {
+        if (!flecheRect) return;
+
+        flecheRect.metadata = flecheRect.metadata || {};
+
+        if (flecheRect.metadata.rotationInitiale === undefined) {
+            flecheRect.metadata.rotationInitiale = Number.isFinite(flecheRect.rotation)
+                ? flecheRect.rotation
+                : 0;
         }
 
-        if (section.estOuvert) {
-            controleSection.isVisible = true;
-            controleSection.height = hauteurInitiale;
-        } else {
-            controleSection.height = "0px";
-            controleSection.isVisible = false;
-        }
+        const estAGauche = positionMenu === PositionMenu.GAUCHE || positionMenu === "gauche";
 
-        this.mettreAJourFlecheDropdown(texteFleche, section.estOuvert);
+        // On part de la rotation du guiTexture.json, puis on retourne l'onglet uniquement à gauche.
+        flecheRect.rotation = estAGauche
+            ? flecheRect.metadata.rotationInitiale + Math.PI
+            : flecheRect.metadata.rotationInitiale;
+
+        // Le bouton interne garde son texte lisible : seul le rectangle de support est retourné.
+        if (Array.isArray(flecheRect.children)) {
+            flecheRect.children.forEach((enfant) => {
+                if (enfant?.name === "FlecheMenuBtn") {
+                    enfant.rotation = 0;
+                }
+            });
+        }
+    }
+
+    initialiserAccordeons(dropdowns = []) {
+        dropdowns.forEach(({ rect, fleche, hauteur }) => {
+            if (!rect) return;
+
+            rect.metadata = rect.metadata || {};
+            rect.metadata.estOuvert = false;
+            rect.metadata.hauteurOuverte = hauteur ?? lireNombreDepuisValeurCss(rect.height, 0);
+            rect.metadata.hauteurActuelle = 0;
+
+            rect.height = "0px";
+            rect.alpha = 0;
+            rect.isVisible = false;
+
+            if (fleche) fleche.text = constantesInterface.flechesDropdown.ferme;
+        });
+    }
+
+    brancherAccordeonsExclusifs(dropdowns = []) {
+        this.initialiserAccordeons(dropdowns);
+
+        dropdowns.forEach((dropdown) => {
+            const { bouton, rect, fleche, hauteur } = dropdown;
+            if (!bouton || !rect) return;
+
+            bouton.onPointerClickObservable.add(() => {
+                const doitOuvrir = !rect.metadata?.estOuvert;
+
+                dropdowns.forEach((autre) => {
+                    if (autre.rect && autre.rect !== rect) {
+                        this.fermerAccordeon(autre.rect, autre.fleche);
+                    }
+                });
+
+                if (doitOuvrir) {
+                    this.ouvrirAccordeon(rect, fleche, hauteur);
+                } else {
+                    this.fermerAccordeon(rect, fleche);
+                }
+            });
+        });
+    }
+
+    ouvrirAccordeon(rect, fleche, hauteurOuverte = null) {
+        if (!rect) return;
+
+        const hauteur = hauteurOuverte ?? rect.metadata?.hauteurOuverte ?? lireNombreDepuisValeurCss(rect.height, 0);
+
+        rect.isVisible = true;
+        rect.alpha = 1;
+        rect.metadata = rect.metadata || {};
+        rect.metadata.estOuvert = true;
+
+        this.animerHauteurRect(rect, rect.metadata.hauteurActuelle || 0, hauteur, 300);
+        rect.metadata.hauteurActuelle = hauteur;
+
+        if (fleche) fleche.text = constantesInterface.flechesDropdown.ouvert;
+    }
+
+    fermerAccordeon(rect, fleche) {
+        if (!rect) return;
+
+        rect.metadata = rect.metadata || {};
+        rect.metadata.estOuvert = false;
+
+        const depart = rect.metadata.hauteurActuelle || lireNombreDepuisValeurCss(rect.height, 0);
+        this.animerHauteurRect(rect, depart, 0, 300, () => {
+            if (!rect.metadata.estOuvert) {
+                rect.isVisible = false;
+                rect.alpha = 0;
+            }
+        });
+
+        rect.metadata.hauteurActuelle = 0;
+
+        if (fleche) fleche.text = constantesInterface.flechesDropdown.ferme;
+    }
+
+    ouvrirPanneauSecondaire(panneau, panneauxAfermer = []) {
+        panneauxAfermer.forEach((p) => this.fermerPanneauSecondaire(p));
+
+        if (!panneau) return;
+
+        panneau.isVisible = true;
+        panneau.zIndex = 30;
+        panneau.isPointerBlocker = true;
+        panneau.isHitTestVisible = true;
+    }
+
+    fermerPanneauSecondaire(panneau) {
+        if (!panneau) return;
+        panneau.isVisible = false;
+    }
+
+    initialiserPanneauxSecondaires(panneaux = []) {
+        panneaux.forEach((panneau) => {
+            if (!panneau) return;
+            panneau.isVisible = false;
+            panneau.zIndex = 30;
+            panneau.isPointerBlocker = true;
+            panneau.isHitTestVisible = true;
+        });
+    }
+
+    deplacerPanneaux(alignement, panneaux = []) {
+        const estAGauche = alignement === BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+
+        panneaux.forEach((panneau) => {
+            if (!panneau) return;
+            panneau.horizontalAlignment = alignement;
+
+            // Correction : seuls les décalages internes du menu principal sont inversés.
+            // Les panneaux secondaires (Police, Menu, Contours, Texture, Lumière, Modèles)
+            // gardent leurs offsets internes du guiTexture.json pour ne pas casser leur mise en page.
+            if (panneau.name === "MainMenuRect") {
+                this.appliquerDecalagesInternesSelonCote(panneau, estAGauche);
+            }
+        });
+    }
+
+    appliquerDecalagesInternesSelonCote(panneau, estAGauche) {
+        this.parcourirControle(panneau, (controle) => {
+            if (!controle || controle.className === "TextBlock") return;
+            if (this.estControleCouleurAConserver(controle)) return;
+
+            controle.metadata = controle.metadata || {};
+
+            if (controle.metadata.leftInitial === undefined) {
+                controle.metadata.leftInitial = controle.left ?? "0px";
+            }
+
+            const leftInitial = controle.metadata.leftInitial;
+
+            // Le JSON a beaucoup de décalages négatifs prévus pour un menu à droite
+            // ex : left = -4%. À gauche, on inverse seulement ces décalages.
+            if (estAGauche) {
+                controle.left = this.inverserSeulementSiNegatif(leftInitial);
+            } else {
+                controle.left = leftInitial;
+            }
+        });
+    }
+
+    inverserSeulementSiNegatif(valeurCss) {
+        if (typeof valeurCss !== "string") return valeurCss;
+
+        const valeur = parseFloat(valeurCss);
+        if (!Number.isFinite(valeur) || valeur >= 0) return valeurCss;
+
+        const unite = valeurCss.includes("%") ? "%" : "px";
+        return `${Math.abs(valeur)}${unite}`;
+    }
+
+    estControleCouleurAConserver(controle) {
+        if (!controle?.name) return false;
+
+        return /^ContBtn[1-8]$/.test(controle.name) ||
+            /^(BlancBtn|NoirBtn|GrisBtn|GrisFoncBtn)$/.test(controle.name);
+    }
+
+    parcourirControle(controle, callback) {
+        callback(controle);
+
+        if (Array.isArray(controle?.children)) {
+            controle.children.forEach((enfant) => this.parcourirControle(enfant, callback));
+        }
     }
 
     mettreAJourFlecheDropdown(texteFleche, estOuvert) {
-        if (!texteFleche) {
-            return;
-        }
-
+        if (!texteFleche) return;
         texteFleche.text = estOuvert
             ? constantesInterface.flechesDropdown.ouvert
             : constantesInterface.flechesDropdown.ferme;
     }
 
-    masquerSectionsSuivantes(stackPanelPrincipal, nomSectionActive) {
-        if (!constantesInterface.comportementMenu.masquerSectionsSuivantes) {
-            return;
+    basculerSection({ section, controleSection, texteFleche, hauteurInitiale }) {
+        if (!section || !controleSection) return;
+        if (section.estOuvert) {
+            this.ouvrirAccordeon(controleSection, texteFleche, lireNombreDepuisValeurCss(hauteurInitiale, hauteurInitiale));
+        } else {
+            this.fermerAccordeon(controleSection, texteFleche);
         }
-
-        if (!stackPanelPrincipal?.children) {
-            return;
-        }
-
-        let sectionTrouvee = false;
-
-        stackPanelPrincipal.children.forEach((enfant) => {
-            if (!enfant?.name) {
-                return;
-            }
-
-            if (enfant.name === nomSectionActive) {
-                sectionTrouvee = true;
-                enfant.isVisible = true;
-                return;
-            }
-
-            if (sectionTrouvee) {
-                enfant.isVisible = false;
-            }
-        });
     }
 
-    afficherToutesLesSections(stackPanelPrincipal) {
-        if (!stackPanelPrincipal?.children) {
-            return;
-        }
+    masquerSectionsSuivantes() {
+        // Conservé pour compatibilité avec le contrôleur existant.
+    }
 
-        stackPanelPrincipal.children.forEach((enfant) => {
-            enfant.isVisible = true;
-        });
+    afficherToutesLesSections() {
+        // Conservé pour compatibilité avec le contrôleur existant.
     }
 
     fermerSectionGUI(controleSection, texteFleche = null) {
-        if (!controleSection) {
+        this.fermerAccordeon(controleSection, texteFleche);
+    }
+
+    fermerTousPanneauxSecondaires(panneaux = []) {
+        panneaux.forEach((panneau) => this.fermerPanneauSecondaire(panneau));
+    }
+
+    fermerTousAccordeons(dropdowns = []) {
+        dropdowns.forEach(({ rect, fleche }) => this.fermerAccordeon(rect, fleche));
+    }
+
+    fermerTouteInterfaceActive({ dropdowns = [], panneaux = [] } = {}) {
+        this.fermerTousAccordeons(dropdowns);
+        this.fermerTousPanneauxSecondaires(panneaux);
+    }
+
+    animerHauteurRect(rect, depart, arrivee, duree = 300, callbackFin = null) {
+        this.animerNombre({
+            depart,
+            arrivee,
+            duree,
+            appliquer: (valeur) => {
+                rect.height = `${valeur}px`;
+            },
+            callbackFin
+        });
+    }
+
+    animerPourcentage(controle, propriete, depart, arrivee, duree = 450, callbackFin = null) {
+        this.animerNombre({
+            depart,
+            arrivee,
+            duree,
+            appliquer: (valeur) => {
+                controle[propriete] = `${valeur}%`;
+            },
+            callbackFin
+        });
+    }
+
+    animerNombre({ depart, arrivee, duree, appliquer, callbackFin = null }) {
+        if (!this.scene?.onBeforeRenderObservable) {
+            appliquer(arrivee);
+            if (callbackFin) callbackFin();
             return;
         }
 
-        controleSection.height = "0px";
-        controleSection.isVisible = false;
+        const debut = performance.now();
+        let observateur = null;
 
-        if (texteFleche) {
-            this.mettreAJourFlecheDropdown(texteFleche, false);
-        }
+        observateur = this.scene.onBeforeRenderObservable.add(() => {
+            const temps = performance.now() - debut;
+            const t = Math.min(temps / duree, 1);
+            const progression = this.progressionDouce(t);
+            const valeur = depart + (arrivee - depart) * progression;
+
+            appliquer(valeur);
+
+            if (t >= 1) {
+                this.scene.onBeforeRenderObservable.remove(observateur);
+                if (callbackFin) callbackFin();
+            }
+        });
+    }
+
+    progressionDouce(t) {
+        return t * t * (3 - 2 * t);
     }
 }

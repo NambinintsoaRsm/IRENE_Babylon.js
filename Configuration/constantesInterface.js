@@ -3,7 +3,7 @@ import { PositionMenu } from "../Domain/interface/PositionMenu.js";
 
 export const constantesInterface = Object.freeze({
     policeDefaut: "Arial",
-    taillePoliceDefaut: 1,
+    taillePoliceDefaut: 0,
     grasDefaut: false,
 
     themeDefaut: ThemeInterface.BLANC,

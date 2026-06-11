@@ -1,4 +1,4 @@
-export class BloquerCameraUC {
+export class DebloquerCameraUC {
     constructor(etatApplication) {
         this.etatApplication = etatApplication;
     }

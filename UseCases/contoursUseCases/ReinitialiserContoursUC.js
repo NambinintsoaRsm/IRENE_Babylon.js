@@ -13,8 +13,15 @@ export class ReinitialiserContoursUC {
             throw new Error("État des contours introuvable.");
         }
 
-        const parametresParDefaut =
-            this.parametresContoursDefaut ?? new ParametresContours();
+        const source = this.parametresContoursDefaut ?? new ParametresContours();
+        const parametresParDefaut = new ParametresContours({
+            actif: source.actif,
+            typeActif: source.typeActif,
+            typesActifs: source.typesActifs ?? [],
+            epaisseur: source.epaisseur,
+            seuil: source.seuil,
+            couleur: source.couleur
+        });
 
         contours.parametres = parametresParDefaut;
 

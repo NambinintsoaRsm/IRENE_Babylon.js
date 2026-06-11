@@ -32,6 +32,7 @@ export function creerShaderContoursProfondeurNormalesSiNecessaire() {
         uniform sampler2D normalSampler;
 
         uniform vec2 screenSize;
+        uniform float edgeWidth;
 
         uniform float useDepth;
         uniform float useNormal;
@@ -93,7 +94,7 @@ export function creerShaderContoursProfondeurNormalesSiNecessaire() {
         }
 
         void main(void) {
-            vec2 texel = vec2(1.0 / screenSize.x, 1.0 / screenSize.y);
+            vec2 texel = vec2(1.0 / screenSize.x, 1.0 / screenSize.y) * max(edgeWidth, 1.0);
 
             vec3 originalColor = texture2D(textureSampler, vUV).rgb;
 

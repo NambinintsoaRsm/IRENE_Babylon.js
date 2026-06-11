@@ -3,17 +3,18 @@ export const constantesCamera = Object.freeze({
     betaInitial: Math.PI / 2.5,
     rayonInitial: 5,
 
-    cibleInitiale: {
-        x: 0,
-        y: 0,
-        z: 0
-    },
+    cibleInitiale: Object.freeze({ x: 0, y: 0, z: 0 }),
 
-    zoomInitial: 1,
+    wheelPrecision: 14,
+    sensibiliteRotation: 3500,
 
-    wheelPrecision: 2,
-    sensibiliteRotation: 2000,
+    facteurCadrage: 3.0,
 
-    distanceMin: 1,
-    distanceMax: 20
+    multiplicateurDistanceMin: 1.4,
+    distanceMinAbsolue: 0.5,
+
+    multiplicateurDistanceMax: 15,
+    distanceMaxAbsolue: 10,
+
+    tailleModeleNormalise: 2
 });

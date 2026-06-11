@@ -1,3 +1,8 @@
+import {
+    filtrerMeshesValides,
+    calculerBornesMeshes
+} from "../../Util/BabylonUtils.js";
+
 /**
  * Cadre automatiquement la caméra autour du modèle chargé.
  *
@@ -5,75 +10,44 @@
  * ou hors champ après chargement.
  */
 export class ServiceCadrageCameraBabylon {
-    cadrer(camera, meshes, parametresCamera) {
+    cadrer(camera, meshes, parametresCamera, facteurCadrage = 2.5) {
         if (!camera) {
             throw new Error("Caméra Babylon introuvable pour cadrer le modèle.");
         }
 
-        const meshesValides = this.filtrerMeshesValides(meshes);
+        const meshesValides = filtrerMeshesValides(meshes);
 
         if (meshesValides.length === 0) {
             throw new Error("Aucun mesh valide à cadrer.");
         }
 
-        const { centre, rayonModele } = this.calculerCentreEtRayon(meshesValides);
+        const infos = calculerBornesMeshes(meshesValides);
 
-        camera.setTarget(centre);
+        if (!infos) {
+            throw new Error("Impossible de calculer les bornes du modèle.");
+        }
 
-        const rayonCamera = this.calculerRayonCamera(rayonModele, parametresCamera);
+        camera.setTarget(infos.centre);
+
+        const rayonCamera = this.calculerRayonCamera(
+            infos.rayon,
+            parametresCamera,
+            facteurCadrage
+        );
 
         camera.radius = rayonCamera;
 
         return {
             cible: {
-                x: centre.x,
-                y: centre.y,
-                z: centre.z
+                x: infos.centre.x,
+                y: infos.centre.y,
+                z: infos.centre.z
             },
             rayon: rayonCamera
         };
     }
 
-    filtrerMeshesValides(meshes = []) {
-        return meshes.filter((mesh) => {
-            return mesh &&
-                mesh.getTotalVertices &&
-                mesh.getTotalVertices() > 0;
-        });
-    }
-
-    calculerCentreEtRayon(meshes) {
-        let min = null;
-        let max = null;
-
-        meshes.forEach((mesh) => {
-            mesh.computeWorldMatrix(true);
-
-            const boundingInfo = mesh.getBoundingInfo();
-            const minimum = boundingInfo.boundingBox.minimumWorld;
-            const maximum = boundingInfo.boundingBox.maximumWorld;
-
-            if (!min) {
-                min = minimum.clone();
-                max = maximum.clone();
-            } else {
-                min = BABYLON.Vector3.Minimize(min, minimum);
-                max = BABYLON.Vector3.Maximize(max, maximum);
-            }
-        });
-
-        const taille = max.subtract(min);
-        const centre = min.add(taille.scale(0.5));
-        const rayonModele = taille.length() / 2;
-
-        return {
-            centre,
-            rayonModele
-        };
-    }
-
-    calculerRayonCamera(rayonModele, parametresCamera) {
-        const facteurCadrage = 2.5;
+    calculerRayonCamera(rayonModele, parametresCamera, facteurCadrage = 2.5) {
         let rayonCamera = rayonModele * facteurCadrage;
 
         if (parametresCamera) {

@@ -1,17 +1,16 @@
-import { PositionMenu, estPositionMenuValide } from "./PositionMenu.js";
-import { ThemeInterface, estThemeInterfaceValide } from "./ThemeInterface.js";
+import { estPositionMenuValide } from "./PositionMenu.js";
+import { estThemeInterfaceValide } from "./ThemeInterface.js";
 
 export class ParametresInterface {
-
     constructor({
-                    police = "OpenDyslexic",
-                    taillePolice = 1,
-                    gras = false,
-                    theme = ThemeInterface.BLANC,
-                    positionMenu = PositionMenu.DROITE,
-                    tailleBorduresMenu = 1,
-                    tailleBorduresBoutons = 1
-                } = {}) {
+        police = "OpenDyslexic",
+        taillePolice = 0,
+        gras = false,
+        theme = "blanc",
+        positionMenu = "droite",
+        tailleBorduresMenu = 1,
+        tailleBorduresBoutons = 1
+    } = {}) {
         this.police = police;
         this.taillePolice = taillePolice;
         this.gras = gras;
@@ -25,11 +24,13 @@ export class ParametresInterface {
 
     valider() {
         if (typeof this.police !== "string" || this.police.trim() === "") {
-            throw new Error("La police de l'interface est invalide.");
+            throw new Error("La police d'interface est invalide.");
         }
 
-        if (!Number.isFinite(this.taillePolice) || this.taillePolice < 0) {
-            throw new Error("La taille de police est invalide.");
+        // Variation relative en pourcentage autour du guiTexture.json.
+        // 0 = taille d'origine, -10 = -10 %, +2 = +2 %.
+        if (!Number.isFinite(this.taillePolice) || this.taillePolice < -100) {
+            throw new Error("La variation de taille de police est invalide.");
         }
 
         if (typeof this.gras !== "boolean") {

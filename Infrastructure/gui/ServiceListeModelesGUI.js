@@ -1,5 +1,11 @@
-import { constantesInterface } from "../../Configuration/constantesInterface.js";
-import { obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
+import {
+    constantesInterface,
+    obtenirThemeInterface
+} from "../../Configuration/constantesInterface.js";
+
+import {
+    viderConteneur
+} from "../../Util/GuiUtils.js";
 
 /**
  * Gère l'affichage dynamique de la liste des modèles 3D.
@@ -7,22 +13,9 @@ import { obtenirThemeInterface } from "../../Configuration/constantesInterface.j
  * Le nombre d'objets n'est pas fixé dans l'interface.
  * Les boutons sont créés à partir du catalogue des modèles disponibles.
  *
- * Les dimensions, couleurs et styles ne sont pas codés en dur ici :
- * ils viennent de Configuration/constantesInterface.js.
+ * Les dimensions, couleurs et styles viennent de Configuration/constantesInterface.js.
  */
 export class ServiceListeModelesGUI {
-    viderListe(conteneurListe) {
-        if (!conteneurListe?.children) {
-            return;
-        }
-
-        const enfants = [...conteneurListe.children];
-
-        enfants.forEach((enfant) => {
-            conteneurListe.removeControl(enfant);
-        });
-    }
-
     afficherModeles({
                         conteneurListe,
                         modeles,
@@ -37,10 +30,11 @@ export class ServiceListeModelesGUI {
             throw new Error("Liste des modèles invalide.");
         }
 
-        this.viderListe(conteneurListe);
+        viderConteneur(conteneurListe);
 
         modeles.forEach((modele) => {
             const estActif = this.estModeleActif(modele, etatApplication);
+
             const bouton = this.creerBoutonModele({
                 modele,
                 etatApplication,
