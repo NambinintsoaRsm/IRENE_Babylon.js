@@ -120,10 +120,15 @@ export class ServiceStyleInterfaceGUI {
     }
 
     appliquerThemeSlider(slider, theme) {
-        if (slider?.metadata?.nePasEcraserFond) {
+        if (!slider) return;
+
+        if (
+            slider.name === "LumTempSlider" ||
+            slider.metadata?.nePasEcraserFond ||
+            slider.metadata?.estSliderTemperature
+        ) {
             return;
         }
-
         slider.background = theme.sliderFond;
         slider.color = theme.sliderBarre;
         slider.borderColor = theme.bordure;
@@ -215,11 +220,11 @@ export class ServiceStyleInterfaceGUI {
             ? BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT
             : BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
 
+        // On déplace uniquement les rectangles/panneaux racines.
+        // Les StackPanel et les boutons internes restent exactement comme dans le JSON.
         const panneaux = [
             "MainMenuRect",
             "FlecheMenuRect",
-            "ConfOptnRect",
-            "RegOptnRect",
             "MenuRect",
             "PoliRect",
             "ContoRect",
@@ -227,6 +232,11 @@ export class ServiceStyleInterfaceGUI {
             "LumRect",
             "ModelRect"
         ].map((nom) => controles[nom]).filter(Boolean);
+
+        // Important : les dropdowns internes restent dans leur parent JSON.
+        // On ne déplace pas ConfOptnRect / RegOptnRect directement, sinon ils
+        // bougent pendant le passage gauche/droite comme si c'étaient des panneaux racines.
+        // Ils suivent MainMenuRect naturellement, comme ZoomReintBtn.
 
         if (serviceAnimationGUI?.deplacerPanneaux) {
             serviceAnimationGUI.deplacerPanneaux(alignement, panneaux);
@@ -271,9 +281,8 @@ export class ServiceStyleInterfaceGUI {
             ? flecheRect.metadata.rotationInitiale + Math.PI
             : flecheRect.metadata.rotationInitiale;
 
-        // On ne retourne pas le bouton interne pour garder la flèche lisible.
         if (flecheBtn) {
-            flecheBtn.rotation = 0;
+            flecheBtn.rotation = estAGauche ? Math.PI : 0;
         }
     }
 }

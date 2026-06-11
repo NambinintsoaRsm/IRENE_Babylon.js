@@ -15,6 +15,7 @@ import { ServiceNormalisationModeleBabylon } from "./Infrastructure/babylon/Serv
 import { ServiceOrientationModeleBabylon } from "./Infrastructure/babylon/ServiceOrientationModeleBabylon.js";
 import { ServiceMateriauxBabylon } from "./Infrastructure/babylon/ServiceMateriauxBabylon.js";
 import { ServiceLumiereBabylon } from "./Infrastructure/babylon/ServiceLumiereBabylon.js";
+import { ServiceEntropieVueBabylon } from "./Infrastructure/babylon/ServiceEntropieVueBabylon.js";
 import { BoucleRenduBabylon } from "./Infrastructure/babylon/BoucleRenduBabylon.js";
 
 import { ChargeurInterfaceGUI } from "./Infrastructure/gui/ChargeurInterfaceGUI.js";
@@ -27,10 +28,10 @@ import { ServiceStyleBoutonsGUI } from "./Infrastructure/gui/ServiceStyleBoutons
 import { ServiceTexteGUI } from "./Infrastructure/gui/ServiceTexteGUI.js";
 import { ServiceBlocagePointeurGUI } from "./Infrastructure/gui/ServiceBlocagePointeurGUI.js";
 import { ServiceListeModelesGUI } from "./Infrastructure/gui/ServiceListeModelesGUI.js";
+import { ServiceControlesSpeciauxGUI } from "./Infrastructure/gui/ServiceControlesSpeciauxGUI.js";
 
 import { ServicePolicesNavigateur } from "./Infrastructure/accessibilite/ServicePolicesNavigateur.js";
-import { ServiceAccessibiliteNavigateur } from "./Infrastructure/accessibilite/ServiceAccessibiliteNavigateur.js";
-import { ServiceMesureTexteNavigateur } from "./Infrastructure/accessibilite/ServiceMesureTexteNavigateur.js";
+import { AccessNav } from "./Infrastructure/accessibilite/AccessNav.js";
 
 import { PostTraitApparence } from "./Infrastructure/postTraitements/PostTraitApparence.js";
 import { PostTraitNettete } from "./Infrastructure/postTraitements/PostTraitNettete.js";
@@ -83,6 +84,7 @@ import { ChargerProfilLocalUC } from "./UseCases/profilUseCases/ChargerProfilLoc
 import { SauvegarderProfilLocalUC } from "./UseCases/profilUseCases/SauvegarderProfilLocalUC.js";
 import { AppliquerProfilUC } from "./UseCases/profilUseCases/AppliquerProfilUC.js";
 import { ReinitialiserProfilUC } from "./UseCases/profilUseCases/ReinitialiserProfilUC.js";
+import { ToggleAccessUC } from "./UseCases/accessibiliteUseCases/ToggleAccessUC.js";
 
 import { ControleurAnimationInterface } from "./Presentation/controleurs/ControleurAnimationInterface.js";
 import { ControleurInterface } from "./Presentation/controleurs/ControleurInterface.js";
@@ -92,6 +94,8 @@ import { ControleurCamera } from "./Presentation/controleurs/ControleurCamera.js
 import { ControleurModele3D } from "./Presentation/controleurs/ControleurModele3D.js";
 import { ControleurProfil } from "./Presentation/controleurs/ControleurProfil.js";
 import { ControleurLumiere } from "./Presentation/controleurs/ControleurLumiere.js";
+import { ControleurAccess } from "./Presentation/controleurs/ControleurAccess.js";
+import { creerBoutonEntropieFallback } from "./Presentation/gui/EntropieGUI.js";
 
 const NOMS_GUI = Object.freeze({
     menu: {
@@ -105,6 +109,8 @@ const NOMS_GUI = Object.freeze({
     accordions: {
         configurations: { bouton: "ConfBtn", rect: "ConfOptnRect", fleche: "ConfDropBtnTxt", hauteur: 160 },
         reglages: { bouton: "RegBtn", rect: "RegOptnRect", fleche: "RegBtnDropTxt", hauteur: 600 }
+        // ZoomReintBtn reste un bouton simple : il ne doit pas être utilisé comme conteneur d'accordéon,
+        // sinon il disparaît quand les accordéons sont initialisés.
     },
 
     panneaux: {
@@ -185,6 +191,20 @@ const NOMS_GUI = Object.freeze({
         conteneurListe: "MdlScrollStkPnl",
         objet1Btn: "MdlBtn0",
         objet2Btn: "MdlBtn1"
+    },
+
+    access: {
+        bouton: "AccessBtn",
+        texte: "AccessBtnTxt",
+        boutonCourt: "AccBtn",
+        texteCourt: "AccBtnTxt"
+    },
+
+    entropie: {
+        bouton: "EntropieBtn",
+        texte: "EntropieTxt",
+        boutonAncien: "EntropieTestBtn",
+        texteAncien: "EntropieResultTxt"
     }
 });
 
@@ -232,13 +252,54 @@ function recupererTousLesControles(advancedTexture) {
         "LumTempSlider", "LumTempValTxt", "LumTempTxt",
         "LumReintBtn", "LumReintBtnTxt",
 
-        "ZoomBtn", "ZoomBtnDropTxt", "ZoomReintBtn"
+        "ZoomBtn", "ZoomBtnDropTxt", "ZoomBtnTxt", "ZoomReintBtn", "ZoomReintBtnTxt",
+
+        "AccessBtn", "AccessBtnTxt", "AccBtn", "AccBtnTxt",
+        "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt"
     ].forEach((nom) => {
         controles[nom] = recherche.obtenir(nom, false);
     });
 
     return controles;
 }
+function creerOuRecupererBoutonEntropie(advancedTexture) {
+    const controles = etatApplication.gui.controles;
+
+    let bouton = controles.EntropieBtn
+        ?? controles.EntropieTestBtn
+        ?? advancedTexture?.getControlByName?.("EntropieBtn")
+        ?? advancedTexture?.getControlByName?.("EntropieTestBtn")
+        ?? null;
+
+    let texte = controles.EntropieTxt
+        ?? controles.EntropieResultTxt
+        ?? advancedTexture?.getControlByName?.("EntropieTxt")
+        ?? advancedTexture?.getControlByName?.("EntropieResultTxt")
+        ?? null;
+
+    if (!bouton) {
+        const elements = creerBoutonEntropieFallback(advancedTexture);
+        controles.EntropiePanel = elements.panneau;
+        bouton = elements.bouton;
+        texte = elements.texteResultat;
+    }
+
+    if (bouton) {
+        controles.EntropieBtn = bouton;
+        controles.EntropieTestBtn = bouton;
+    }
+
+    if (texte) {
+        texte.metadata = texte.metadata || {};
+        texte.metadata.texteDynamique = true;
+        texte.isVisible = true;
+        controles.EntropieTxt = texte;
+        controles.EntropieResultTxt = texte;
+    }
+
+    advancedTexture?.markAsDirty?.();
+}
+
 
 function majTexteValeur(textBlock, valeur, decimals = 1) {
     if (!textBlock) return;
@@ -271,8 +332,9 @@ async function main() {
     const serviceCadrageCameraBabylon = new ServiceCadrageCameraBabylon();
     const serviceMateriauxBabylon = new ServiceMateriauxBabylon();
     const serviceLumiereBabylon = new ServiceLumiereBabylon();
-    const serviceEntropieVueBabylon = null;
+    const serviceEntropieVueBabylon = new ServiceEntropieVueBabylon();
     const boucleRenduBabylon = new BoucleRenduBabylon();
+    const serviceControlesSpeciauxGUI = new ServiceControlesSpeciauxGUI();
 
     etatApplication.moteur = fabriqueMoteur.creer(canvas);
     etatApplication.scenes.scene3D = fabriqueScene3D.creer(etatApplication.moteur);
@@ -291,7 +353,7 @@ async function main() {
 
     const chargeurInterfaceGUI = new ChargeurInterfaceGUI();
     const serviceDimensionsGUI = new ServiceDimensionsGUI();
-    const serviceAnimationGUI = new ServiceAnimationGUI(serviceDimensionsGUI, etatApplication.scenes.sceneGUI);
+    const serviceAnimationGUI = new ServiceAnimationGUI(serviceDimensionsGUI, etatApplication.scenes.sceneGUI, etatApplication);
     const serviceDropdownGUI = new ServiceDropdownGUI();
     const serviceStyleInterfaceGUI = new ServiceStyleInterfaceGUI();
     const serviceStyleBoutonsGUI = new ServiceStyleBoutonsGUI();
@@ -300,17 +362,17 @@ async function main() {
     const serviceListeModelesGUI = new ServiceListeModelesGUI();
 
     const servicePolicesNavigateur = new ServicePolicesNavigateur();
-    const serviceAccessibiliteNavigateur = new ServiceAccessibiliteNavigateur();
-    const serviceMesureTexteNavigateur = new ServiceMesureTexteNavigateur();
+    const accessNav = new AccessNav();
 
     await servicePolicesNavigateur.chargerPolices(constantesInterface.policesDisponibles);
     await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
 
     etatApplication.gui.controles = recupererTousLesControles(etatApplication.gui.advancedTexture);
+    creerOuRecupererBoutonEntropie(etatApplication.gui.advancedTexture);
 
     etatApplication.accessibilite = {
-        preferencesNavigateur: serviceAccessibiliteNavigateur.lirePreferences(),
-        serviceMesureTexteNavigateur
+        preferencesNavigateur: accessNav.lire(),
+        actif: false
     };
 
     const postTraitApparence = new PostTraitApparence();
@@ -364,6 +426,17 @@ async function main() {
     const appliquerProfilUC = new AppliquerProfilUC(etatApplication);
     const reinitialiserProfilUC = new ReinitialiserProfilUC(etatApplication);
 
+    const toggleAccessUC = new ToggleAccessUC({
+        etatApplication,
+        accessNav,
+        serviceStyleInterfaceGUI,
+        serviceTexteGUI,
+        serviceSceneBabylon,
+        serviceLumiereBabylon,
+        postTraitApparence,
+        postTraitNettete
+    });
+
     const controleurAnimationInterface = new ControleurAnimationInterface({
         etatApplication,
         basculerMenuUC,
@@ -391,7 +464,8 @@ async function main() {
         serviceStyleInterfaceGUI,
         serviceStyleBoutonsGUI,
         serviceDropdownGUI,
-        servicePolicesNavigateur
+        servicePolicesNavigateur,
+        serviceControlesSpeciauxGUI
     });
 
     const controleurApparence = new ControleurApparence({
@@ -468,17 +542,25 @@ async function main() {
         serviceLumiereBabylon
     });
 
+    const controleurAccess = new ControleurAccess({
+        etatApplication,
+        toggleAccessUC
+    });
+
     brancherAnimationInterface(controleurAnimationInterface);
     controleurInterface.brancherDepuisNomsGUI(NOMS_GUI, serviceAnimationGUI);
     brancherApparence(controleurApparence);
     brancherContours(controleurContours);
     controleurCamera.brancherDepuisNomsGUI(NOMS_GUI.camera);
     controleurLumiere.brancherDepuisNomsGUI();
+    controleurAccess.brancherDepuisNomsGUI(NOMS_GUI.access);
     brancherModele3D(controleurModele3D);
+    brancherTestEntropie(serviceEntropieVueBabylon);
 
     controleurProfil.chargerProfilAuDemarrage();
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
+    rafraichirTexteEntropie();
 
     // On ne crée pas les post-traitements au démarrage :
     // ils seront créés seulement quand une valeur quitte son état neutre.
@@ -678,6 +760,112 @@ function brancherModele3D(controleur) {
         { bouton: obtenir(c, NOMS_GUI.modeles.objet1Btn), idModele: "objet1" },
         { bouton: obtenir(c, NOMS_GUI.modeles.objet2Btn), idModele: "objet2" }
     ]);
+}
+
+function preparerTexteDynamique(textBlock, texteParDefaut = "") {
+    if (!textBlock) return;
+    textBlock.metadata = textBlock.metadata || {};
+    textBlock.metadata.texteDynamique = true;
+    textBlock.isVisible = true;
+
+    if (!textBlock.text && texteParDefaut) {
+        textBlock.text = texteParDefaut;
+    }
+
+    textBlock._markAsDirty?.();
+    etatApplication.gui.advancedTexture?.markAsDirty?.();
+}
+
+function rafraichirTexteEntropie() {
+    const c = etatApplication.gui?.controles ?? {};
+    const texte = c.EntropieTxt
+        ?? c.EntropieResultTxt
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieTxt")
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieResultTxt");
+
+    preparerTexteDynamique(texte, "Vue optimale : --");
+}
+
+function brancherTestEntropie(serviceEntropieVueBabylon) {
+    const c = etatApplication.gui.controles;
+    const bouton = c.EntropieBtn ?? c.EntropieTestBtn ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieBtn") ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieTestBtn");
+    const texteResultat = c.EntropieTxt ?? c.EntropieResultTxt ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieTxt") ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieResultTxt");
+
+    if (!bouton || !serviceEntropieVueBabylon) {
+        console.warn("[Entropie] Bouton ou service introuvable.");
+        return;
+    }
+
+    if (texteResultat) {
+        preparerTexteDynamique(texteResultat, "Vue optimale : --");
+    }
+
+    bouton.onPointerClickObservable.clear();
+    bouton.onPointerClickObservable.add(async () => {
+        if (texteResultat) {
+            texteResultat.text = "Recherche...";
+            texteResultat._markAsDirty?.();
+            etatApplication.gui.advancedTexture?.markAsDirty?.();
+        }
+
+        const scene = etatApplication.scenes.scene3D;
+        const camera = etatApplication.camera.cameraBabylon;
+        const meshes = obtenirMeshesModelePourEntropie(scene);
+
+        const resultat = await serviceEntropieVueBabylon.placerCameraSurVueEntropieMaximale({
+            scene,
+            camera,
+            meshes,
+            nombreVues: 48,
+            conserverRayonCourant: true,
+            texteResultat
+        });
+
+        if (!resultat) {
+            if (texteResultat) {
+                texteResultat.text = "Vue optimale : erreur";
+                texteResultat._markAsDirty?.();
+            }
+            return;
+        }
+
+        if (texteResultat) {
+            texteResultat.text = `Vue optimale : ${Math.round(resultat.entropieNormalisee * 100)}%`;
+            texteResultat._markAsDirty?.();
+            etatApplication.gui.advancedTexture?.markAsDirty?.();
+        }
+
+        console.log("[Vue optimale par entropie]", {
+            resultat,
+            apparence: etatApplication.apparence?.parametres,
+            lumieresScene: scene?.lights?.map((lumiere) => ({
+                name: lumiere.name,
+                type: lumiere.getClassName?.(),
+                intensity: lumiere.intensity,
+                isEnabled: lumiere.isEnabled?.(),
+                direction: lumiere.direction
+                    ? { x: lumiere.direction.x, y: lumiere.direction.y, z: lumiere.direction.z }
+                    : null
+            })),
+            texture: etatApplication.apparence?.parametres?.textureActive,
+            fondScene: scene?.clearColor
+        });
+    });
+}
+
+function obtenirMeshesModelePourEntropie(scene) {
+    const depuisEtat = etatApplication.modele3d?.meshesImportes;
+
+    if (Array.isArray(depuisEtat) && depuisEtat.length > 0) {
+        return depuisEtat;
+    }
+
+    return scene?.meshes?.filter((mesh) => {
+        return mesh &&
+            mesh.getBoundingInfo &&
+            mesh.isVisible !== false &&
+            mesh.getTotalVertices?.() > 0;
+    }) ?? [];
 }
 
 async function chargerModeleInitial(controleurModele3D) {

@@ -45,8 +45,8 @@ export class ControleurLumiere {
     brancherIntensite({ slider, texteValeur }) {
         if (!slider) return;
 
-        slider.minimum = 0;
-        slider.maximum = 3;
+        slider.minimum = 0.2;
+        slider.maximum = 2.5;
         slider.step = 0.1;
         slider.value = 1.2;
         slider.isPointerBlocker = true;
@@ -73,6 +73,7 @@ export class ControleurLumiere {
         slider.isPointerBlocker = true;
         slider.metadata = slider.metadata || {};
         slider.metadata.nePasEcraserFond = true;
+        slider.metadata.estSliderTemperature = true;
 
         this.serviceLumiereBabylon.appliquerTemperature(this.etatApplication.scenes.scene3D, slider.value);
         this.appliquerFondTemperatureSliderApresRendu(slider);

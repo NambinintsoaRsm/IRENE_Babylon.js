@@ -50,6 +50,42 @@ export class ServiceAccessibiliteNavigateur {
         return this.correspondA("(prefers-contrast: more)");
     }
 
+    prefereContrasteFaible() {
+        return this.correspondA("(prefers-contrast: less)");
+    }
+
+    prefereContrastePersonnalise() {
+        return this.correspondA("(prefers-contrast: custom)");
+    }
+
+    detecterContraste() {
+        if (this.prefereContrasteEleve()) return "more";
+        if (this.prefereContrasteFaible()) return "less";
+        if (this.prefereContrastePersonnalise()) return "custom";
+        return "normal";
+    }
+
+    mesurerRemEnPixels() {
+        if (typeof document === "undefined" || !document.body) {
+            return 16;
+        }
+
+        const element = document.createElement("div");
+        element.style.position = "absolute";
+        element.style.visibility = "hidden";
+        element.style.pointerEvents = "none";
+        element.style.width = "1rem";
+        element.style.height = "1rem";
+        element.style.left = "-9999px";
+        element.style.top = "-9999px";
+
+        document.body.appendChild(element);
+        const largeur = element.getBoundingClientRect().width;
+        document.body.removeChild(element);
+
+        return Number.isFinite(largeur) && largeur > 0 ? largeur : 16;
+    }
+
     couleursForceesActives() {
         return this.correspondA("(forced-colors: active)");
     }
@@ -64,16 +100,27 @@ export class ServiceAccessibiliteNavigateur {
 
     lirePreferences() {
         const modeCouleur = this.detecterModeCouleur();
+        const contraste = this.detecterContraste();
 
         return {
             modeCouleur,
+            schemaCouleur: modeCouleur === "sombre" ? "dark" : modeCouleur === "clair" ? "light" : "unknown",
             modeSombre: modeCouleur === "sombre",
             modeClair: modeCouleur === "clair",
             animationsReduites: this.prefereAnimationsReduites(),
-            contrasteEleve: this.prefereContrasteEleve(),
+            reductionMouvement: this.prefereAnimationsReduites(),
+            contraste,
+            contrasteEleve: contraste === "more",
+            contrasteFaible: contraste === "less",
+            contrastePersonnalise: contraste === "custom",
             couleursForcees: this.couleursForceesActives(),
+            remPx: this.mesurerRemEnPixels(),
             devicePixelRatio: this.obtenirDevicePixelRatio()
         };
+    }
+
+    lirePreferencesCompletes() {
+        return this.lirePreferences();
     }
 
     ecouterChangementsPreferences(callback) {
@@ -90,6 +137,8 @@ export class ServiceAccessibiliteNavigateur {
             window.matchMedia("(prefers-color-scheme: light)"),
             window.matchMedia("(prefers-reduced-motion: reduce)"),
             window.matchMedia("(prefers-contrast: more)"),
+            window.matchMedia("(prefers-contrast: less)"),
+            window.matchMedia("(prefers-contrast: custom)"),
             window.matchMedia("(forced-colors: active)")
         ];
 

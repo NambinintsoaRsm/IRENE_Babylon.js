@@ -9,8 +9,8 @@ export class ParametresCamera {
                     wheelPrecision = 2,
                     sensibiliteRotation = 2000,
 
-                    distanceMin = 1,
-                    distanceMax = 20,
+                    distanceMin = 0.8,
+                    distanceMax = 25,
 
                     estBloquee = false
                 } = {}) {

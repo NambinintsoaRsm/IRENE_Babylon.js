@@ -1,3 +1,4 @@
+import { constantesApparence } from "../../Configuration/constantesApparence.js";
 /**
  * Branche les réglages d'apparence :
  * - contraste ;
@@ -126,15 +127,35 @@ export class ControleurApparence {
             this.postTraitApparence.appliquer(this.etatApplication);
             this.postTraitNettete.appliquer(this.etatApplication);
 
-            const sliderTheme = this.etatApplication.gui.controles.ThmSlider;
-            const texteTheme = this.etatApplication.gui.controles.RegThmValTxt;
+            const c = this.etatApplication.gui.controles;
+
+            this.reglerSliderEtTexte(c.NetteteSlider, c.RegNetValTxt, constantesApparence.nettete.defaut, false);
+            this.reglerSliderEtTexte(c.ContrasteSlider, c.RegConValTxt, constantesApparence.contraste.defaut, false);
+            this.reglerSliderEtTexte(c.LuminositeSlider, c.RegLumValTxt, constantesApparence.luminosite.defaut, true);
+            this.reglerSliderEtTexte(c.SaturationSlider, c.RegLumSatTxt, constantesApparence.saturation.defaut, false);
+
+            const sliderTheme = c.ThmSlider;
+            const texteTheme = c.RegThmValTxt;
 
             if (sliderTheme) {
                 sliderTheme.value = 0;
             }
 
             this.appliquerFondScene(0, texteTheme);
+            this.etatApplication.gui.advancedTexture?.markAsDirty?.();
         });
+    }
+
+    reglerSliderEtTexte(slider, texte, valeur, signe = false) {
+        if (slider) slider.value = valeur;
+
+        if (texte) {
+            const pourcentage = Math.round(valeur * 100);
+            texte.metadata = texte.metadata || {};
+            texte.metadata.texteDynamique = true;
+            texte.text = signe && pourcentage > 0 ? `+${pourcentage}%` : `${pourcentage}%`;
+            texte._markAsDirty?.();
+        }
     }
 
     brancherSliderApparence(slider, callback) {

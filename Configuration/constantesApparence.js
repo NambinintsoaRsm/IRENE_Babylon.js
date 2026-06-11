@@ -12,8 +12,8 @@ export const constantesApparence = Object.freeze({
     }),
 
     luminosite: Object.freeze({
-        min: -0.5,
-        max: 0.5,
+        min: -0.4,
+        max: 0.4,
         defaut: 0
     }),
 

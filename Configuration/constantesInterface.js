@@ -140,8 +140,8 @@ export const constantesInterface = Object.freeze({
 
     flechesMenu: Object.freeze({
         [PositionMenu.DROITE]: Object.freeze({
-            ouvert: "▶",
-            ferme: "◀"
+            ouvert: "◀",
+            ferme: "▶"
         }),
 
         [PositionMenu.GAUCHE]: Object.freeze({

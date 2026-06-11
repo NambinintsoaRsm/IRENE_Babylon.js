@@ -7,9 +7,14 @@ import { lireNombreDepuisValeurCss } from "../../Util/ValeurCssUtils.js";
  * menu latéral, accordéons, panneaux secondaires et flèches.
  */
 export class ServiceAnimationGUI {
-    constructor(serviceDimensionsGUI = null, scene = null) {
+    constructor(serviceDimensionsGUI = null, scene = null, etatApplication = null) {
         this.serviceDimensionsGUI = serviceDimensionsGUI;
         this.scene = scene;
+        this.etatApplication = etatApplication;
+    }
+
+    definirEtatApplication(etatApplication) {
+        this.etatApplication = etatApplication;
     }
 
     definirScene(scene) {
@@ -40,6 +45,8 @@ export class ServiceAnimationGUI {
     }
 
     basculerMenu({ etatApplication, menuRect, flecheRect, flecheText }) {
+        // Le pliage/dépliage du menu principal garde son animation.
+        // Les transitions entre panneaux secondaires restent instantanées.
         this.appliquerPositionMenu({ etatApplication, menuRect, flecheRect, flecheText, animer: true });
     }
 
@@ -68,8 +75,9 @@ export class ServiceAnimationGUI {
         flecheRect.horizontalAlignment = alignement;
 
         if (animer) {
-            this.animerPourcentage(menuRect, "left", lireNombreDepuisValeurCss(menuRect.left), gaucheMenu, 450);
-            this.animerPourcentage(flecheRect, "left", lireNombreDepuisValeurCss(flecheRect.left), gaucheFleche, 450);
+            const duree = this.obtenirDureeMenu(etatApplication);
+            this.animerPourcentage(menuRect, "left", lireNombreDepuisValeurCss(menuRect.left), gaucheMenu, duree);
+            this.animerPourcentage(flecheRect, "left", lireNombreDepuisValeurCss(flecheRect.left), gaucheFleche, duree);
         } else {
             menuRect.left = `${gaucheMenu}%`;
             flecheRect.left = `${gaucheFleche}%`;
@@ -108,16 +116,16 @@ export class ServiceAnimationGUI {
 
         const estAGauche = positionMenu === PositionMenu.GAUCHE || positionMenu === "gauche";
 
-        // On part de la rotation du guiTexture.json, puis on retourne l'onglet uniquement à gauche.
+        // Le rectangle d'onglet doit être miroir quand le menu passe à gauche,
+        // mais le texte/flèche à l'intérieur doit rester lisible et non inversé.
         flecheRect.rotation = estAGauche
             ? flecheRect.metadata.rotationInitiale + Math.PI
             : flecheRect.metadata.rotationInitiale;
 
-        // Le bouton interne garde son texte lisible : seul le rectangle de support est retourné.
         if (Array.isArray(flecheRect.children)) {
             flecheRect.children.forEach((enfant) => {
                 if (enfant?.name === "FlecheMenuBtn") {
-                    enfant.rotation = 0;
+                    enfant.rotation = estAGauche ? Math.PI : 0;
                 }
             });
         }
@@ -169,13 +177,17 @@ export class ServiceAnimationGUI {
         if (!rect) return;
 
         const hauteur = hauteurOuverte ?? rect.metadata?.hauteurOuverte ?? lireNombreDepuisValeurCss(rect.height, 0);
+        const duree = this.obtenirDureePanneau();
 
         rect.isVisible = true;
-        rect.alpha = 1;
         rect.metadata = rect.metadata || {};
         rect.metadata.estOuvert = true;
 
-        this.animerHauteurRect(rect, rect.metadata.hauteurActuelle || 0, hauteur, 300);
+        const departHauteur = rect.metadata.hauteurActuelle || lireNombreDepuisValeurCss(rect.height, 0) || 0;
+        const departAlpha = Number.isFinite(rect.alpha) ? rect.alpha : 0;
+
+        this.animerHauteurRect(rect, departHauteur, hauteur, duree);
+        this.animerAlpha(rect, departAlpha, 1, duree);
         rect.metadata.hauteurActuelle = hauteur;
 
         if (fleche) fleche.text = constantesInterface.flechesDropdown.ouvert;
@@ -187,13 +199,16 @@ export class ServiceAnimationGUI {
         rect.metadata = rect.metadata || {};
         rect.metadata.estOuvert = false;
 
+        const duree = this.obtenirDureePanneau();
         const depart = rect.metadata.hauteurActuelle || lireNombreDepuisValeurCss(rect.height, 0);
-        this.animerHauteurRect(rect, depart, 0, 300, () => {
+
+        this.animerHauteurRect(rect, depart, 0, duree, () => {
             if (!rect.metadata.estOuvert) {
                 rect.isVisible = false;
                 rect.alpha = 0;
             }
         });
+        this.animerAlpha(rect, Number.isFinite(rect.alpha) ? rect.alpha : 1, 0, duree);
 
         rect.metadata.hauteurActuelle = 0;
 
@@ -205,15 +220,20 @@ export class ServiceAnimationGUI {
 
         if (!panneau) return;
 
+        // Pas d'animation entre les panneaux de menu : on évite les transitions globales.
+        // Seuls les dropdowns principaux utilisent une apparition douce.
         panneau.isVisible = true;
         panneau.zIndex = 30;
         panneau.isPointerBlocker = true;
         panneau.isHitTestVisible = true;
+        panneau.alpha = 1;
     }
 
     fermerPanneauSecondaire(panneau) {
         if (!panneau) return;
+
         panneau.isVisible = false;
+        panneau.alpha = 1;
     }
 
     initialiserPanneauxSecondaires(panneaux = []) {
@@ -227,18 +247,11 @@ export class ServiceAnimationGUI {
     }
 
     deplacerPanneaux(alignement, panneaux = []) {
-        const estAGauche = alignement === BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-
         panneaux.forEach((panneau) => {
             if (!panneau) return;
             panneau.horizontalAlignment = alignement;
-
-            // Correction : seuls les décalages internes du menu principal sont inversés.
-            // Les panneaux secondaires (Police, Menu, Contours, Texture, Lumière, Modèles)
-            // gardent leurs offsets internes du guiTexture.json pour ne pas casser leur mise en page.
-            if (panneau.name === "MainMenuRect") {
-                this.appliquerDecalagesInternesSelonCote(panneau, estAGauche);
-            }
+            // On ne modifie plus les left/top internes quand le menu passe à gauche/droite :
+            // les décalages du guiTexture.json restent la source de vérité.
         });
     }
 
@@ -378,6 +391,29 @@ export class ServiceAnimationGUI {
                 if (callbackFin) callbackFin();
             }
         });
+    }
+
+    animerAlpha(controle, depart, arrivee, duree = 300, callbackFin = null) {
+        this.animerNombre({
+            depart,
+            arrivee,
+            duree,
+            appliquer: (valeur) => {
+                controle.alpha = valeur;
+            },
+            callbackFin
+        });
+    }
+
+    obtenirDureeMenu(etatApplication = null) {
+        return etatApplication?.animation?.parametres?.dureeMenuLateral
+            ?? this.etatApplication?.animation?.parametres?.dureeMenuLateral
+            ?? 450;
+    }
+
+    obtenirDureePanneau() {
+        return this.etatApplication?.animation?.parametres?.dureePanneauDeroulant
+            ?? 300;
     }
 
     progressionDouce(t) {

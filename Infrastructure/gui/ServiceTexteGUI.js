@@ -23,6 +23,14 @@ export class ServiceTexteGUI {
             }
         });
 
+        // Si le mode accessibilité est actif, on garde la taille navigateur
+        // même après un changement de thème, de police ou de style.
+        const remPx = Number(etatApplication?.accessibilite?.preferencesNavigateur?.remPx);
+        if (etatApplication?.accessibilite?.actif && Number.isFinite(remPx) && remPx > 0) {
+            this.appliquerTailleNavigateurPx(etatApplication, Math.round(remPx));
+            return;
+        }
+
         advancedTexture.markAsDirty();
     }
 
@@ -89,4 +97,38 @@ export class ServiceTexteGUI {
 
         return fontSizeOriginal;
     }
+
+    appliquerTailleNavigateurPx(etatApplication, taillePx) {
+        const advancedTexture = etatApplication?.gui?.advancedTexture;
+        const valeur = Number(taillePx);
+
+        if (!advancedTexture || !Number.isFinite(valeur) || valeur <= 0) return;
+
+        advancedTexture.getDescendants().forEach((controle) => {
+            if (controle instanceof BABYLON.GUI.TextBlock) {
+                this.appliquerTailleNavigateurSurTextBlock(controle, valeur);
+            }
+
+            if (controle instanceof BABYLON.GUI.Button && controle.textBlock) {
+                this.appliquerTailleNavigateurSurTextBlock(controle.textBlock, valeur);
+            }
+        });
+
+        advancedTexture.markAsDirty();
+    }
+
+    appliquerTailleNavigateurSurTextBlock(textBlock, taillePx) {
+        if (!textBlock) return;
+
+        textBlock.metadata = textBlock.metadata || {};
+
+        if (textBlock.metadata.fontSizeOriginal === undefined) {
+            textBlock.metadata.fontSizeOriginal = textBlock.fontSize;
+        }
+
+        textBlock.metadata.tailleAccessibiliteNavigateurPx = taillePx;
+        textBlock.fontSize = `${taillePx}px`;
+        textBlock._markAsDirty?.();
+    }
+
 }

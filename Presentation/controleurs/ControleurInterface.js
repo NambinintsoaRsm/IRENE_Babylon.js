@@ -22,7 +22,8 @@ export class ControleurInterface {
         serviceStyleInterfaceGUI,
         serviceStyleBoutonsGUI,
         serviceDropdownGUI,
-        servicePolicesNavigateur = null
+        servicePolicesNavigateur = null,
+                    serviceControlesSpeciauxGUI = null
     }) {
         this.etatApplication = etatApplication;
 
@@ -420,6 +421,10 @@ export class ControleurInterface {
         bouton.onPointerClickObservable.add(() => {
             this.changerPositionMenuUC.executer(positionMenu);
             this.serviceStyleInterfaceGUI.appliquerPositionMenu(this.etatApplication, serviceAnimationGUI);
+
+            this.serviceControlesSpeciauxGUI?.reappliquerSliderTemperatureApresRendu(
+                this.etatApplication
+            );
         });
     }
 

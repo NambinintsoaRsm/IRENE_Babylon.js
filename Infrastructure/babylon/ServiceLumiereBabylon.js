@@ -13,6 +13,7 @@ export class ServiceLumiereBabylon {
         this.intensiteActuelle = 1.2;
         this.temperatureActuelle = 50;
         this.couleurActuelle = new BABYLON.Color3(1, 1, 1);
+        this.facteurVitesseRotation = 1;
     }
 
     initialiser(scene) {
@@ -143,7 +144,7 @@ export class ServiceLumiereBabylon {
 
         this.observateurRotation = scene.onBeforeRenderObservable.add(() => {
             const delta = scene.getEngine()?.getDeltaTime?.() ?? 16;
-            angle += delta * 0.001;
+            angle += delta * 0.001 * (this.facteurVitesseRotation ?? 1);
 
             const direction = new BABYLON.Vector3(
                 -Math.cos(angle),
