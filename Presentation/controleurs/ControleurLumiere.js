@@ -52,12 +52,10 @@ export class ControleurLumiere {
         slider.isPointerBlocker = true;
 
         this.serviceLumiereBabylon.appliquerIntensite(this.etatApplication.scenes.scene3D, slider.value);
-        this.mettreAJourTexteIntensite(texteValeur, slider.value);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
             this.serviceLumiereBabylon.appliquerIntensite(this.etatApplication.scenes.scene3D, valeur);
-            this.mettreAJourTexteIntensite(texteValeur, valeur);
         });
     }
 
@@ -77,12 +75,10 @@ export class ControleurLumiere {
 
         this.serviceLumiereBabylon.appliquerTemperature(this.etatApplication.scenes.scene3D, slider.value);
         this.appliquerFondTemperatureSliderApresRendu(slider);
-        this.mettreAJourTexteTemperature(texteValeur, slider.value);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
             this.serviceLumiereBabylon.appliquerTemperature(this.etatApplication.scenes.scene3D, valeur);
-            this.mettreAJourTexteTemperature(texteValeur, valeur);
         });
     }
 
@@ -224,8 +220,6 @@ export class ControleurLumiere {
     reinitialiserInterfaceLumiere() {
         const intensite = this.obtenir("LumIntSlider");
         const temperature = this.obtenir("LumTempSlider");
-        const texteIntensite = this.obtenir("LumIntValTxt");
-        const texteTemperature = this.obtenir("LumTempValTxt");
         const texteSelection = this.obtenir("LumDropBtnTxt");
         const liste = this.obtenir("LumTypScroll");
         const icone = this.obtenir("LumDropBtnIcoTxt");
@@ -257,25 +251,8 @@ export class ControleurLumiere {
         }
         if (icone) icone.text = "▶";
 
-        this.mettreAJourTexteIntensite(texteIntensite, 1.2);
-        this.mettreAJourTexteTemperature(texteTemperature, 50);
     }
 
-    mettreAJourTexteIntensite(texteValeur, valeur) {
-        if (!texteValeur) return;
-        texteValeur.metadata = texteValeur.metadata || {};
-        texteValeur.metadata.texteDynamique = true;
-        texteValeur.text = `${Math.round(Number(valeur) * 100)}%`;
-        texteValeur._markAsDirty?.();
-    }
-
-    mettreAJourTexteTemperature(texteValeur, valeur) {
-        if (!texteValeur) return;
-        texteValeur.metadata = texteValeur.metadata || {};
-        texteValeur.metadata.texteDynamique = true;
-        texteValeur.text = this.serviceLumiereBabylon.libelleTemperature(valeur);
-        texteValeur._markAsDirty?.();
-    }
 
     obtenir(nom) {
         if (!nom) return null;

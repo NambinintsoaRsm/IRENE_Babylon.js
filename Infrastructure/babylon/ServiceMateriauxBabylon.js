@@ -1,3 +1,5 @@
+import { constantesApparence } from "../../Configuration/constantesApparence.js";
+
 /**
  * Gère les matériaux Babylon appliqués aux modèles.
  *
@@ -36,24 +38,26 @@ export class ServiceMateriauxBabylon {
         }
     }
 
-    appliquerTextureProcedurale(meshes = [], typeTexture) {
+    appliquerTextureProcedurale(meshes = [], typeTexture, options = {}) {
+        const decalageMotif = Number(options.decalageMotif ?? 0);
+
         meshes.forEach((mesh) => {
             if (!mesh) return;
 
             this.memoriserMateriauOriginal(mesh);
 
-            if (typeTexture === "originale") {
+            if (typeTexture === "originale" || typeTexture === null) {
                 this.restaurerTextureOriginale(mesh);
                 return;
             }
 
             if (typeTexture === "damier") {
-                this.appliquerDamier(mesh);
+                this.appliquerDamier(mesh, decalageMotif);
                 return;
             }
 
             if (typeTexture === "rayures") {
-                this.appliquerRayures(mesh);
+                this.appliquerRayures(mesh, decalageMotif);
             }
         });
     }
@@ -65,21 +69,26 @@ export class ServiceMateriauxBabylon {
         this.corrigerMateriau(mesh.material);
     }
 
-    appliquerDamier(mesh) {
+    appliquerDamier(mesh, decalageMotif = 0) {
         const material = new BABYLON.StandardMaterial(`${mesh.name}_damier`, mesh.getScene());
         const texture = new BABYLON.DynamicTexture(
             `${mesh.name}_texture_damier`,
-            { width: 512, height: 512 },
+            {
+                width: constantesApparence.textureMotif.texture.largeur,
+                height: constantesApparence.textureMotif.texture.hauteur
+            },
             mesh.getScene(),
             false
         );
 
         const context = texture.getContext();
-        const tailleCase = 24;
+        const largeurTexture = constantesApparence.textureMotif.texture.largeur;
+        const hauteurTexture = constantesApparence.textureMotif.texture.hauteur;
+        const tailleCase = this.calculerTailleDamier(decalageMotif);
 
-        for (let y = 0; y < 512; y += tailleCase) {
-            for (let x = 0; x < 512; x += tailleCase) {
-                const pair = ((x / tailleCase) + (y / tailleCase)) % 2 === 0;
+        for (let y = 0; y < hauteurTexture; y += tailleCase) {
+            for (let x = 0; x < largeurTexture; x += tailleCase) {
+                const pair = (Math.floor(x / tailleCase) + Math.floor(y / tailleCase)) % 2 === 0;
                 context.fillStyle = pair ? "white" : "black";
                 context.fillRect(x, y, tailleCase, tailleCase);
             }
@@ -91,27 +100,48 @@ export class ServiceMateriauxBabylon {
         mesh.material = material;
     }
 
-    appliquerRayures(mesh) {
+    appliquerRayures(mesh, decalageMotif = 0) {
         const material = new BABYLON.StandardMaterial(`${mesh.name}_rayures`, mesh.getScene());
         const texture = new BABYLON.DynamicTexture(
             `${mesh.name}_texture_rayures`,
-            { width: 512, height: 512 },
+            {
+                width: constantesApparence.textureMotif.texture.largeur,
+                height: constantesApparence.textureMotif.texture.hauteur
+            },
             mesh.getScene(),
             false
         );
 
         const context = texture.getContext();
-        const largeurRayure = 12;
+        const largeurTexture = constantesApparence.textureMotif.texture.largeur;
+        const hauteurTexture = constantesApparence.textureMotif.texture.hauteur;
+        const largeurRayure = this.calculerLargeurRayure(decalageMotif);
 
-        for (let x = 0; x < 512; x += largeurRayure) {
-            const pair = Math.floor(x / largeurRayure) % 2 === 0;
+        for (let y = 0; y < hauteurTexture; y += largeurRayure) {
+            const pair = Math.floor(y / largeurRayure) % 2 === 0;
             context.fillStyle = pair ? "white" : "black";
-            context.fillRect(0, x, 512, largeurRayure);
+            context.fillRect(0, y, largeurTexture, largeurRayure);
         }
 
         texture.update();
         material.diffuseTexture = texture;
         material.backFaceCulling = false;
         mesh.material = material;
+    }
+
+    calculerTailleDamier(decalageMotif = 0) {
+        const config = constantesApparence.textureMotif.damier;
+        return Math.max(
+            config.tailleMin,
+            config.tailleBase + Number(decalageMotif) * config.pas
+        );
+    }
+
+    calculerLargeurRayure(decalageMotif = 0) {
+        const config = constantesApparence.textureMotif.rayures;
+        return Math.max(
+            config.largeurMin,
+            config.largeurBase + Number(decalageMotif) * config.pas
+        );
     }
 }

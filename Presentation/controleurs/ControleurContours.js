@@ -30,6 +30,8 @@ export class ControleurContours {
         this.postTraitContProfNorm = postTraitContProfNorm;
         this.postTraitContoursCouleur = postTraitContoursCouleur;
         this.boutonsType = new Map();
+        this.sliderEpaisseur = null;
+        this.texteEpaisseur = null;
     }
 
     brancherSilhouette(bouton) {
@@ -57,27 +59,25 @@ export class ControleurContours {
         bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(() => {
             const parametres = this.etatApplication.contours.parametres;
+            const dejaActif = this.estContourActif(parametres, typeContour);
 
-            if (typeof parametres.basculer === "function") {
-                parametres.basculer(typeContour);
+            if (dejaActif) {
+                this.desactiverContoursUC.executer(typeContour);
             } else {
-                // Compatibilité si l'ancien domaine est encore chargé.
-                if (parametres.actif && parametres.typeActif === typeContour) {
-                    this.desactiverContoursUC.executer();
-                } else {
-                    if (typeContour === TypeContour.SILHOUETTE) this.activerSilhouetteUC.executer();
-                    if (typeContour === TypeContour.RELIEF) this.activerReliefUC.executer();
-                    if (typeContour === TypeContour.COULEUR) this.activerContourCouleurUC.executer();
-                }
+                if (typeContour === TypeContour.SILHOUETTE) this.activerSilhouetteUC.executer();
+                if (typeContour === TypeContour.RELIEF) this.activerReliefUC.executer();
+                if (typeContour === TypeContour.COULEUR) this.activerContourCouleurUC.executer();
             }
 
+            this.mettreAJourSliderEpaisseurSiContoursDesactives();
             this.appliquerContours();
             this.mettreAJourBoutonsTypes();
-        });
-    }
+        });    }
 
     brancherSliderEpaisseur({ slider, texteValeur = null }) {
         if (!slider) return;
+        this.sliderEpaisseur = slider;
+        this.texteEpaisseur = texteValeur;
 
         const valeurInitiale = Math.min(
             3,
@@ -130,12 +130,13 @@ export class ControleurContours {
 
         bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(() => {
-            this.reinitialiserContoursUC.executer();
+            const parametres = this.reinitialiserContoursUC.executer();
+
+            this.mettreAJourSliderEpaisseur(parametres.epaisseur ?? 1);
             this.appliquerContours();
             this.mettreAJourBoutonsTypes();
             this.mettreAJourBoutonsCouleurs(null);
-        });
-    }
+        });    }
 
     mettreAJourBoutonsTypes() {
         const parametres = this.etatApplication.contours.parametres;
@@ -179,6 +180,27 @@ export class ControleurContours {
         if (typeof parametres.estActif === "function") return parametres.estActif(typeContour);
         if (Array.isArray(parametres.typesActifs)) return parametres.typesActifs.includes(typeContour);
         return parametres.typeActif === typeContour;
+    }
+    mettreAJourSliderEpaisseurSiContoursDesactives() {
+        const parametres = this.etatApplication.contours.parametres;
+
+        if (parametres?.actif) {
+            return;
+        }
+
+        this.mettreAJourSliderEpaisseur(parametres?.epaisseur ?? 1);
+    }
+
+    mettreAJourSliderEpaisseur(epaisseur) {
+        const valeur = Math.round(epaisseur);
+
+        if (this.sliderEpaisseur) {
+            this.sliderEpaisseur.value = valeur;
+        }
+
+        if (this.texteEpaisseur) {
+            this.texteEpaisseur.text = String(valeur);
+        }
     }
 
     appliquerContours() {

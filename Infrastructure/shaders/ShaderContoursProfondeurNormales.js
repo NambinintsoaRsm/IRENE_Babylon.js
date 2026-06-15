@@ -32,7 +32,8 @@ export function creerShaderContoursProfondeurNormalesSiNecessaire() {
         uniform sampler2D normalSampler;
 
         uniform vec2 screenSize;
-        uniform float edgeWidth;
+        uniform float depthEdgeWidth;
+        uniform float normalEdgeWidth;
 
         uniform float useDepth;
         uniform float useNormal;
@@ -94,7 +95,8 @@ export function creerShaderContoursProfondeurNormalesSiNecessaire() {
         }
 
         void main(void) {
-            vec2 texel = vec2(1.0 / screenSize.x, 1.0 / screenSize.y) * max(edgeWidth, 1.0);
+            vec2 texelDepth = vec2(1.0 / screenSize.x, 1.0 / screenSize.y) * max(depthEdgeWidth, 1.0);
+            vec2 texelNormal = vec2(1.0 / screenSize.x, 1.0 / screenSize.y) * max(normalEdgeWidth, 1.0);
 
             vec3 originalColor = texture2D(textureSampler, vUV).rgb;
 
@@ -102,11 +104,11 @@ export function creerShaderContoursProfondeurNormalesSiNecessaire() {
             float normalEdge = 0.0;
 
             if (useDepth > 0.5) {
-                depthEdge = sobelDepth(texel);
+                depthEdge = sobelDepth(texelDepth);
             }
 
             if (useNormal > 0.5) {
-                normalEdge = normalGradient(texel);
+                normalEdge = normalGradient(texelNormal);
             }
 
             vec3 finalEdgeColor = vec3(0.0);

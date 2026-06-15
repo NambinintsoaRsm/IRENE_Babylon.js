@@ -1,5 +1,6 @@
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
 import { constantesContours } from "../../Configuration/constantesContours.js";
+import { calculerEpaisseurContourPourType } from "../../Util/ContourEpaisseurUtils.js";
 import { couleurHexaVersRgb01 } from "../../Util/CouleurUtils.js";
 import { creerShaderContoursProfondeurNormalesSiNecessaire } from "../shaders/ShaderContoursProfondeurNormales.js";
 
@@ -19,7 +20,8 @@ export class PostTraitContProfNorm {
             nomShader.replace("PixelShader", ""),
             [
                 "screenSize",
-                "edgeWidth",
+                "depthEdgeWidth",
+                "normalEdgeWidth",
                 "useDepth",
                 "useNormal",
                 "depthThreshold",
@@ -43,12 +45,21 @@ export class PostTraitContProfNorm {
         const utiliseSilhouette = this.estContourActif(parametresContours, TypeContour.SILHOUETTE);
         const utiliseRelief = this.estContourActif(parametresContours, TypeContour.RELIEF);
         const normalTexture = normalRenderer.getGBuffer().textures[1];
-        const epaisseur = Math.min(3, Math.max(1, Number(parametresContours.epaisseur) || 1));
+
+        const epaisseurSilhouette = calculerEpaisseurContourPourType(
+            parametresContours.epaisseur,
+            TypeContour.SILHOUETTE
+        );
+        const epaisseurRelief = calculerEpaisseurContourPourType(
+            parametresContours.epaisseur,
+            TypeContour.RELIEF
+        );
 
         effect.setTexture("depthSampler", depthMap);
         effect.setTexture("normalSampler", normalTexture);
         effect.setFloat2("screenSize", scene.getEngine().getRenderWidth(), scene.getEngine().getRenderHeight());
-        effect.setFloat("edgeWidth", epaisseur);
+        effect.setFloat("depthEdgeWidth", epaisseurSilhouette);
+        effect.setFloat("normalEdgeWidth", epaisseurRelief);
         effect.setFloat("useDepth", utiliseSilhouette ? 1.0 : 0.0);
         effect.setFloat("useNormal", utiliseRelief ? 1.0 : 0.0);
         effect.setFloat("depthThreshold", constantesContours.seuils[TypeContour.SILHOUETTE]);
@@ -58,6 +69,8 @@ export class PostTraitContProfNorm {
         effect.setFloat3("depthColor", couleur.r, couleur.g, couleur.b);
         effect.setFloat3("normalColor", couleur.r, couleur.g, couleur.b);
     }
+
+
 
     estContourActif(parametresContours, typeContour) {
         if (!parametresContours?.actif) return false;

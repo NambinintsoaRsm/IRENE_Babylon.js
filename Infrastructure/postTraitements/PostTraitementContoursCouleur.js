@@ -1,5 +1,6 @@
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
 import { constantesContours } from "../../Configuration/constantesContours.js";
+import { calculerEpaisseurContourPourType } from "../../Util/ContourEpaisseurUtils.js";
 import { couleurHexaVersRgb01 } from "../../Util/CouleurUtils.js";
 import { creerShaderContoursCouleurSiNecessaire } from "../shaders/ShaderContoursCouleur.js";
 
@@ -25,15 +26,20 @@ export class PostTraitContoursCouleur {
 
     appliquerUniforms({ effect, scene, parametresContours }) {
         const utiliseCouleur = this.estContourActif(parametresContours, TypeContour.COULEUR);
-        const epaisseur = Math.min(3, Math.max(1, Number(parametresContours.epaisseur) || 1));
+        const epaisseurCouleur = calculerEpaisseurContourPourType(
+            parametresContours.epaisseur,
+            TypeContour.COULEUR
+        );
 
         effect.setFloat2("screenSize", scene.getEngine().getRenderWidth(), scene.getEngine().getRenderHeight());
-        effect.setFloat("edgeWidth", epaisseur);
+        effect.setFloat("edgeWidth", epaisseurCouleur);
         effect.setFloat("colorThreshold", utiliseCouleur ? constantesContours.seuils[TypeContour.COULEUR] : Number.POSITIVE_INFINITY);
 
         const couleur = couleurHexaVersRgb01(parametresContours.couleur);
         effect.setFloat3("colorEdgeColor", couleur.r, couleur.g, couleur.b);
     }
+
+
 
     estContourActif(parametresContours, typeContour) {
         if (!parametresContours?.actif) return false;

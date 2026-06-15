@@ -2,7 +2,9 @@ import { chemins } from "./Configuration/chemins.js";
 import { constantesCamera } from "./Configuration/constantesCamera.js";
 import { constantesApparence } from "./Configuration/constantesApparence.js";
 import { constantesInterface } from "./Configuration/constantesInterface.js";
+import { constantesContours } from "./Configuration/constantesContours.js";
 import { etatApplication } from "./Etat/etatApplication.js";
+
 
 import { FabriqueMoteurBabylon } from "./Infrastructure/babylon/FabriqueMoteurBabylon.js";
 import { FabriqueScene3D } from "./Infrastructure/babylon/FabriqueScene3D.js";
@@ -58,6 +60,7 @@ import { ChangerLuminositeUC } from "./UseCases/apparenceUseCases/ChangerLuminos
 import { ChangerSaturationUC } from "./UseCases/apparenceUseCases/ChangerSaturationUC.js";
 import { ChangerNetteteUC } from "./UseCases/apparenceUseCases/ChangerNetteteUC.js";
 import { ChangerTextureUC } from "./UseCases/apparenceUseCases/ChangerTextureUC.js";
+import { ChangerTailleMotifTextureUC } from "./UseCases/apparenceUseCases/ChangerTailleMotifTextureUC.js";
 import { ReinitialiserApparenceUC } from "./UseCases/apparenceUseCases/ReinitialiserApparenceUC.js";
 
 import { ActiverSilhouetteUC } from "./UseCases/contoursUseCases/ActiverSilhouetteUC.js";
@@ -178,7 +181,10 @@ const NOMS_GUI = Object.freeze({
     texture: {
         originaleBtn: "TxtuBtn0",
         damierBtn: "TxtuBtn1",
-        rayuresBtn: "TxtuBtn2"
+        rayuresBtn: "TxtuBtn2",
+        tailleMotifSlider: "TextuTailleSlider",
+        tailleMotifTxt: "TextuTailleTxt",
+        reinitialiserBtn: "TxtuReintBtn"
     },
 
     camera: {
@@ -254,6 +260,7 @@ function recupererTousLesControles(advancedTexture) {
 
         "ZoomBtn", "ZoomBtnDropTxt", "ZoomBtnTxt", "ZoomReintBtn", "ZoomReintBtnTxt",
 
+        "TextuTailleSlider", "TextuTailleTxt", "TxtuReintBtn", "TxtuReintBtnTxt",
         "AccessBtn", "AccessBtnTxt", "AccBtn", "AccBtnTxt",
         "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt"
     ].forEach((nom) => {
@@ -399,6 +406,7 @@ async function main() {
     const changerSaturationUC = new ChangerSaturationUC(etatApplication);
     const changerNetteteUC = new ChangerNetteteUC(etatApplication);
     const changerTextureUC = new ChangerTextureUC(etatApplication);
+    const changerTailleMotifTextureUC = new ChangerTailleMotifTextureUC(etatApplication);
     const reinitialiserApparenceUC = new ReinitialiserApparenceUC(etatApplication);
 
     const activerSilhouetteUC = new ActiverSilhouetteUC(etatApplication);
@@ -406,7 +414,7 @@ async function main() {
     const activerContourCouleurUC = new ActiverContourCouleurUC(etatApplication);
     const changerEpaisseurContourUC = new ChangerEpaisseurContourUC(etatApplication);
     const changerCouleurContourUC = new ChangerCouleurContourUC(etatApplication);
-    const desactiverContoursUC = new DesactiverContoursUC(etatApplication);
+    const desactiverContoursUC = new DesactiverContoursUC(etatApplication, constantesContours.epaisseurDefaut);
     const reinitialiserContoursUC = new ReinitialiserContoursUC(etatApplication);
 
     const changerVitesseCameraUC = new ChangerVitesseCameraUC(etatApplication);
@@ -475,6 +483,7 @@ async function main() {
         changerSaturationUC,
         changerNetteteUC,
         changerTextureUC,
+        changerTailleMotifTextureUC,
         reinitialiserApparenceUC,
         postTraitApparence,
         postTraitNettete,
@@ -703,6 +712,17 @@ function brancherApparence(controleur) {
         if (boutonOriginal) controleur.brancherTexture({ bouton: boutonOriginal, typeTexture: "originale" });
         if (boutonDamier) controleur.brancherTexture({ bouton: boutonDamier, typeTexture: "damier" });
         if (boutonRayures) controleur.brancherTexture({ bouton: boutonRayures, typeTexture: "rayures" });
+
+        controleur.brancherTailleMotifTexture({
+            slider: obtenir(c, texture.tailleMotifSlider),
+            texteValeur: null
+        });
+
+        controleur.brancherReinitialisationTexture({
+            bouton: obtenir(c, texture.reinitialiserBtn),
+            slider: obtenir(c, texture.tailleMotifSlider),
+            texteValeur:null
+        });
     }
 
     const reset = obtenir(c, n.reinitialiserBtn);

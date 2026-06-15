@@ -5,13 +5,13 @@ export const constantesCamera = Object.freeze({
 
     cibleInitiale: Object.freeze({ x: 0, y: 0, z: 0 }),
 
-    wheelPrecision: 50,
+    wheelPrecision: 150,
     sensibiliteRotation: 3500,
 
     facteurCadrage: 3.0,
 
-    multiplicateurDistanceMin: 1.4,
-    distanceMinAbsolue: 0.5,
+    multiplicateurDistanceMin: 1.0,
+    distanceMinAbsolue: 0.2,
 
     multiplicateurDistanceMax: 15,
     distanceMaxAbsolue: 10,

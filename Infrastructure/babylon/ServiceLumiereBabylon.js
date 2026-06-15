@@ -13,7 +13,7 @@ export class ServiceLumiereBabylon {
         this.intensiteActuelle = 1.2;
         this.temperatureActuelle = 50;
         this.couleurActuelle = new BABYLON.Color3(1, 1, 1);
-        this.facteurVitesseRotation = 1;
+        this.facteurVitesseRotation = 0.35;
     }
 
     initialiser(scene) {
@@ -173,11 +173,7 @@ export class ServiceLumiereBabylon {
         this.appliquerType(scene, "principale");
     }
 
-    libelleTemperature(valeur) {
-        if (valeur < 40) return "Chaud";
-        if (valeur > 60) return "Froid";
-        return "Neutre";
-    }
+
 
     libelleType(type) {
         if (type === "haut") return "Haut";
