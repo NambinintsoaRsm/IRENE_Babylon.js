@@ -1,6 +1,5 @@
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
 import { constantesContours } from "../../Configuration/constantesContours.js";
-import { calculerEpaisseurContourPourType } from "../../Util/ContourEpaisseurUtils.js";
 import { couleurHexaVersRgb01 } from "../../Util/CouleurUtils.js";
 import { creerShaderContoursProfondeurNormalesSiNecessaire } from "../shaders/ShaderContoursProfondeurNormales.js";
 
@@ -45,15 +44,9 @@ export class PostTraitContProfNorm {
         const utiliseSilhouette = this.estContourActif(parametresContours, TypeContour.SILHOUETTE);
         const utiliseRelief = this.estContourActif(parametresContours, TypeContour.RELIEF);
         const normalTexture = normalRenderer.getGBuffer().textures[1];
-
-        const epaisseurSilhouette = calculerEpaisseurContourPourType(
-            parametresContours.epaisseur,
-            TypeContour.SILHOUETTE
-        );
-        const epaisseurRelief = calculerEpaisseurContourPourType(
-            parametresContours.epaisseur,
-            TypeContour.RELIEF
-        );
+        const epaisseurSlider = this.normaliserEpaisseurSlider(parametresContours?.epaisseur);
+        const epaisseurSilhouette = this.calculerEpaisseurPourType(TypeContour.SILHOUETTE, epaisseurSlider);
+        const epaisseurRelief = this.calculerEpaisseurPourType(TypeContour.RELIEF, epaisseurSlider);
 
         effect.setTexture("depthSampler", depthMap);
         effect.setTexture("normalSampler", normalTexture);
@@ -70,7 +63,38 @@ export class PostTraitContProfNorm {
         effect.setFloat3("normalColor", couleur.r, couleur.g, couleur.b);
     }
 
+    normaliserEpaisseurSlider(epaisseur) {
+        const config = constantesContours.epaisseurSlider;
+        const valeur = Number(epaisseur);
 
+        if (!Number.isFinite(valeur)) {
+            return config.defaut;
+        }
+
+        return Math.min(config.max, Math.max(config.min, valeur));
+    }
+
+    calculerEpaisseurPourType(typeContour, epaisseurSlider) {
+        const slider = constantesContours.epaisseurSlider;
+        const config = constantesContours.epaisseursParType?.[typeContour];
+
+        if (!config) {
+            return epaisseurSlider;
+        }
+
+        if (typeContour === TypeContour.SILHOUETTE) {
+            const epaisseurRenforcee = epaisseurSlider <= slider.min
+                ? epaisseurSlider + Number(config.renfortBase ?? 0)
+                : epaisseurSlider;
+
+            return Math.min(config.max, Math.max(config.min, epaisseurRenforcee));
+        }
+
+        const progression = (epaisseurSlider - slider.min) / (slider.max - slider.min);
+        const epaisseur = config.min + progression * (config.max - config.min);
+
+        return Math.min(config.max, Math.max(config.min, epaisseur));
+    }
 
     estContourActif(parametresContours, typeContour) {
         if (!parametresContours?.actif) return false;

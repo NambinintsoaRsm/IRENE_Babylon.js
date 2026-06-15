@@ -1,6 +1,5 @@
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
 import { constantesContours } from "../../Configuration/constantesContours.js";
-import { calculerEpaisseurContourPourType } from "../../Util/ContourEpaisseurUtils.js";
 import { couleurHexaVersRgb01 } from "../../Util/CouleurUtils.js";
 import { creerShaderContoursCouleurSiNecessaire } from "../shaders/ShaderContoursCouleur.js";
 
@@ -26,10 +25,8 @@ export class PostTraitContoursCouleur {
 
     appliquerUniforms({ effect, scene, parametresContours }) {
         const utiliseCouleur = this.estContourActif(parametresContours, TypeContour.COULEUR);
-        const epaisseurCouleur = calculerEpaisseurContourPourType(
-            parametresContours.epaisseur,
-            TypeContour.COULEUR
-        );
+        const epaisseurSlider = this.normaliserEpaisseurSlider(parametresContours?.epaisseur);
+        const epaisseurCouleur = this.calculerEpaisseurPourType(TypeContour.COULEUR, epaisseurSlider);
 
         effect.setFloat2("screenSize", scene.getEngine().getRenderWidth(), scene.getEngine().getRenderHeight());
         effect.setFloat("edgeWidth", epaisseurCouleur);
@@ -39,7 +36,30 @@ export class PostTraitContoursCouleur {
         effect.setFloat3("colorEdgeColor", couleur.r, couleur.g, couleur.b);
     }
 
+    normaliserEpaisseurSlider(epaisseur) {
+        const config = constantesContours.epaisseurSlider;
+        const valeur = Number(epaisseur);
 
+        if (!Number.isFinite(valeur)) {
+            return config.defaut;
+        }
+
+        return Math.min(config.max, Math.max(config.min, valeur));
+    }
+
+    calculerEpaisseurPourType(typeContour, epaisseurSlider) {
+        const slider = constantesContours.epaisseurSlider;
+        const config = constantesContours.epaisseursParType?.[typeContour];
+
+        if (!config) {
+            return epaisseurSlider;
+        }
+
+        const progression = (epaisseurSlider - slider.min) / (slider.max - slider.min);
+        const epaisseur = config.min + progression * (config.max - config.min);
+
+        return Math.min(config.max, Math.max(config.min, epaisseur));
+    }
 
     estContourActif(parametresContours, typeContour) {
         if (!parametresContours?.actif) return false;

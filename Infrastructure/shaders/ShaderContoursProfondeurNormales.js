@@ -5,13 +5,10 @@
  * - les contours de silhouette, basés sur les différences de profondeur ;
  * - les contours de relief, basés sur les différences de normales.
  *
- * Il sert à mieux faire ressortir la forme générale de l’objet
- * et certains détails géométriques importants.
- *
- * Les seuils, couleurs et activations ne sont pas définis ici.
- * Ils seront envoyés par le post-traitement des contours.
+ * Correction progressive de l'épaisseur :
+ * l'épaisseur ne change plus seulement la distance d'échantillonnage Sobel.
+ * Le shader dilate réellement le contour sur plusieurs rayons autour du pixel.
  */
-
 
 export const NOM_SHADER_CONTOURS_PROFONDEUR_NORMALES = "depthNormalContourPixelShader";
 
@@ -45,11 +42,11 @@ export function creerShaderContoursProfondeurNormalesSiNecessaire() {
         uniform vec3 normalColor;
 
         float getDepth(vec2 uv) {
-            return texture2D(depthSampler, uv).r;
+            return texture2D(depthSampler, clamp(uv, 0.0, 1.0)).r;
         }
 
         vec3 getNormal(vec2 uv) {
-            vec3 n = texture2D(normalSampler, uv).rgb;
+            vec3 n = texture2D(normalSampler, clamp(uv, 0.0, 1.0)).rgb;
             n = n * 2.0 - 1.0;
             return normalize(n);
         }
@@ -94,39 +91,70 @@ export function creerShaderContoursProfondeurNormalesSiNecessaire() {
             return max(max(e1, e2), max(e3, e4));
         }
 
-        void main(void) {
-            vec2 texelDepth = vec2(1.0 / screenSize.x, 1.0 / screenSize.y) * max(depthEdgeWidth, 1.0);
-            vec2 texelNormal = vec2(1.0 / screenSize.x, 1.0 / screenSize.y) * max(normalEdgeWidth, 1.0);
+        float poidsRayon(float rayon, float largeur) {
+            if (rayon <= 1.0) {
+                return 1.0;
+            }
 
+            return smoothstep(rayon - 1.0, rayon, largeur);
+        }
+
+        float contourDepthProgressif(vec2 texelBase, float largeur) {
+            float largeurBornee = clamp(largeur, 1.0, 3.0);
+            float masque = 0.0;
+
+            float e1 = sobelDepth(texelBase * 1.0);
+            float e2 = sobelDepth(texelBase * 2.0);
+            float e3 = sobelDepth(texelBase * 3.0);
+
+            masque = max(masque, step(depthThreshold, e1));
+            masque = max(masque, step(depthThreshold, e2) * poidsRayon(2.0, largeurBornee));
+            masque = max(masque, step(depthThreshold, e3) * poidsRayon(3.0, largeurBornee));
+
+            return clamp(masque, 0.0, 1.0);
+        }
+
+        float contourNormalProgressif(vec2 texelBase, float largeur) {
+            float largeurBornee = clamp(largeur, 1.0, 3.0);
+            float masque = 0.0;
+
+            float e1 = normalGradient(texelBase * 1.0);
+            float e2 = normalGradient(texelBase * 2.0);
+            float e3 = normalGradient(texelBase * 3.0);
+
+            masque = max(masque, step(normalThreshold, e1));
+            masque = max(masque, step(normalThreshold, e2) * poidsRayon(2.0, largeurBornee));
+            masque = max(masque, step(normalThreshold, e3) * poidsRayon(3.0, largeurBornee));
+
+            return clamp(masque, 0.0, 1.0);
+        }
+
+        void main(void) {
+            vec2 texelBase = vec2(1.0 / screenSize.x, 1.0 / screenSize.y);
             vec3 originalColor = texture2D(textureSampler, vUV).rgb;
 
-            float depthEdge = 0.0;
-            float normalEdge = 0.0;
+            float depthMask = 0.0;
+            float normalMask = 0.0;
 
             if (useDepth > 0.5) {
-                depthEdge = sobelDepth(texelDepth);
+                depthMask = contourDepthProgressif(texelBase, depthEdgeWidth);
             }
 
             if (useNormal > 0.5) {
-                normalEdge = normalGradient(texelNormal);
+                normalMask = contourNormalProgressif(texelBase, normalEdgeWidth);
             }
 
-            vec3 finalEdgeColor = vec3(0.0);
-            float activeEdges = 0.0;
+            float poidsTotal = depthMask + normalMask;
 
-            if (useDepth > 0.5 && depthEdge > depthThreshold) {
-                finalEdgeColor += depthColor;
-                activeEdges += 1.0;
-            }
+            if (poidsTotal > 0.001) {
+                vec3 couleurContour = vec3(0.0);
 
-            if (useNormal > 0.5 && normalEdge > normalThreshold) {
-                finalEdgeColor += normalColor;
-                activeEdges += 1.0;
-            }
+                couleurContour += depthColor * depthMask;
+                couleurContour += normalColor * normalMask;
+                couleurContour = couleurContour / poidsTotal;
 
-            if (activeEdges > 0.0) {
-                finalEdgeColor = finalEdgeColor / activeEdges;
-                gl_FragColor = vec4(finalEdgeColor, 1.0);
+                float intensite = clamp(poidsTotal, 0.0, 1.0);
+                gl_FragColor = vec4(mix(originalColor, couleurContour, intensite), 1.0);
             } else {
                 gl_FragColor = vec4(originalColor, 1.0);
             }

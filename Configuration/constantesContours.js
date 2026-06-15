@@ -4,8 +4,6 @@ export const constantesContours = Object.freeze({
     epaisseurDefaut: 1,
     couleurDefaut: "#000000",
 
-    // Valeurs du slider visibles dans l'interface.
-    // Le slider reste global : il peut aller de 1 à 3 pour permettre à la silhouette d'aller jusqu'à 3.
     epaisseurSlider: Object.freeze({
         min: 1,
         max: 3,
@@ -13,24 +11,30 @@ export const constantesContours = Object.freeze({
         step: 1
     }),
 
-    // Limites réellement appliquées au rendu selon le type de contour.
-    // La silhouette peut utiliser toute la plage du slider.
-    // Relief et Couleur sont limités à 2, même si le slider est à 3.
-    epaisseurParType: Object.freeze({
+    /**
+     * Réglages visuels par type de contour.
+     *
+     * Le slider utilisateur reste commun et va de 1 à 3.
+     * Ensuite, chaque type convertit cette valeur en épaisseur réellement appliquée :
+     * - Silhouette : 1 à 3, avec un léger renfort quand le slider vaut 1.
+     * - Relief : 1 à 2, mais progressif sur les positions 1 / 2 / 3 du slider.
+     * - Couleur : 1 à 2, mais progressif sur les positions 1 / 2 / 3 du slider.
+     */
+    epaisseursParType: Object.freeze({
         [TypeContour.SILHOUETTE]: Object.freeze({
-            min: 1.2,
+            min: 1,
             max: 3,
-            renfortBase: 0.2
+            renfortBase: 0.35
         }),
+
         [TypeContour.RELIEF]: Object.freeze({
             min: 1,
-            max: 2,
-            renfortBase: 0
+            max: 2
         }),
+
         [TypeContour.COULEUR]: Object.freeze({
             min: 1,
-            max: 2,
-            renfortBase: 0
+            max: 2
         })
     }),
 
