@@ -18,6 +18,7 @@ import { ServiceOrientationModeleBabylon } from "./Infrastructure/babylon/Servic
 import { ServiceMateriauxBabylon } from "./Infrastructure/babylon/ServiceMateriauxBabylon.js";
 import { ServiceLumiereBabylon } from "./Infrastructure/babylon/ServiceLumiereBabylon.js";
 import { ServiceEntropieVueBabylon } from "./Infrastructure/babylon/ServiceEntropieVueBabylon.js";
+import { ServiceCouleurContourAdaptativeBabylon } from "./Infrastructure/babylon/ServiceCouleurContourAdaptativeBabylon.js";
 import { BoucleRenduBabylon } from "./Infrastructure/babylon/BoucleRenduBabylon.js";
 
 import { ChargeurInterfaceGUI } from "./Infrastructure/gui/ChargeurInterfaceGUI.js";
@@ -39,6 +40,8 @@ import { PostTraitApparence } from "./Infrastructure/postTraitements/PostTraitAp
 import { PostTraitNettete } from "./Infrastructure/postTraitements/PostTraitNettete.js";
 import { PostTraitContProfNorm } from "./Infrastructure/postTraitements/PostTraitContProfNorm.js";
 import { PostTraitContoursCouleur } from "./Infrastructure/postTraitements/PostTraitementContoursCouleur.js";
+import { PostTraitMiseLumiereNormales } from "./Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js";
+import { PostTraitMiseLumiereCouleurs } from "./Infrastructure/postTraitements/PostTraitMiseLumiereCouleurs.js";
 
 import { StockageProfilLocal } from "./Infrastructure/stockage/StockageProfilLocal.js";
 
@@ -70,6 +73,9 @@ import { ChangerEpaisseurContourUC } from "./UseCases/contoursUseCases/ChangerEp
 import { ChangerCouleurContourUC } from "./UseCases/contoursUseCases/ChangerCouleurContourUC.js";
 import { DesactiverContoursUC } from "./UseCases/contoursUseCases/DesactiverContoursUC.js";
 import { ReinitialiserContoursUC } from "./UseCases/contoursUseCases/ReinitialiserContoursUC.js";
+import { ChoisirCouleurContourAdaptativeUC } from "./UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js";
+import { BasculerMiseLumiereNormalesUC } from "./UseCases/contoursUseCases/BasculerMiseLumiereNormalesUC.js";
+import { BasculerMiseLumiereCouleursUC } from "./UseCases/contoursUseCases/BasculerMiseLumiereCouleursUC.js";
 
 import { ChangerVitesseCameraUC } from "./UseCases/cameraUseCases/ChangerVitesseCameraUC.js";
 import { ReinitialiserCameraUC } from "./UseCases/cameraUseCases/ReinitialiserCameraUC.js";
@@ -173,6 +179,29 @@ const NOMS_GUI = Object.freeze({
         silhouetteBtn: "ContDBtn",
         reliefBtn: "ContNBtn",
         couleurBtn: "ContCBtn",
+        couleurOptimaleBtns: [
+            "ContAutoBtn",
+            "ContCouleurAutoBtn",
+            "CoulAutoBtn",
+            "CouleurAutoBtn",
+            "ContOptBtn",
+            "CouleurOptimaleBtn",
+            "ContCouleurOptBtn"
+        ],
+        miseLumiereNormalesBtns: [
+            "ContLumNormBtn",
+            "ContNormLumBtn",
+            "ContTestNormBtn",
+            "ReliefLumBtn",
+            "ReliefTestBtn"
+        ],
+        miseLumiereCouleursBtns: [
+            "ContLumCoulBtn",
+            "ContCoulLumBtn",
+            "ContTestCoulBtn",
+            "CouleurLumBtn",
+            "CouleurTestBtn"
+        ],
         epaisseurSlider: "ContEpaiSlider",
         epaisseurValeurTxt: "ContEpaiValTxt",
         couleurs: ["ContBtn1", "ContBtn2", "ContBtn3", "ContBtn4", "ContBtn5", "ContBtn6", "ContBtn7", "ContBtn8"]
@@ -216,6 +245,22 @@ const NOMS_GUI = Object.freeze({
 
 function obtenir(controles, nom) {
     return nom ? controles[nom] ?? null : null;
+}
+
+function obtenirPremier(controles, noms) {
+    if (!Array.isArray(noms)) {
+        return obtenir(controles, noms);
+    }
+
+    for (const nom of noms) {
+        const controle = obtenir(controles, nom);
+
+        if (controle) {
+            return controle;
+        }
+    }
+
+    return null;
 }
 
 function collecterNomsGUI(objet, resultat = []) {
@@ -340,6 +385,7 @@ async function main() {
     const serviceMateriauxBabylon = new ServiceMateriauxBabylon();
     const serviceLumiereBabylon = new ServiceLumiereBabylon();
     const serviceEntropieVueBabylon = new ServiceEntropieVueBabylon();
+    const serviceCouleurContourAdaptativeBabylon = new ServiceCouleurContourAdaptativeBabylon();
     const boucleRenduBabylon = new BoucleRenduBabylon();
     const serviceControlesSpeciauxGUI = new ServiceControlesSpeciauxGUI();
 
@@ -386,6 +432,8 @@ async function main() {
     const postTraitNettete = new PostTraitNettete();
     const postTraitContProfNorm = new PostTraitContProfNorm();
     const postTraitContoursCouleur = new PostTraitContoursCouleur();
+    const postTraitMiseLumiereNormales = new PostTraitMiseLumiereNormales();
+    const postTraitMiseLumiereCouleurs = new PostTraitMiseLumiereCouleurs();
     const stockageProfilLocal = new StockageProfilLocal();
 
     const basculerMenuUC = new BasculerMenuUC(etatApplication);
@@ -416,6 +464,12 @@ async function main() {
     const changerCouleurContourUC = new ChangerCouleurContourUC(etatApplication);
     const desactiverContoursUC = new DesactiverContoursUC(etatApplication, constantesContours.epaisseurDefaut);
     const reinitialiserContoursUC = new ReinitialiserContoursUC(etatApplication);
+    const choisirCouleurContourAdaptativeUC = new ChoisirCouleurContourAdaptativeUC(
+        etatApplication,
+        serviceCouleurContourAdaptativeBabylon
+    );
+    const basculerMiseLumiereNormalesUC = new BasculerMiseLumiereNormalesUC(etatApplication);
+    const basculerMiseLumiereCouleursUC = new BasculerMiseLumiereCouleursUC(etatApplication);
 
     const changerVitesseCameraUC = new ChangerVitesseCameraUC(etatApplication);
     const reinitialiserCameraUC = new ReinitialiserCameraUC(etatApplication);
@@ -455,7 +509,8 @@ async function main() {
         serviceBlocagePointeurGUI,
         bloquerCameraUC,
         debloquerCameraUC,
-        serviceCameraBabylon
+        serviceCameraBabylon,
+        serviceControlesSpeciauxGUI
     });
 
     const controleurInterface = new ControleurInterface({
@@ -498,10 +553,15 @@ async function main() {
         activerContourCouleurUC,
         changerEpaisseurContourUC,
         changerCouleurContourUC,
+        choisirCouleurContourAdaptativeUC,
+        basculerMiseLumiereNormalesUC,
+        basculerMiseLumiereCouleursUC,
         desactiverContoursUC,
         reinitialiserContoursUC,
         postTraitContProfNorm,
-        postTraitContoursCouleur
+        postTraitContoursCouleur,
+        postTraitMiseLumiereNormales,
+        postTraitMiseLumiereCouleurs
     });
 
     const controleurCamera = new ControleurCamera({
@@ -543,7 +603,9 @@ async function main() {
         postTraitApparence,
         postTraitNettete,
         postTraitContProfNorm,
-        postTraitContoursCouleur
+        postTraitContoursCouleur,
+        postTraitMiseLumiereNormales,
+        postTraitMiseLumiereCouleurs
     });
 
     const controleurLumiere = new ControleurLumiere({
@@ -569,6 +631,7 @@ async function main() {
     controleurProfil.chargerProfilAuDemarrage();
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
+    serviceControlesSpeciauxGUI.installerSuiviSliderTemperature(etatApplication);
     rafraichirTexteEntropie();
 
     // On ne crée pas les post-traitements au démarrage :
@@ -749,10 +812,16 @@ function brancherContours(controleur) {
     if (obtenir(c, n.reliefBtn)) controleur.brancherRelief(obtenir(c, n.reliefBtn));
     if (obtenir(c, n.couleurBtn)) controleur.brancherContourCouleur(obtenir(c, n.couleurBtn));
 
+    const boutonCouleurOptimale = obtenirPremier(c, n.couleurOptimaleBtns);
+    if (boutonCouleurOptimale) controleur.brancherCouleurAdaptative(boutonCouleurOptimale);
+
     controleur.brancherSliderEpaisseur({
         slider: obtenir(c, n.epaisseurSlider),
         texteValeur: obtenir(c, n.epaisseurValeurTxt)
     });
+
+    controleur.brancherMiseLumiereNormales(obtenirPremier(c, n.miseLumiereNormalesBtns));
+    controleur.brancherMiseLumiereCouleurs(obtenirPremier(c, n.miseLumiereCouleursBtns));
 
     n.couleurs.forEach((nom) => {
         const bouton = obtenir(c, nom);

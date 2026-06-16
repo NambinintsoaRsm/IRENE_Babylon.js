@@ -100,7 +100,12 @@ export const etatApplication = {
         parametres: profilParDefaut.contours,
 
         postTraitContProfNorm: null,
-        postTraitementContoursCouleur: null
+        postTraitementContoursCouleur: null,
+
+        miseLumiereNormalesActif: false,
+        miseLumiereCouleursActif: false,
+        postTraitMiseLumiereNormales: null,
+        postTraitMiseLumiereCouleurs: null
     },
 
     camera: {

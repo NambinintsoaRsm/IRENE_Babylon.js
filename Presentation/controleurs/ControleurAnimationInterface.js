@@ -13,7 +13,8 @@ export class ControleurAnimationInterface {
         serviceBlocagePointeurGUI = null,
         bloquerCameraUC = null,
         debloquerCameraUC = null,
-        serviceCameraBabylon = null
+        serviceCameraBabylon = null,
+        serviceControlesSpeciauxGUI = null
     }) {
         this.etatApplication = etatApplication;
         this.basculerMenuUC = basculerMenuUC;
@@ -25,6 +26,7 @@ export class ControleurAnimationInterface {
         this.bloquerCameraUC = bloquerCameraUC;
         this.debloquerCameraUC = debloquerCameraUC;
         this.serviceCameraBabylon = serviceCameraBabylon;
+        this.serviceControlesSpeciauxGUI = serviceControlesSpeciauxGUI;
 
         this.dropdownsPrincipaux = [];
         this.panneauxSecondaires = [];
@@ -66,6 +68,10 @@ export class ControleurAnimationInterface {
                 flecheRect,
                 flecheText
             });
+
+            this.serviceControlesSpeciauxGUI?.signalerChangementDisposition(
+                this.etatApplication
+            );
         });
     }
 
@@ -89,6 +95,10 @@ export class ControleurAnimationInterface {
                         panneau,
                         this.panneauxSecondaires.filter((p) => p !== panneau)
                     );
+
+                    this.serviceControlesSpeciauxGUI?.signalerChangementDisposition(
+                        this.etatApplication
+                    );
                 });
             }
 
@@ -96,6 +106,10 @@ export class ControleurAnimationInterface {
                 retour.onPointerClickObservable.clear();
                 retour.onPointerClickObservable.add(() => {
                     this.serviceAnimationGUI.fermerPanneauSecondaire(panneau);
+
+                    this.serviceControlesSpeciauxGUI?.signalerChangementDisposition(
+                        this.etatApplication
+                    );
                 });
             }
         });

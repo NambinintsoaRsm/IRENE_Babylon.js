@@ -88,18 +88,20 @@ export class ControleurLumiere {
         const appliquer = () => {
             const mesure = slider._currentMeasure;
 
-            if (!mesure || mesure.width === 0) {
-                slider.background = "#D8D8D8FF";
-                slider.thumbColor = "#f2f2f2";
-                return;
+            // Si le panneau Lumières est fermé ou vient d'être déplacé, la mesure
+            // peut être encore vide. On n'écrase pas le fond par un gris : le
+            // service dédié le recalculera dès que la position réelle sera connue.
+            if (!mesure || mesure.width <= 0 || mesure.height <= 0) {
+                return false;
             }
 
             try {
+                const yMilieu = mesure.top + (mesure.height / 2);
                 const gradient = new BABYLON.GUI.LinearGradient(
                     mesure.left,
-                    mesure.top,
+                    yMilieu,
                     mesure.left + mesure.width,
-                    mesure.top
+                    yMilieu
                 );
 
                 gradient.addColorStop(0, "#ff7a2f");
@@ -107,11 +109,22 @@ export class ControleurLumiere {
                 gradient.addColorStop(1, "#9fd3ff");
 
                 slider.backgroundGradient = gradient;
+                slider.background = "#00000000";
                 slider.thumbColor = "#f2f2f2";
                 slider.displayValueBar = false;
                 slider.color = "#00000000";
+                slider.metadata = slider.metadata || {};
+                slider.metadata.signatureGradientTemperature = [
+                    Math.round(mesure.left),
+                    Math.round(mesure.top),
+                    Math.round(mesure.width),
+                    Math.round(mesure.height)
+                ].join("|");
+                slider._markAsDirty?.();
+
+                return true;
             } catch (erreur) {
-                slider.background = "#D8D8D8FF";
+                return false;
             }
         };
 
@@ -120,6 +133,16 @@ export class ControleurLumiere {
         } else {
             appliquer();
         }
+
+        let framesRestantes = 6;
+        const reessayer = () => {
+            if (framesRestantes <= 0) return;
+            framesRestantes -= 1;
+            appliquer();
+            requestAnimationFrame(reessayer);
+        };
+
+        requestAnimationFrame(reessayer);
     }
 
     brancherTypeLumiereSwitch({ boutonDropdown, texteSelection, iconeDropdown, liste, options = [] }) {
