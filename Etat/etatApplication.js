@@ -7,6 +7,7 @@ import { EtatModele3D } from "../Domain/modele3d/EtatModele3D.js";
 import { constantesAnimation } from "../Configuration/constantesAnimation.js";
 import { catalogueModeles3D } from "../Configuration/catalogueModeles3D.js";
 import { profilParDefaut } from "../Configuration/profilParDefaut.js";
+import { constantesContours } from "../Configuration/constantesContours.js";
 
 function creerSectionsAnimation() {
     return {
@@ -98,6 +99,12 @@ export const etatApplication = {
 
     contours: {
         parametres: profilParDefaut.contours,
+        parametresMiseLumiere: {
+            intervalleClignotement: constantesContours.miseLumiereGradients.animation.intervalleSecondes.defaut,
+            luminanceSliderValeur: constantesContours.miseLumiereGradients.animation.luminancePourcentage.defaut,
+            luminanceDelta: constantesContours.miseLumiereGradients.animation.luminancePourcentage.deltaDefaut,
+            largeur: constantesContours.miseLumiereGradients.animation.largeur.defaut
+        },
 
         postTraitContProfNorm: null,
         postTraitementContoursCouleur: null,

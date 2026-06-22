@@ -1,4 +1,5 @@
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
+import { constantesContours } from "../../Configuration/constantesContours.js";
 
 /**
  * Contrôleur des contours.
@@ -212,6 +213,133 @@ export class ControleurContours {
                 bouton.isEnabled = true;
             }
         });
+    }
+
+    brancherParametresMiseLumiere({
+        sliderFrequence = null,
+        sliderLuminance = null,
+        sliderLargeur = null
+    } = {}) {
+        const parametres = this.garantirParametresMiseLumiere();
+        const configuration = constantesContours.miseLumiereGradients.animation;
+
+        this.brancherSliderNumerique({
+            slider: sliderFrequence,
+            min: configuration.intervalleSecondes.min,
+            max: configuration.intervalleSecondes.max,
+            step: configuration.intervalleSecondes.step,
+            valeurInitiale: parametres.intervalleClignotement,
+            normaliser: (valeur) => this.bornerNombre(
+                valeur,
+                configuration.intervalleSecondes.min,
+                configuration.intervalleSecondes.max,
+                configuration.intervalleSecondes.defaut
+            ),
+            appliquer: (valeur) => {
+                parametres.intervalleClignotement = valeur;
+            }
+        });
+
+        this.brancherSliderNumerique({
+            slider: sliderLuminance,
+            min: configuration.luminancePourcentage.min,
+            max: configuration.luminancePourcentage.max,
+            step: configuration.luminancePourcentage.step,
+            valeurInitiale: parametres.luminanceSliderValeur ?? configuration.luminancePourcentage.defaut,
+            normaliser: (valeur) => Math.round(this.bornerNombre(
+                valeur,
+                configuration.luminancePourcentage.min,
+                configuration.luminancePourcentage.max,
+                configuration.luminancePourcentage.defaut
+            )),
+            appliquer: (valeur) => {
+                parametres.luminanceSliderValeur = valeur;
+                parametres.luminanceDelta = this.convertirSliderLuminanceEnDelta(
+                    valeur,
+                    configuration.luminancePourcentage
+                );
+            }
+        });
+
+        this.brancherSliderNumerique({
+            slider: sliderLargeur,
+            min: configuration.largeur.min,
+            max: configuration.largeur.max,
+            step: configuration.largeur.step,
+            valeurInitiale: parametres.largeur,
+            normaliser: (valeur) => Math.round(this.bornerNombre(
+                valeur,
+                configuration.largeur.min,
+                configuration.largeur.max,
+                configuration.largeur.defaut
+            )),
+            appliquer: (valeur) => {
+                parametres.largeur = valeur;
+            }
+        });
+    }
+
+    brancherSliderNumerique({ slider, min, max, step, valeurInitiale, normaliser, appliquer }) {
+        if (!slider) return;
+
+        slider.minimum = min;
+        slider.maximum = max;
+        slider.step = step;
+        slider.value = normaliser(valeurInitiale);
+
+        slider.onValueChangedObservable.clear();
+        slider.onValueChangedObservable.add((valeur) => {
+            appliquer(normaliser(Number(valeur)));
+        });
+    }
+
+    garantirParametresMiseLumiere() {
+        const animation = constantesContours.miseLumiereGradients.animation;
+
+        this.etatApplication.contours.parametresMiseLumiere = this.etatApplication.contours.parametresMiseLumiere || {
+            intervalleClignotement: animation.intervalleSecondes.defaut,
+            luminanceSliderValeur: animation.luminancePourcentage.defaut,
+            luminanceDelta: animation.luminancePourcentage.deltaDefaut,
+            largeur: animation.largeur.defaut
+        };
+
+        if (!Number.isFinite(Number(this.etatApplication.contours.parametresMiseLumiere.luminanceDelta))) {
+            this.etatApplication.contours.parametresMiseLumiere.luminanceDelta = animation.luminancePourcentage.deltaDefaut;
+        }
+
+        if (!Number.isFinite(Number(this.etatApplication.contours.parametresMiseLumiere.luminanceSliderValeur))) {
+            this.etatApplication.contours.parametresMiseLumiere.luminanceSliderValeur = animation.luminancePourcentage.defaut;
+        }
+
+        return this.etatApplication.contours.parametresMiseLumiere;
+    }
+
+    convertirSliderLuminanceEnDelta(valeurSlider, configurationLuminance) {
+        const minSlider = Number(configurationLuminance?.min ?? 0);
+        const maxSlider = Number(configurationLuminance?.max ?? 100);
+        const minDelta = Number(configurationLuminance?.deltaMin ?? 0.04);
+        const maxDelta = Number(configurationLuminance?.deltaMax ?? 0.16);
+        const defautDelta = Number(configurationLuminance?.deltaDefaut ?? 0.10);
+
+        const valeur = this.bornerNombre(
+            valeurSlider,
+            minSlider,
+            maxSlider,
+            Number(configurationLuminance?.defaut ?? 50)
+        );
+
+        if (maxSlider <= minSlider || !Number.isFinite(minDelta) || !Number.isFinite(maxDelta)) {
+            return defautDelta;
+        }
+
+        const ratio = (valeur - minSlider) / (maxSlider - minSlider);
+        return minDelta + ratio * (maxDelta - minDelta);
+    }
+
+    bornerNombre(valeur, min, max, defaut) {
+        const nombre = Number(valeur);
+        if (!Number.isFinite(nombre)) return defaut;
+        return Math.min(max, Math.max(min, nombre));
     }
 
     brancherReinitialisation(bouton) {

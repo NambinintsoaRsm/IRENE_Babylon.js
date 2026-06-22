@@ -10,7 +10,7 @@ export class ParametresCamera {
                     sensibiliteRotation = 2000,
 
                     distanceMin = 0.0001,
-                    distanceMax = 25,
+                    distanceMax = 10,
 
                     estBloquee = false
                 } = {}) {

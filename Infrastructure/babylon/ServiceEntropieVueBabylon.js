@@ -431,7 +431,6 @@ export class ServiceEntropieVueBabylon {
         const entropieBrute = this.calculerEntropieHistogramme(histogramme, valeursGris.length);
         const entropieMaximale = Math.log2(nombreClasses);
         const entropieNormalisee = this.limiterEntre0Et1(entropieBrute / entropieMaximale);
-        const contrasteNormalise = this.calculerContrasteNormalise(valeursGris);
 
         // Pour ce test, le score est volontairement l'entropie normalisée seule.
         // Le contraste est exporté à titre de diagnostic, mais il ne pondère pas le score.
@@ -441,7 +440,6 @@ export class ServiceEntropieVueBabylon {
             scoreGlobal,
             entropieBrute,
             entropieNormalisee,
-            contrasteNormalise,
             pixelsAnalyses: valeursGris.length
         };
     }
@@ -481,22 +479,6 @@ export class ServiceEntropieVueBabylon {
         return entropie;
     }
 
-    calculerContrasteNormalise(valeurs) {
-        if (!valeurs.length) {
-            return 0;
-        }
-
-        const moyenne = valeurs.reduce((somme, valeur) => somme + valeur, 0) / valeurs.length;
-        const variance = valeurs.reduce((somme, valeur) => {
-            const ecart = valeur - moyenne;
-            return somme + ecart * ecart;
-        }, 0) / valeurs.length;
-
-        const ecartType = Math.sqrt(variance);
-
-        // 64 est une valeur empirique : au-delà, l'image est déjà très contrastée.
-        return this.limiterEntre0Et1(ecartType / 64);
-    }
 
     creerCsvVuesEntropie({ vuesAnalysees, infosModele, configuration }) {
         const lignes = [];
@@ -512,7 +494,6 @@ export class ServiceEntropieVueBabylon {
             "rayon_objet",
             "score_entropie_normalise",
             "entropie_brute_bits",
-            "contraste_normalise_diagnostic",
             "pixels_analyses",
             "centre_x",
             "centre_y",
@@ -534,7 +515,6 @@ export class ServiceEntropieVueBabylon {
                 this.formaterNombre(vue.rayonObjet),
                 this.formaterNombre(vue.scoreGlobal),
                 this.formaterNombre(vue.entropieBrute),
-                this.formaterNombre(vue.contrasteNormalise),
                 vue.pixelsAnalyses,
                 this.formaterNombre(c.x),
                 this.formaterNombre(c.y),

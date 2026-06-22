@@ -39,7 +39,7 @@ export const constantesContours = Object.freeze({
     }),
 
     seuils: Object.freeze({
-        [TypeContour.SILHOUETTE]: 0.005,
+        [TypeContour.SILHOUETTE]: 0.00009,
         [TypeContour.RELIEF]: 0.12,
         [TypeContour.COULEUR]: 0.30
     }),
@@ -49,19 +49,69 @@ export const constantesContours = Object.freeze({
      * Test de mise en lumière locale des gradients.
      *
      * Les boutons ContLumNormBtn / ContLumCoulBtn n'affichent pas un trait coloré :
-     * ils renforcent uniquement la luminance locale des zones de fort gradient.
+     * ils renforcent uniquement la luminosité locale des zones de fort gradient.
      */
     miseLumiereGradients: Object.freeze({
         normales: Object.freeze({
-            seuilGradient: 0.20,
-            intensite: 0.30,
-            voisinsMin: 3
+            seuilGradient: 0.3,
+            intensite: 0.9,
+            voisinsMin: 2
         }),
 
         couleurs: Object.freeze({
-            seuilGradient: 0.5,
-            intensite:0.8,
-            voisinsMin: 1
+            seuilGradient: 0.35,
+            intensite: 0.9,
+            voisinsMin: 2
+        }),
+
+        animation: Object.freeze({
+            intervalleSecondes: Object.freeze({
+                min: 1,
+                max: 4,
+                defaut: 2,
+                step: 1
+            }),
+
+            /**
+             * Le slider reste simple côté interface : 0 à 100.
+             * Il est ensuite converti en légère variation HSL autour d'une valeur de base.
+             * Cela évite les effets extrêmes noir/blanc.
+             */
+            luminancePourcentage: Object.freeze({
+                min: 0,
+                max: 80,
+                defaut: 20,
+                step: 1,
+                // Plus lumineux : le slider peut maintenant renforcer davantage la lumière locale.
+                deltaMin: 0.05,
+                deltaMax: 0.28,
+                deltaDefaut: 0.12
+            }),
+
+            /**
+             * La largeur n'est pas un tracé de contour.
+             * Elle élargit seulement le masque de pixels affectés autour des gradients.
+             */
+            largeur: Object.freeze({
+                min: 1,
+                // Augmenté pour pouvoir élargir davantage le trait Highlight.
+                // Attention : les grandes valeurs sont plus coûteuses, car elles élargissent
+                // le masque autour des gradients.
+                max: 5,
+                defaut: 2,
+                step: 1
+            }),
+
+            clignotement: Object.freeze({
+                // 0 = le highlight peut vraiment disparaître pendant le clignotement,
+                // ce qui rend l'effet plus marqué sans augmenter le coût du shader.
+                facteurMinimal: 0.0
+            }),
+
+            securiteLuminosite: Object.freeze({
+                minLightness: 0.08,
+                maxLightness: 0.98
+            })
         })
     }),
 

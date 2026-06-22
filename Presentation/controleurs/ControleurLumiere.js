@@ -40,6 +40,9 @@ export class ControleurLumiere {
         });
 
         this.brancherReinitialisation(this.obtenir("LumReintBtn"));
+
+        // Pause / reprise de la lumière tournante avec la touche espace.
+        this.brancherPauseLumiereTournanteParEspace();
     }
 
     brancherIntensite({ slider, texteValeur }) {
@@ -209,6 +212,8 @@ export class ControleurLumiere {
                     texteSelection._markAsDirty?.();
                 }
 
+                this.mettreAJourLibellePauseLumiere(false);
+
                 this.mettreAJourTexteBoutonOption(bouton, ancienneOption.libelle);
 
                 liste.isVisible = false;
@@ -228,6 +233,74 @@ export class ControleurLumiere {
         texte.metadata.texteDynamique = true;
         texte.text = libelle;
         texte._markAsDirty?.();
+    }
+
+    brancherPauseLumiereTournanteParEspace() {
+        // Si le contrôleur est rebranché, on évite d'empiler plusieurs écouteurs clavier.
+        if (this.detacherRaccourciEspace) {
+            this.detacherRaccourciEspace();
+        }
+
+        const gererTouche = (event) => {
+            if (!this.estToucheEspace(event)) return;
+
+            // Evite qu'un appui long déclenche pause/reprise en boucle.
+            if (event.repeat) return;
+
+            // On ne bloque pas l'espace quand l'utilisateur saisit du texte.
+            if (this.estSaisieTexteActive(event.target)) return;
+
+            const scene = this.etatApplication.scenes.scene3D;
+            const estEnPause = this.serviceLumiereBabylon.basculerPauseRotation(scene);
+
+            // Si la lumière tournante n'est pas active, la touche espace garde son comportement normal.
+            if (estEnPause === null) return;
+
+            // Empêche le scroll de la page ou une action navigateur liée à l'espace.
+            event.preventDefault();
+            event.stopPropagation();
+
+           // this.mettreAJourLibellePauseLumiere(estEnPause);
+        };
+
+        // Capture = true pour reconnaître l'espace même si le canvas ou un contrôle GUI a le focus.
+        window.addEventListener("keydown", gererTouche, true);
+
+        this.detacherRaccourciEspace = () => {
+            window.removeEventListener("keydown", gererTouche, true);
+        };
+    }
+
+    estToucheEspace(event) {
+        return event.code === "Space"
+            || event.key === " "
+            || event.key === "Space"
+            || event.key === "Spacebar"
+            || event.keyCode === 32
+            || event.which === 32;
+    }
+
+    estSaisieTexteActive(cible) {
+        if (!cible) return false;
+
+        const nomBalise = cible.tagName?.toLowerCase?.();
+
+        return nomBalise === "input"
+            || nomBalise === "textarea"
+            || nomBalise === "select"
+            || cible.isContentEditable === true;
+    }
+    //  peut être utile si on peut indication textuelle
+    mettreAJourLibellePauseLumiere(estEnPause) {
+        const texteSelection = this.obtenir("LumDropBtnTxt");
+        if (!texteSelection) return;
+
+        if (this.optionCourante?.type !== "tournante") return;
+
+        texteSelection.metadata = texteSelection.metadata || {};
+        texteSelection.metadata.texteDynamique = true;
+        texteSelection.text = estEnPause ? "Tournante (pause)" : "Tournante";
+        texteSelection._markAsDirty?.();
     }
 
     brancherReinitialisation(bouton) {

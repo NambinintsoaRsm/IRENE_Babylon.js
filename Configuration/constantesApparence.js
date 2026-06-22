@@ -43,7 +43,7 @@ export const constantesApparence = Object.freeze({
     textureMotif: Object.freeze({
         slider: Object.freeze({
             min: -5,
-            max: 5,
+            max: 2,
             defaut: 0,
             step: 1
         }),

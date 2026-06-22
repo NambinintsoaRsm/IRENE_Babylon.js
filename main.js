@@ -18,6 +18,7 @@ import { ServiceOrientationModeleBabylon } from "./Infrastructure/babylon/Servic
 import { ServiceMateriauxBabylon } from "./Infrastructure/babylon/ServiceMateriauxBabylon.js";
 import { ServiceLumiereBabylon } from "./Infrastructure/babylon/ServiceLumiereBabylon.js";
 import { ServiceEntropieVueBabylon } from "./Infrastructure/babylon/ServiceEntropieVueBabylon.js";
+import { ServiceSaillanceVueBabylon } from "./Infrastructure/babylon/ServiceSaillanceVueBabylon.js";
 import { ServiceCouleurContourAdaptativeBabylon } from "./Infrastructure/babylon/ServiceCouleurContourAdaptativeBabylon.js";
 import { BoucleRenduBabylon } from "./Infrastructure/babylon/BoucleRenduBabylon.js";
 
@@ -88,6 +89,7 @@ import { ChargerModeleUC } from "./UseCases/modele3dUseCases/ChargerModeleUC.js"
 import { SupprimerModeleActuelUC } from "./UseCases/modele3dUseCases/SupprimerModeleActuelUC.js";
 import { NormaliserModeleUC } from "./UseCases/modele3dUseCases/NormaliserModeleUC.js";
 import { ChoisirVueEntropieUC } from "./UseCases/modele3dUseCases/ChoisirVueEntropieUC.js";
+import { ChoisirVueSaillanceUC } from "./UseCases/modele3dUseCases/ChoisirVueSaillanceUC.js";
 
 import { ChargerProfilLocalUC } from "./UseCases/profilUseCases/ChargerProfilLocalUC.js";
 import { SauvegarderProfilLocalUC } from "./UseCases/profilUseCases/SauvegarderProfilLocalUC.js";
@@ -105,6 +107,7 @@ import { ControleurProfil } from "./Presentation/controleurs/ControleurProfil.js
 import { ControleurLumiere } from "./Presentation/controleurs/ControleurLumiere.js";
 import { ControleurAccess } from "./Presentation/controleurs/ControleurAccess.js";
 import { creerBoutonEntropieFallback } from "./Presentation/gui/EntropieGUI.js";
+import { creerBoutonSaillanceFallback } from "./Presentation/gui/SaillanceGUI.js";
 
 const NOMS_GUI = Object.freeze({
     menu: {
@@ -128,6 +131,7 @@ const NOMS_GUI = Object.freeze({
         contours: { bouton: "ContBtn", panneau: "ContoRect", retour: "ContRetourBtn" },
         texture: { bouton: "TextuBtn", panneau: "TextuRect", retour: "TxtuRetourBtn" },
         lumiere: { bouton: "LumBtn", panneau: "LumRect", retour: "LumRetourBtn" },
+        highlight: { bouton: "HighBtn", panneau: "HighRect", retour: "HighRetourBtn" },
         modeles: { bouton: "Mod3DBtn", panneau: "ModelRect", retour: "ModelRetourBtn" }
     },
 
@@ -204,6 +208,9 @@ const NOMS_GUI = Object.freeze({
         ],
         epaisseurSlider: "ContEpaiSlider",
         epaisseurValeurTxt: "ContEpaiValTxt",
+        highlightLargeurSlider: "HighLargSlider",
+        highlightLuminositeSlider: "HighLumSlider",
+        highlightFrequenceSlider: "HighFreqSlider",
         couleurs: ["ContBtn1", "ContBtn2", "ContBtn3", "ContBtn4", "ContBtn5", "ContBtn6", "ContBtn7", "ContBtn8"]
     },
 
@@ -240,6 +247,12 @@ const NOMS_GUI = Object.freeze({
         texte: "EntropieTxt",
         boutonAncien: "EntropieTestBtn",
         texteAncien: "EntropieResultTxt"
+    },
+
+    saillance: {
+        bouton: "SaillanceBtn",
+        texte: "SaillanceTxt",
+        texteBouton: "SaillanceBtnTxt"
     }
 });
 
@@ -307,7 +320,11 @@ function recupererTousLesControles(advancedTexture) {
 
         "TextuTailleSlider", "TextuTailleTxt", "TxtuReintBtn", "TxtuReintBtnTxt",
         "AccessBtn", "AccessBtnTxt", "AccBtn", "AccBtnTxt",
-        "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt"
+        "HighBtn", "HighBtnTxt", "HighBtnDropTxt", "HighRect", "HighRetourBtn", "HighRetourBtnTxt",
+        "HighLargSlider", "HighLumSlider", "HighFreqSlider",
+        "ContLumNormBtn", "ContLumNormBtnTxt", "ContLumCoulBtn", "ContLumCoulBtnTxt",
+        "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt",
+        "SaillanceBtn", "SaillanceTxt", "SaillanceBtnTxt"
     ].forEach((nom) => {
         controles[nom] = recherche.obtenir(nom, false);
     });
@@ -353,6 +370,41 @@ function creerOuRecupererBoutonEntropie(advancedTexture) {
 }
 
 
+function creerOuRecupererBoutonSaillance(advancedTexture) {
+    const controles = etatApplication.gui.controles;
+
+    let bouton = controles.SaillanceBtn
+        ?? advancedTexture?.getControlByName?.("SaillanceBtn")
+        ?? null;
+
+    let texte = controles.SaillanceTxt
+        ?? controles.SaillanceBtnTxt
+        ?? advancedTexture?.getControlByName?.("SaillanceTxt")
+        ?? advancedTexture?.getControlByName?.("SaillanceBtnTxt")
+        ?? null;
+
+    if (!bouton) {
+        const elements = creerBoutonSaillanceFallback(advancedTexture);
+        controles.SaillancePanel = elements.panneau;
+        bouton = elements.bouton;
+        texte = elements.texteResultat;
+    }
+
+    if (bouton) {
+        controles.SaillanceBtn = bouton;
+    }
+
+    if (texte) {
+        texte.metadata = texte.metadata || {};
+        texte.metadata.texteDynamique = true;
+        texte.isVisible = true;
+        controles.SaillanceTxt = texte;
+    }
+
+    advancedTexture?.markAsDirty?.();
+}
+
+
 function majTexteValeur(textBlock, valeur, decimals = 1) {
     if (!textBlock) return;
     textBlock.text = Number(valeur).toFixed(decimals);
@@ -385,6 +437,7 @@ async function main() {
     const serviceMateriauxBabylon = new ServiceMateriauxBabylon();
     const serviceLumiereBabylon = new ServiceLumiereBabylon();
     const serviceEntropieVueBabylon = new ServiceEntropieVueBabylon();
+    const serviceSaillanceVueBabylon = new ServiceSaillanceVueBabylon();
     const serviceCouleurContourAdaptativeBabylon = new ServiceCouleurContourAdaptativeBabylon();
     const boucleRenduBabylon = new BoucleRenduBabylon();
     const serviceControlesSpeciauxGUI = new ServiceControlesSpeciauxGUI();
@@ -418,10 +471,15 @@ async function main() {
     const accessNav = new AccessNav();
 
     await servicePolicesNavigateur.chargerPolices(constantesInterface.policesDisponibles);
-    await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
+
+    ////////////////////////////////////////////////////////////////
+
+    // Ligne de base avec le fichier JSON :
+     await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
 
     etatApplication.gui.controles = recupererTousLesControles(etatApplication.gui.advancedTexture);
     creerOuRecupererBoutonEntropie(etatApplication.gui.advancedTexture);
+    creerOuRecupererBoutonSaillance(etatApplication.gui.advancedTexture);
 
     etatApplication.accessibilite = {
         preferencesNavigateur: accessNav.lire(),
@@ -482,6 +540,7 @@ async function main() {
     const supprimerModeleActuelUC = new SupprimerModeleActuelUC(etatApplication);
     const normaliserModeleUC = new NormaliserModeleUC(etatApplication);
     const choisirVueEntropieUC = new ChoisirVueEntropieUC(etatApplication);
+    const choisirVueSaillanceUC = new ChoisirVueSaillanceUC(etatApplication);
 
     const chargerProfilLocalUC = new ChargerProfilLocalUC(etatApplication, stockageProfilLocal);
     const sauvegarderProfilLocalUC = new SauvegarderProfilLocalUC(etatApplication, stockageProfilLocal);
@@ -509,8 +568,7 @@ async function main() {
         serviceBlocagePointeurGUI,
         bloquerCameraUC,
         debloquerCameraUC,
-        serviceCameraBabylon,
-        serviceControlesSpeciauxGUI
+        serviceCameraBabylon
     });
 
     const controleurInterface = new ControleurInterface({
@@ -627,12 +685,13 @@ async function main() {
     controleurAccess.brancherDepuisNomsGUI(NOMS_GUI.access);
     brancherModele3D(controleurModele3D);
     brancherTestEntropie(serviceEntropieVueBabylon);
+    brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC);
 
     controleurProfil.chargerProfilAuDemarrage();
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
-    serviceControlesSpeciauxGUI.installerSuiviSliderTemperature(etatApplication);
     rafraichirTexteEntropie();
+    rafraichirTexteSaillance();
 
     // On ne crée pas les post-traitements au démarrage :
     // ils seront créés seulement quand une valeur quitte son état neutre.
@@ -823,6 +882,14 @@ function brancherContours(controleur) {
     controleur.brancherMiseLumiereNormales(obtenirPremier(c, n.miseLumiereNormalesBtns));
     controleur.brancherMiseLumiereCouleurs(obtenirPremier(c, n.miseLumiereCouleursBtns));
 
+    if (typeof controleur.brancherParametresMiseLumiere === "function") {
+        controleur.brancherParametresMiseLumiere({
+            sliderFrequence: obtenir(c, n.highlightFrequenceSlider),
+            sliderLuminance: obtenir(c, n.highlightLuminositeSlider),
+            sliderLargeur: obtenir(c, n.highlightLargeurSlider)
+        });
+    }
+
     n.couleurs.forEach((nom) => {
         const bouton = obtenir(c, nom);
 
@@ -873,6 +940,84 @@ function rafraichirTexteEntropie() {
         ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieResultTxt");
 
     preparerTexteDynamique(texte, "Vue optimale : --");
+}
+
+function rafraichirTexteSaillance() {
+    const c = etatApplication.gui?.controles ?? {};
+    const texte = c.SaillanceTxt
+        ?? c.SaillanceBtnTxt
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
+
+    preparerTexteDynamique(texte, "Vue saillance : --");
+}
+
+function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC = null) {
+    const c = etatApplication.gui.controles;
+    const bouton = c.SaillanceBtn
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtn");
+    const texteResultat = c.SaillanceTxt
+        ?? c.SaillanceBtnTxt
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
+
+    if (!bouton || !serviceSaillanceVueBabylon) {
+        console.warn("[Saillance] Bouton ou service introuvable.");
+        return;
+    }
+
+    if (texteResultat) {
+        preparerTexteDynamique(texteResultat, "Vue saillance : --");
+    }
+
+    bouton.onPointerClickObservable.clear();
+    bouton.onPointerClickObservable.add(async () => {
+        if (texteResultat) {
+            texteResultat.text = "Recherche saillance...";
+            texteResultat._markAsDirty?.();
+            etatApplication.gui.advancedTexture?.markAsDirty?.();
+        }
+
+        try {
+            choisirVueSaillanceUC?.executer?.();
+
+            const scene = etatApplication.scenes.scene3D;
+            const camera = etatApplication.camera.cameraBabylon;
+            const meshes = obtenirMeshesModelePourEntropie(scene);
+
+            const resultat = await serviceSaillanceVueBabylon.placerCameraSurVueSaillanceMaximale({
+                scene,
+                camera,
+                meshes,
+                conserverRayonCourant: true,
+                texteResultat
+            });
+
+            if (!resultat) {
+                if (texteResultat) {
+                    texteResultat.text = "Vue saillance : erreur";
+                    texteResultat._markAsDirty?.();
+                }
+                return;
+            }
+
+            if (texteResultat) {
+                texteResultat.text = `Vue saillance : ${Math.round((resultat.scoreGlobal ?? 0) * 100)}%`;
+                texteResultat._markAsDirty?.();
+                etatApplication.gui.advancedTexture?.markAsDirty?.();
+            }
+
+            console.log("[Vue optimale par saillance]", resultat);
+        } catch (erreur) {
+            console.error("[Saillance] Erreur pendant le calcul de vue :", erreur);
+
+            if (texteResultat) {
+                texteResultat.text = "Vue saillance : erreur";
+                texteResultat._markAsDirty?.();
+                etatApplication.gui.advancedTexture?.markAsDirty?.();
+            }
+        }
+    });
 }
 
 function brancherTestEntropie(serviceEntropieVueBabylon) {
