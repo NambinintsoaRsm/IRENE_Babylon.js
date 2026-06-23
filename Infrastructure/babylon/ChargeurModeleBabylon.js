@@ -2,6 +2,7 @@
  * Charge un modèle 3D dans la scène Babylon.
  *
  * Le modèle vient du catalogue Configuration/catalogueModeles3D.js.
+ * Les chemins restent relatifs : ex. assets/modeles/glb/pot.glb.
  */
 export class ChargeurModeleBabylon {
     async charger(scene, modele) {
@@ -15,6 +16,9 @@ export class ChargeurModeleBabylon {
 
         const { dossier, fichier } = this.extraireDossierEtFichier(modele.chemin);
 
+        // Babylon détecte le loader à partir de l'extension : .obj, .glb, .gltf, etc.
+        // Les anciens OBJ restent donc possibles si on les remet dans le catalogue,
+        // mais les modèles actifs sont maintenant les GLB.
         const resultat = await BABYLON.SceneLoader.ImportMeshAsync(
             "",
             dossier,
@@ -23,7 +27,9 @@ export class ChargeurModeleBabylon {
         );
 
         const meshesImportes = resultat.meshes ?? [];
-        const meshActuel = meshesImportes[0] ?? null;
+        const meshActuel = meshesImportes.find((mesh) => mesh?.getTotalVertices?.() > 0)
+            ?? meshesImportes[0]
+            ?? null;
 
         return {
             modele,

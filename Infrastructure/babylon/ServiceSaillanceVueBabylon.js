@@ -46,6 +46,92 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         };
     }
 
+    calculerInfosModele(meshes) {
+        const infos = super.calculerInfosModele(meshes);
+
+        // Mémorisé pour le calcul automatique de la distance de saillance.
+        this._derniersInfosModeleSaillance = infos;
+
+        return infos;
+    }
+
+    calculerRayonRecherche({ camera, rayonModele, conserverRayonCourant, configuration }) {
+        const cadrage = configuration?.cadrageAutomatique ?? {};
+
+        if (cadrage.actif === false) {
+            return super.calculerRayonRecherche({
+                camera,
+                rayonModele,
+                conserverRayonCourant,
+                configuration
+            });
+        }
+
+        const occupation = this.limiterEntre(
+            Number(cadrage.occupationImageMin ?? 0.8),
+            0.1,
+            0.95
+        );
+        const margeSecurite = Math.max(0.5, Number(cadrage.margeSecurite ?? 1));
+        const fovLimite = this.calculerFovLimiteCamera(camera);
+
+        // rayonModele correspond à la demi-dimension maximale du modèle calculée
+        // dans le service parent. C'est volontaire : on veut cadrer la taille visible
+        // principale de l'objet, pas conserver la distance de navigation précédente.
+        const demiTailleObjet = Math.max(0.0001, Number(rayonModele) || 1);
+        const angleOccupe = Math.max(0.05, fovLimite * occupation);
+
+        let rayon = (demiTailleObjet / Math.tan(angleOccupe / 2)) * margeSecurite;
+        rayon = Math.max(rayon, Number(configuration?.distanceMinimale ?? 0.1));
+
+        if (Number.isFinite(camera.lowerRadiusLimit) && camera.lowerRadiusLimit > 0) {
+            rayon = Math.max(rayon, camera.lowerRadiusLimit);
+        }
+
+        if (Number.isFinite(camera.upperRadiusLimit) && camera.upperRadiusLimit > 0) {
+            rayon = Math.min(rayon, camera.upperRadiusLimit);
+        }
+
+        this._derniereDistanceCadrageSaillance = {
+            rayon,
+            occupationImageMin: occupation,
+            fovLimite,
+            demiTailleObjet
+        };
+
+        return rayon;
+    }
+
+    calculerFovLimiteCamera(camera) {
+        const fov = Number(camera?.fov) || Math.PI / 4;
+        const scene = camera?.getScene?.();
+        const engine = scene?.getEngine?.();
+        const largeur = Number(engine?.getRenderWidth?.(true)) || 1;
+        const hauteur = Number(engine?.getRenderHeight?.(true)) || 1;
+        const aspect = Math.max(0.0001, largeur / hauteur);
+
+        let fovVertical = fov;
+        let fovHorizontal = 2 * Math.atan(Math.tan(fov / 2) * aspect);
+
+        if (typeof BABYLON !== "undefined" && camera?.fovMode === BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED) {
+            fovHorizontal = fov;
+            fovVertical = 2 * Math.atan(Math.tan(fov / 2) / aspect);
+        }
+
+        return Math.max(0.05, Math.min(fovVertical, fovHorizontal));
+    }
+
+    limiterEntre(valeur, min, max) {
+        const nombre = Number(valeur);
+
+        if (!Number.isFinite(nombre)) {
+            return min;
+        }
+
+        return Math.max(min, Math.min(max, nombre));
+    }
+
+
     creerScoreImageVide() {
         return {
             scoreGlobal: 0,
@@ -545,11 +631,11 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
 
         // Histogramme de distribution : une barre = une plage de scores.
         // Exemple : combien de vues ont un score entre 40% et 50%.
-        /*this.telechargerTexte(
+        this.telechargerTexte(
             this.creerSvgHistogrammeDistributionScores(vuesAnalysees, exportHistogramme),
             exportHistogramme.nomFichierSvg || "saillance_gmm_histogramme.svg",
             "image/svg+xml;charset=utf-8"
-        );*/
+        );
     }
 
     creerSvgHistogrammeDistributionScores(vuesAnalysees, configurationHistogramme = {}) {

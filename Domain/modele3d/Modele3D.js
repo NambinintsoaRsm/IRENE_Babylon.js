@@ -1,3 +1,5 @@
+const TYPES_MODELES_AUTORISES = Object.freeze(["obj", "glb", "gltf"]);
+
 export class Modele3D {
     constructor({
                     id,
@@ -26,8 +28,15 @@ export class Modele3D {
             throw new Error("Le chemin du modèle 3D est invalide.");
         }
 
-        if (this.type !== "obj") {
-            throw new Error("Le type du modèle 3D doit être 'obj'.");
+        // Ancienne règle : seuls les OBJ étaient acceptés.
+        // if (this.type !== "obj") {
+        //     throw new Error("Le type du modèle 3D doit être 'obj'.");
+        // }
+
+        // Nouvelle règle : on garde OBJ possible, mais on autorise aussi GLB/GLTF
+        // pour les modèles Babylon plus simples à déployer avec textures intégrées.
+        if (!TYPES_MODELES_AUTORISES.includes(this.type)) {
+            throw new Error(`Le type du modèle 3D doit être l'un de : ${TYPES_MODELES_AUTORISES.join(", ")}.`);
         }
     }
 }

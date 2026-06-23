@@ -14,8 +14,21 @@ export const constantesSaillance = Object.freeze({
         // Même logique que l'entropie : vues réparties sur une sphère autour de l'objet.
         pasAlphaDegres: 30,
         betasDegres: Object.freeze([20, 45, 70, 90, 110, 135, 160]),
+        // Le facteur reste disponible en secours si le cadrage automatique est désactivé.
         facteurRayonObjet: 3,
-        distanceMinimale: 1.5
+        distanceMinimale: 1.5,
+
+        // Remarque tuteur : au lancement de l'algorithme, on fixe automatiquement
+        // la distance caméra-objet au lieu de garder la distance après navigation.
+        // Objectif : le modèle doit occuper environ 80% de l'image rendue.
+        cadrageAutomatique: Object.freeze({
+            actif: true,
+            occupationImageMin: 0.8,
+
+            // 1 = cadrage calculé exactement ; > 1 éloigne légèrement la caméra ;
+            // < 1 rapproche un peu mais peut couper l'objet si le modèle est très allongé.
+            margeSecurite: 1
+        })
     }),
 
     analyseImage: Object.freeze({
