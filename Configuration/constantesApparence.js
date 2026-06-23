@@ -34,5 +34,35 @@ export const constantesApparence = Object.freeze({
     texturesProcedurales: Object.freeze({
         DAMIER: "damier",
         RAYURES: "rayures"
+    }),
+
+    // Réglage centralisé de la taille des motifs procéduraux.
+    // Le slider ne donne pas directement une taille en pixels : il donne un écart
+    // autour de la valeur de base. Cela permet de garder les valeurs facilement
+    // modifiables ici.
+    textureMotif: Object.freeze({
+        slider: Object.freeze({
+            min: -5,
+            max: 2,
+            defaut: 0,
+            step: 1
+        }),
+
+        texture: Object.freeze({
+            largeur: 512,
+            hauteur: 512
+        }),
+
+        damier: Object.freeze({
+            tailleBase: 24,
+            pas: 4,
+            tailleMin: 4
+        }),
+
+        rayures: Object.freeze({
+            largeurBase: 12,
+            pas: 2,
+            largeurMin: 2
+        })
     })
 });

@@ -26,7 +26,8 @@ export const profilParDefaut = new ProfilUtilisateur({
         luminosite: constantesApparence.luminosite.defaut,
         saturation: constantesApparence.saturation.defaut,
         nettete: constantesApparence.nettete.defaut,
-        textureActive: constantesApparence.textureDefaut
+        textureActive: constantesApparence.textureDefaut,
+        textureMotifTaille: constantesApparence.textureMotif.slider.defaut
     }),
 
     contours: new ParametresContours({

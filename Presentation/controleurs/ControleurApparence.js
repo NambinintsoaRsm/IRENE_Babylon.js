@@ -16,6 +16,7 @@ export class ControleurApparence {
         changerSaturationUC,
         changerNetteteUC,
         changerTextureUC,
+        changerTailleMotifTextureUC = null,
         reinitialiserApparenceUC,
         postTraitApparence,
         postTraitNettete,
@@ -29,6 +30,7 @@ export class ControleurApparence {
         this.changerSaturationUC = changerSaturationUC;
         this.changerNetteteUC = changerNetteteUC;
         this.changerTextureUC = changerTextureUC;
+        this.changerTailleMotifTextureUC = changerTailleMotifTextureUC;
         this.reinitialiserApparenceUC = reinitialiserApparenceUC;
 
         this.postTraitApparence = postTraitApparence;
@@ -104,15 +106,94 @@ export class ControleurApparence {
 
         bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(() => {
-            this.changerTextureUC.executer(typeTexture);
-
-            if (this.serviceMateriauxBabylon) {
-                this.serviceMateriauxBabylon.appliquerTextureProcedurale(
-                    this.etatApplication.modele3d.meshesImportes,
-                    typeTexture
-                );
-            }
+            const parametres = this.changerTextureUC.executer(typeTexture);
+            this.appliquerTextureActive(parametres.textureActive, parametres.textureMotifTaille);
         });
+    }
+
+    brancherTailleMotifTexture({ slider, texteValeur }) {
+        if (!slider || !this.changerTailleMotifTextureUC) {
+            return;
+        }
+
+        const config = constantesApparence.textureMotif.slider;
+
+        slider.minimum = config.min;
+        slider.maximum = config.max;
+        slider.step = config.step;
+        slider.value = config.defaut;
+
+        this.mettreAJourTexteTailleMotif(texteValeur, config.defaut);
+
+        slider.onValueChangedObservable.clear();
+        slider.onValueChangedObservable.add((valeur) => {
+            const parametres = this.changerTailleMotifTextureUC.executer(valeur);
+            this.mettreAJourTexteTailleMotif(texteValeur, parametres.textureMotifTaille);
+
+            // Sur la texture par défaut/originale, le slider ne fait rien visuellement.
+            // Il agit seulement si damier ou rayures est actif.
+            this.appliquerTextureActive(parametres.textureActive, parametres.textureMotifTaille);
+        });
+    }
+
+    brancherReinitialisationTexture({ bouton, slider, texteValeur }) {
+        if (!bouton) {
+            return;
+        }
+
+        bouton.onPointerClickObservable.clear();
+        bouton.onPointerClickObservable.add(() => {
+            const tailleDefaut = constantesApparence.textureMotif.slider.defaut;
+            const parametresTaille = this.changerTailleMotifTextureUC
+                ? this.changerTailleMotifTextureUC.executer(tailleDefaut)
+                : this.etatApplication.apparence.parametres;
+
+            const parametresTexture = this.changerTextureUC.executer("originale");
+            const tailleMotif = parametresTaille?.textureMotifTaille ?? tailleDefaut;
+
+            if (slider) {
+                slider.value = tailleDefaut;
+            }
+
+            this.mettreAJourTexteTailleMotif(texteValeur, tailleDefaut);
+            this.appliquerTextureActive(parametresTexture.textureActive, tailleMotif);
+            this.etatApplication.gui.advancedTexture?.markAsDirty?.();
+        });
+    }
+
+    appliquerTextureActive(typeTexture, decalageMotif = 0) {
+        if (!this.serviceMateriauxBabylon) {
+            return;
+        }
+
+        if (typeTexture !== "damier" && typeTexture !== "rayures" && typeTexture !== "originale") {
+            return;
+        }
+
+        this.serviceMateriauxBabylon.appliquerTextureProcedurale(
+            this.etatApplication.modele3d.meshesImportes,
+            typeTexture,
+            { decalageMotif }
+        );
+    }
+
+    mettreAJourTexteTailleMotif(texte, valeur) {
+        if (!texte) {
+            return;
+        }
+
+        texte.metadata = texte.metadata || {};
+        texte.metadata.texteDynamique = true;
+
+        if (Number(valeur) === 0) {
+            texte.text = "Taille : défaut";
+        } else if (Number(valeur) > 0) {
+            texte.text = `Taille : +${Math.round(Number(valeur))}`;
+        } else {
+            texte.text = `Taille : ${Math.round(Number(valeur))}`;
+        }
+
+        texte._markAsDirty?.();
     }
 
     brancherReinitialisation(bouton) {

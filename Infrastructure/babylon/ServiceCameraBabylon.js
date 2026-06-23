@@ -136,14 +136,14 @@ export class ServiceCameraBabylon {
 
     calculerRayonCamera(infos, facteurCadrage) {
         const rayonObjet = Math.max(Number(infos.rayon) || 0, 0.5);
-        return Math.max(rayonObjet * facteurCadrage, 1.2);
+        return Math.max(rayonObjet * facteurCadrage, 1.4);
     }
 
     appliquerLimitesDepuisInfos(camera, infos, constantesCamera = {}) {
         const rayonObjet = Math.max(Number(infos.rayon) || 0.5, 0.5);
 
-        const multiplicateurDistanceMin = constantesCamera.multiplicateurDistanceMin ?? 1.9;
-        const distanceMinAbsolue = constantesCamera.distanceMinAbsolue ?? 1.5;
+        const multiplicateurDistanceMin = constantesCamera.multiplicateurDistanceMin ?? 1.47;
+        const distanceMinAbsolue = constantesCamera.distanceMinAbsolue ?? 1.4;
 
         const multiplicateurDistanceMax = constantesCamera.multiplicateurDistanceMax ?? 5.2;
         const distanceMaxAbsolue = constantesCamera.distanceMaxAbsolue ?? 5;

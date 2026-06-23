@@ -13,7 +13,13 @@ export class ServiceLumiereBabylon {
         this.intensiteActuelle = 1.2;
         this.temperatureActuelle = 50;
         this.couleurActuelle = new BABYLON.Color3(1, 1, 1);
-        this.facteurVitesseRotation = 1;
+        this.facteurVitesseRotation = 0.35;
+
+        // Etat conservé pour pouvoir mettre la lumière tournante en pause
+        // sans perdre sa position courante.
+        this.angleRotation = 0;
+        this.rotationEnPause = false;
+        this.directionRotationActuelle = new BABYLON.Vector3(-1, -0.7, 0).normalize();
     }
 
     initialiser(scene) {
@@ -68,11 +74,19 @@ export class ServiceLumiereBabylon {
         const lumieres = this.garantirLumieres(scene);
         if (!lumieres) return;
 
+        const nouveauType = type || "principale";
+
         if (!options.garderRotation) {
             this.arreterRotation(scene);
+            this.rotationEnPause = false;
+
+            if (nouveauType !== "tournante") {
+                this.angleRotation = 0;
+                this.directionRotationActuelle = new BABYLON.Vector3(-1, -0.7, 0).normalize();
+            }
         }
 
-        this.typeActif = type || "principale";
+        this.typeActif = nouveauType;
 
         if (this.typeActif === "haut") {
             this.activerDirectionnelle(scene, lumieres, new BABYLON.Vector3(0, -1, 0));
@@ -85,10 +99,16 @@ export class ServiceLumiereBabylon {
         }
 
         if (this.typeActif === "tournante") {
-            this.activerDirectionnelle(scene, lumieres, new BABYLON.Vector3(-1, -0.7, 0));
-            if (!options.garderRotation) {
+            const direction = options.garderRotation && this.directionRotationActuelle
+                ? this.directionRotationActuelle.clone()
+                : this.directionDepuisAngleRotation();
+
+            this.activerDirectionnelle(scene, lumieres, direction);
+
+            if (!this.rotationEnPause && !this.observateurRotation) {
                 this.demarrerRotation(scene);
             }
+
             return;
         }
 
@@ -118,6 +138,10 @@ export class ServiceLumiereBabylon {
     activerDirectionnelle(scene, lumieres, direction) {
         const directionNormalisee = direction.normalize();
 
+        // On mémorise la direction réellement appliquée. C'est elle qui reste
+        // visible pendant une pause de la lumière tournante.
+        this.directionRotationActuelle = directionNormalisee.clone();
+
         if (lumieres.lumierePrincipale) {
             // Base faible pour éviter un objet trop noir.
             lumieres.lumierePrincipale.intensity = this.intensiteActuelle * 0.35;
@@ -134,24 +158,30 @@ export class ServiceLumiereBabylon {
         this.appliquerCouleurAuxLumieres(lumieres, this.couleurActuelle);
     }
 
+    directionDepuisAngleRotation() {
+        return new BABYLON.Vector3(
+            -Math.cos(this.angleRotation),
+            -0.7,
+            -Math.sin(this.angleRotation)
+        ).normalize();
+    }
+
     demarrerRotation(scene) {
         if (!scene?.onBeforeRenderObservable) return;
 
         const lumieres = this.garantirLumieres(scene);
         if (!lumieres) return;
 
-        let angle = 0;
+        // Sécurité : ne jamais ajouter plusieurs observers de rotation.
+        if (this.observateurRotation) return;
+
+        this.rotationEnPause = false;
 
         this.observateurRotation = scene.onBeforeRenderObservable.add(() => {
             const delta = scene.getEngine()?.getDeltaTime?.() ?? 16;
-            angle += delta * 0.001 * (this.facteurVitesseRotation ?? 1);
+            this.angleRotation += delta * 0.001 * (this.facteurVitesseRotation ?? 1);
 
-            const direction = new BABYLON.Vector3(
-                -Math.cos(angle),
-                -0.7,
-                -Math.sin(angle)
-            ).normalize();
-
+            const direction = this.directionDepuisAngleRotation();
             this.activerDirectionnelle(scene, lumieres, direction);
         });
     }
@@ -164,20 +194,55 @@ export class ServiceLumiereBabylon {
         this.observateurRotation = null;
     }
 
+    mettreRotationEnPause(scene) {
+        if (this.typeActif !== "tournante") {
+            return null;
+        }
+
+        // On arrête uniquement l'animation. La direction déjà appliquée à la
+        // lumière n'est pas modifiée, donc la lumière reste à sa position.
+        this.rotationEnPause = true;
+        this.arreterRotation(scene);
+
+        return true;
+    }
+
+    reprendreRotation(scene) {
+        if (this.typeActif !== "tournante") {
+            return null;
+        }
+
+        this.rotationEnPause = false;
+        this.demarrerRotation(scene);
+
+        return false;
+    }
+
+    basculerPauseRotation(scene) {
+        if (this.typeActif !== "tournante") {
+            return null;
+        }
+
+        if (this.rotationEnPause || !this.observateurRotation) {
+            return this.reprendreRotation(scene);
+        }
+
+        return this.mettreRotationEnPause(scene);
+    }
+
     reinitialiser(scene) {
         this.arreterRotation(scene);
         this.typeActif = "principale";
         this.intensiteActuelle = 1.2;
         this.temperatureActuelle = 50;
+        this.angleRotation = 0;
+        this.rotationEnPause = false;
+        this.directionRotationActuelle = new BABYLON.Vector3(-1, -0.7, 0).normalize();
         this.appliquerTemperature(scene, 50);
         this.appliquerType(scene, "principale");
     }
 
-    libelleTemperature(valeur) {
-        if (valeur < 40) return "Chaud";
-        if (valeur > 60) return "Froid";
-        return "Neutre";
-    }
+
 
     libelleType(type) {
         if (type === "haut") return "Haut";

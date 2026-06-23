@@ -40,6 +40,9 @@ export class ControleurLumiere {
         });
 
         this.brancherReinitialisation(this.obtenir("LumReintBtn"));
+
+        // Pause / reprise de la lumière tournante avec la touche espace.
+        this.brancherPauseLumiereTournanteParEspace();
     }
 
     brancherIntensite({ slider, texteValeur }) {
@@ -52,12 +55,10 @@ export class ControleurLumiere {
         slider.isPointerBlocker = true;
 
         this.serviceLumiereBabylon.appliquerIntensite(this.etatApplication.scenes.scene3D, slider.value);
-        this.mettreAJourTexteIntensite(texteValeur, slider.value);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
             this.serviceLumiereBabylon.appliquerIntensite(this.etatApplication.scenes.scene3D, valeur);
-            this.mettreAJourTexteIntensite(texteValeur, valeur);
         });
     }
 
@@ -77,12 +78,10 @@ export class ControleurLumiere {
 
         this.serviceLumiereBabylon.appliquerTemperature(this.etatApplication.scenes.scene3D, slider.value);
         this.appliquerFondTemperatureSliderApresRendu(slider);
-        this.mettreAJourTexteTemperature(texteValeur, slider.value);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
             this.serviceLumiereBabylon.appliquerTemperature(this.etatApplication.scenes.scene3D, valeur);
-            this.mettreAJourTexteTemperature(texteValeur, valeur);
         });
     }
 
@@ -92,18 +91,20 @@ export class ControleurLumiere {
         const appliquer = () => {
             const mesure = slider._currentMeasure;
 
-            if (!mesure || mesure.width === 0) {
-                slider.background = "#D8D8D8FF";
-                slider.thumbColor = "#f2f2f2";
-                return;
+            // Si le panneau Lumières est fermé ou vient d'être déplacé, la mesure
+            // peut être encore vide. On n'écrase pas le fond par un gris : le
+            // service dédié le recalculera dès que la position réelle sera connue.
+            if (!mesure || mesure.width <= 0 || mesure.height <= 0) {
+                return false;
             }
 
             try {
+                const yMilieu = mesure.top + (mesure.height / 2);
                 const gradient = new BABYLON.GUI.LinearGradient(
                     mesure.left,
-                    mesure.top,
+                    yMilieu,
                     mesure.left + mesure.width,
-                    mesure.top
+                    yMilieu
                 );
 
                 gradient.addColorStop(0, "#ff7a2f");
@@ -111,11 +112,22 @@ export class ControleurLumiere {
                 gradient.addColorStop(1, "#9fd3ff");
 
                 slider.backgroundGradient = gradient;
+                slider.background = "#00000000";
                 slider.thumbColor = "#f2f2f2";
                 slider.displayValueBar = false;
                 slider.color = "#00000000";
+                slider.metadata = slider.metadata || {};
+                slider.metadata.signatureGradientTemperature = [
+                    Math.round(mesure.left),
+                    Math.round(mesure.top),
+                    Math.round(mesure.width),
+                    Math.round(mesure.height)
+                ].join("|");
+                slider._markAsDirty?.();
+
+                return true;
             } catch (erreur) {
-                slider.background = "#D8D8D8FF";
+                return false;
             }
         };
 
@@ -124,6 +136,16 @@ export class ControleurLumiere {
         } else {
             appliquer();
         }
+
+        let framesRestantes = 6;
+        const reessayer = () => {
+            if (framesRestantes <= 0) return;
+            framesRestantes -= 1;
+            appliquer();
+            requestAnimationFrame(reessayer);
+        };
+
+        requestAnimationFrame(reessayer);
     }
 
     brancherTypeLumiereSwitch({ boutonDropdown, texteSelection, iconeDropdown, liste, options = [] }) {
@@ -190,6 +212,8 @@ export class ControleurLumiere {
                     texteSelection._markAsDirty?.();
                 }
 
+                this.mettreAJourLibellePauseLumiere(false);
+
                 this.mettreAJourTexteBoutonOption(bouton, ancienneOption.libelle);
 
                 liste.isVisible = false;
@@ -211,6 +235,74 @@ export class ControleurLumiere {
         texte._markAsDirty?.();
     }
 
+    brancherPauseLumiereTournanteParEspace() {
+        // Si le contrôleur est rebranché, on évite d'empiler plusieurs écouteurs clavier.
+        if (this.detacherRaccourciEspace) {
+            this.detacherRaccourciEspace();
+        }
+
+        const gererTouche = (event) => {
+            if (!this.estToucheEspace(event)) return;
+
+            // Evite qu'un appui long déclenche pause/reprise en boucle.
+            if (event.repeat) return;
+
+            // On ne bloque pas l'espace quand l'utilisateur saisit du texte.
+            if (this.estSaisieTexteActive(event.target)) return;
+
+            const scene = this.etatApplication.scenes.scene3D;
+            const estEnPause = this.serviceLumiereBabylon.basculerPauseRotation(scene);
+
+            // Si la lumière tournante n'est pas active, la touche espace garde son comportement normal.
+            if (estEnPause === null) return;
+
+            // Empêche le scroll de la page ou une action navigateur liée à l'espace.
+            event.preventDefault();
+            event.stopPropagation();
+
+           // this.mettreAJourLibellePauseLumiere(estEnPause);
+        };
+
+        // Capture = true pour reconnaître l'espace même si le canvas ou un contrôle GUI a le focus.
+        window.addEventListener("keydown", gererTouche, true);
+
+        this.detacherRaccourciEspace = () => {
+            window.removeEventListener("keydown", gererTouche, true);
+        };
+    }
+
+    estToucheEspace(event) {
+        return event.code === "Space"
+            || event.key === " "
+            || event.key === "Space"
+            || event.key === "Spacebar"
+            || event.keyCode === 32
+            || event.which === 32;
+    }
+
+    estSaisieTexteActive(cible) {
+        if (!cible) return false;
+
+        const nomBalise = cible.tagName?.toLowerCase?.();
+
+        return nomBalise === "input"
+            || nomBalise === "textarea"
+            || nomBalise === "select"
+            || cible.isContentEditable === true;
+    }
+    //  peut être utile si on peut indication textuelle
+    mettreAJourLibellePauseLumiere(estEnPause) {
+        const texteSelection = this.obtenir("LumDropBtnTxt");
+        if (!texteSelection) return;
+
+        if (this.optionCourante?.type !== "tournante") return;
+
+        texteSelection.metadata = texteSelection.metadata || {};
+        texteSelection.metadata.texteDynamique = true;
+        texteSelection.text = estEnPause ? "Tournante (pause)" : "Tournante";
+        texteSelection._markAsDirty?.();
+    }
+
     brancherReinitialisation(bouton) {
         if (!bouton) return;
 
@@ -224,8 +316,6 @@ export class ControleurLumiere {
     reinitialiserInterfaceLumiere() {
         const intensite = this.obtenir("LumIntSlider");
         const temperature = this.obtenir("LumTempSlider");
-        const texteIntensite = this.obtenir("LumIntValTxt");
-        const texteTemperature = this.obtenir("LumTempValTxt");
         const texteSelection = this.obtenir("LumDropBtnTxt");
         const liste = this.obtenir("LumTypScroll");
         const icone = this.obtenir("LumDropBtnIcoTxt");
@@ -257,25 +347,8 @@ export class ControleurLumiere {
         }
         if (icone) icone.text = "▶";
 
-        this.mettreAJourTexteIntensite(texteIntensite, 1.2);
-        this.mettreAJourTexteTemperature(texteTemperature, 50);
     }
 
-    mettreAJourTexteIntensite(texteValeur, valeur) {
-        if (!texteValeur) return;
-        texteValeur.metadata = texteValeur.metadata || {};
-        texteValeur.metadata.texteDynamique = true;
-        texteValeur.text = `${Math.round(Number(valeur) * 100)}%`;
-        texteValeur._markAsDirty?.();
-    }
-
-    mettreAJourTexteTemperature(texteValeur, valeur) {
-        if (!texteValeur) return;
-        texteValeur.metadata = texteValeur.metadata || {};
-        texteValeur.metadata.texteDynamique = true;
-        texteValeur.text = this.serviceLumiereBabylon.libelleTemperature(valeur);
-        texteValeur._markAsDirty?.();
-    }
 
     obtenir(nom) {
         if (!nom) return null;

@@ -2,7 +2,9 @@ import { chemins } from "./Configuration/chemins.js";
 import { constantesCamera } from "./Configuration/constantesCamera.js";
 import { constantesApparence } from "./Configuration/constantesApparence.js";
 import { constantesInterface } from "./Configuration/constantesInterface.js";
+import { constantesContours } from "./Configuration/constantesContours.js";
 import { etatApplication } from "./Etat/etatApplication.js";
+
 
 import { FabriqueMoteurBabylon } from "./Infrastructure/babylon/FabriqueMoteurBabylon.js";
 import { FabriqueScene3D } from "./Infrastructure/babylon/FabriqueScene3D.js";
@@ -16,6 +18,8 @@ import { ServiceOrientationModeleBabylon } from "./Infrastructure/babylon/Servic
 import { ServiceMateriauxBabylon } from "./Infrastructure/babylon/ServiceMateriauxBabylon.js";
 import { ServiceLumiereBabylon } from "./Infrastructure/babylon/ServiceLumiereBabylon.js";
 import { ServiceEntropieVueBabylon } from "./Infrastructure/babylon/ServiceEntropieVueBabylon.js";
+import { ServiceSaillanceVueBabylon } from "./Infrastructure/babylon/ServiceSaillanceVueBabylon.js";
+import { ServiceCouleurContourAdaptativeBabylon } from "./Infrastructure/babylon/ServiceCouleurContourAdaptativeBabylon.js";
 import { BoucleRenduBabylon } from "./Infrastructure/babylon/BoucleRenduBabylon.js";
 
 import { ChargeurInterfaceGUI } from "./Infrastructure/gui/ChargeurInterfaceGUI.js";
@@ -37,6 +41,8 @@ import { PostTraitApparence } from "./Infrastructure/postTraitements/PostTraitAp
 import { PostTraitNettete } from "./Infrastructure/postTraitements/PostTraitNettete.js";
 import { PostTraitContProfNorm } from "./Infrastructure/postTraitements/PostTraitContProfNorm.js";
 import { PostTraitContoursCouleur } from "./Infrastructure/postTraitements/PostTraitementContoursCouleur.js";
+import { PostTraitMiseLumiereNormales } from "./Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js";
+import { PostTraitMiseLumiereCouleurs } from "./Infrastructure/postTraitements/PostTraitMiseLumiereCouleurs.js";
 
 import { StockageProfilLocal } from "./Infrastructure/stockage/StockageProfilLocal.js";
 
@@ -58,6 +64,7 @@ import { ChangerLuminositeUC } from "./UseCases/apparenceUseCases/ChangerLuminos
 import { ChangerSaturationUC } from "./UseCases/apparenceUseCases/ChangerSaturationUC.js";
 import { ChangerNetteteUC } from "./UseCases/apparenceUseCases/ChangerNetteteUC.js";
 import { ChangerTextureUC } from "./UseCases/apparenceUseCases/ChangerTextureUC.js";
+import { ChangerTailleMotifTextureUC } from "./UseCases/apparenceUseCases/ChangerTailleMotifTextureUC.js";
 import { ReinitialiserApparenceUC } from "./UseCases/apparenceUseCases/ReinitialiserApparenceUC.js";
 
 import { ActiverSilhouetteUC } from "./UseCases/contoursUseCases/ActiverSilhouetteUC.js";
@@ -67,6 +74,9 @@ import { ChangerEpaisseurContourUC } from "./UseCases/contoursUseCases/ChangerEp
 import { ChangerCouleurContourUC } from "./UseCases/contoursUseCases/ChangerCouleurContourUC.js";
 import { DesactiverContoursUC } from "./UseCases/contoursUseCases/DesactiverContoursUC.js";
 import { ReinitialiserContoursUC } from "./UseCases/contoursUseCases/ReinitialiserContoursUC.js";
+import { ChoisirCouleurContourAdaptativeUC } from "./UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js";
+import { BasculerMiseLumiereNormalesUC } from "./UseCases/contoursUseCases/BasculerMiseLumiereNormalesUC.js";
+import { BasculerMiseLumiereCouleursUC } from "./UseCases/contoursUseCases/BasculerMiseLumiereCouleursUC.js";
 
 import { ChangerVitesseCameraUC } from "./UseCases/cameraUseCases/ChangerVitesseCameraUC.js";
 import { ReinitialiserCameraUC } from "./UseCases/cameraUseCases/ReinitialiserCameraUC.js";
@@ -79,6 +89,7 @@ import { ChargerModeleUC } from "./UseCases/modele3dUseCases/ChargerModeleUC.js"
 import { SupprimerModeleActuelUC } from "./UseCases/modele3dUseCases/SupprimerModeleActuelUC.js";
 import { NormaliserModeleUC } from "./UseCases/modele3dUseCases/NormaliserModeleUC.js";
 import { ChoisirVueEntropieUC } from "./UseCases/modele3dUseCases/ChoisirVueEntropieUC.js";
+import { ChoisirVueSaillanceUC } from "./UseCases/modele3dUseCases/ChoisirVueSaillanceUC.js";
 
 import { ChargerProfilLocalUC } from "./UseCases/profilUseCases/ChargerProfilLocalUC.js";
 import { SauvegarderProfilLocalUC } from "./UseCases/profilUseCases/SauvegarderProfilLocalUC.js";
@@ -96,6 +107,7 @@ import { ControleurProfil } from "./Presentation/controleurs/ControleurProfil.js
 import { ControleurLumiere } from "./Presentation/controleurs/ControleurLumiere.js";
 import { ControleurAccess } from "./Presentation/controleurs/ControleurAccess.js";
 import { creerBoutonEntropieFallback } from "./Presentation/gui/EntropieGUI.js";
+import { creerBoutonSaillanceFallback } from "./Presentation/gui/SaillanceGUI.js";
 
 const NOMS_GUI = Object.freeze({
     menu: {
@@ -119,6 +131,7 @@ const NOMS_GUI = Object.freeze({
         contours: { bouton: "ContBtn", panneau: "ContoRect", retour: "ContRetourBtn" },
         texture: { bouton: "TextuBtn", panneau: "TextuRect", retour: "TxtuRetourBtn" },
         lumiere: { bouton: "LumBtn", panneau: "LumRect", retour: "LumRetourBtn" },
+        highlight: { bouton: "HighBtn", panneau: "HighRect", retour: "HighRetourBtn" },
         modeles: { bouton: "Mod3DBtn", panneau: "ModelRect", retour: "ModelRetourBtn" }
     },
 
@@ -170,15 +183,44 @@ const NOMS_GUI = Object.freeze({
         silhouetteBtn: "ContDBtn",
         reliefBtn: "ContNBtn",
         couleurBtn: "ContCBtn",
+        couleurOptimaleBtns: [
+            "ContAutoBtn",
+            "ContCouleurAutoBtn",
+            "CoulAutoBtn",
+            "CouleurAutoBtn",
+            "ContOptBtn",
+            "CouleurOptimaleBtn",
+            "ContCouleurOptBtn"
+        ],
+        miseLumiereNormalesBtns: [
+            "ContLumNormBtn",
+            "ContNormLumBtn",
+            "ContTestNormBtn",
+            "ReliefLumBtn",
+            "ReliefTestBtn"
+        ],
+        miseLumiereCouleursBtns: [
+            "ContLumCoulBtn",
+            "ContCoulLumBtn",
+            "ContTestCoulBtn",
+            "CouleurLumBtn",
+            "CouleurTestBtn"
+        ],
         epaisseurSlider: "ContEpaiSlider",
         epaisseurValeurTxt: "ContEpaiValTxt",
+        highlightLargeurSlider: "HighLargSlider",
+        highlightLuminositeSlider: "HighLumSlider",
+        highlightFrequenceSlider: "HighFreqSlider",
         couleurs: ["ContBtn1", "ContBtn2", "ContBtn3", "ContBtn4", "ContBtn5", "ContBtn6", "ContBtn7", "ContBtn8"]
     },
 
     texture: {
         originaleBtn: "TxtuBtn0",
         damierBtn: "TxtuBtn1",
-        rayuresBtn: "TxtuBtn2"
+        rayuresBtn: "TxtuBtn2",
+        tailleMotifSlider: "TextuTailleSlider",
+        tailleMotifTxt: "TextuTailleTxt",
+        reinitialiserBtn: "TxtuReintBtn"
     },
 
     camera: {
@@ -205,11 +247,33 @@ const NOMS_GUI = Object.freeze({
         texte: "EntropieTxt",
         boutonAncien: "EntropieTestBtn",
         texteAncien: "EntropieResultTxt"
+    },
+
+    saillance: {
+        bouton: "SaillanceBtn",
+        texte: "SaillanceTxt",
+        texteBouton: "SaillanceBtnTxt"
     }
 });
 
 function obtenir(controles, nom) {
     return nom ? controles[nom] ?? null : null;
+}
+
+function obtenirPremier(controles, noms) {
+    if (!Array.isArray(noms)) {
+        return obtenir(controles, noms);
+    }
+
+    for (const nom of noms) {
+        const controle = obtenir(controles, nom);
+
+        if (controle) {
+            return controle;
+        }
+    }
+
+    return null;
 }
 
 function collecterNomsGUI(objet, resultat = []) {
@@ -254,8 +318,13 @@ function recupererTousLesControles(advancedTexture) {
 
         "ZoomBtn", "ZoomBtnDropTxt", "ZoomBtnTxt", "ZoomReintBtn", "ZoomReintBtnTxt",
 
+        "TextuTailleSlider", "TextuTailleTxt", "TxtuReintBtn", "TxtuReintBtnTxt",
         "AccessBtn", "AccessBtnTxt", "AccBtn", "AccBtnTxt",
-        "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt"
+        "HighBtn", "HighBtnTxt", "HighBtnDropTxt", "HighRect", "HighRetourBtn", "HighRetourBtnTxt",
+        "HighLargSlider", "HighLumSlider", "HighFreqSlider",
+        "ContLumNormBtn", "ContLumNormBtnTxt", "ContLumCoulBtn", "ContLumCoulBtnTxt",
+        "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt",
+        "SaillanceBtn", "SaillanceTxt", "SaillanceBtnTxt"
     ].forEach((nom) => {
         controles[nom] = recherche.obtenir(nom, false);
     });
@@ -301,6 +370,41 @@ function creerOuRecupererBoutonEntropie(advancedTexture) {
 }
 
 
+function creerOuRecupererBoutonSaillance(advancedTexture) {
+    const controles = etatApplication.gui.controles;
+
+    let bouton = controles.SaillanceBtn
+        ?? advancedTexture?.getControlByName?.("SaillanceBtn")
+        ?? null;
+
+    let texte = controles.SaillanceTxt
+        ?? controles.SaillanceBtnTxt
+        ?? advancedTexture?.getControlByName?.("SaillanceTxt")
+        ?? advancedTexture?.getControlByName?.("SaillanceBtnTxt")
+        ?? null;
+
+    if (!bouton) {
+        const elements = creerBoutonSaillanceFallback(advancedTexture);
+        controles.SaillancePanel = elements.panneau;
+        bouton = elements.bouton;
+        texte = elements.texteResultat;
+    }
+
+    if (bouton) {
+        controles.SaillanceBtn = bouton;
+    }
+
+    if (texte) {
+        texte.metadata = texte.metadata || {};
+        texte.metadata.texteDynamique = true;
+        texte.isVisible = true;
+        controles.SaillanceTxt = texte;
+    }
+
+    advancedTexture?.markAsDirty?.();
+}
+
+
 function majTexteValeur(textBlock, valeur, decimals = 1) {
     if (!textBlock) return;
     textBlock.text = Number(valeur).toFixed(decimals);
@@ -333,6 +437,8 @@ async function main() {
     const serviceMateriauxBabylon = new ServiceMateriauxBabylon();
     const serviceLumiereBabylon = new ServiceLumiereBabylon();
     const serviceEntropieVueBabylon = new ServiceEntropieVueBabylon();
+    const serviceSaillanceVueBabylon = new ServiceSaillanceVueBabylon();
+    const serviceCouleurContourAdaptativeBabylon = new ServiceCouleurContourAdaptativeBabylon();
     const boucleRenduBabylon = new BoucleRenduBabylon();
     const serviceControlesSpeciauxGUI = new ServiceControlesSpeciauxGUI();
 
@@ -365,10 +471,15 @@ async function main() {
     const accessNav = new AccessNav();
 
     await servicePolicesNavigateur.chargerPolices(constantesInterface.policesDisponibles);
-    await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
+
+    ////////////////////////////////////////////////////////////////
+
+    // Ligne de base avec le fichier JSON :
+     await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
 
     etatApplication.gui.controles = recupererTousLesControles(etatApplication.gui.advancedTexture);
     creerOuRecupererBoutonEntropie(etatApplication.gui.advancedTexture);
+    creerOuRecupererBoutonSaillance(etatApplication.gui.advancedTexture);
 
     etatApplication.accessibilite = {
         preferencesNavigateur: accessNav.lire(),
@@ -379,6 +490,8 @@ async function main() {
     const postTraitNettete = new PostTraitNettete();
     const postTraitContProfNorm = new PostTraitContProfNorm();
     const postTraitContoursCouleur = new PostTraitContoursCouleur();
+    const postTraitMiseLumiereNormales = new PostTraitMiseLumiereNormales();
+    const postTraitMiseLumiereCouleurs = new PostTraitMiseLumiereCouleurs();
     const stockageProfilLocal = new StockageProfilLocal();
 
     const basculerMenuUC = new BasculerMenuUC(etatApplication);
@@ -399,6 +512,7 @@ async function main() {
     const changerSaturationUC = new ChangerSaturationUC(etatApplication);
     const changerNetteteUC = new ChangerNetteteUC(etatApplication);
     const changerTextureUC = new ChangerTextureUC(etatApplication);
+    const changerTailleMotifTextureUC = new ChangerTailleMotifTextureUC(etatApplication);
     const reinitialiserApparenceUC = new ReinitialiserApparenceUC(etatApplication);
 
     const activerSilhouetteUC = new ActiverSilhouetteUC(etatApplication);
@@ -406,8 +520,14 @@ async function main() {
     const activerContourCouleurUC = new ActiverContourCouleurUC(etatApplication);
     const changerEpaisseurContourUC = new ChangerEpaisseurContourUC(etatApplication);
     const changerCouleurContourUC = new ChangerCouleurContourUC(etatApplication);
-    const desactiverContoursUC = new DesactiverContoursUC(etatApplication);
+    const desactiverContoursUC = new DesactiverContoursUC(etatApplication, constantesContours.epaisseurDefaut);
     const reinitialiserContoursUC = new ReinitialiserContoursUC(etatApplication);
+    const choisirCouleurContourAdaptativeUC = new ChoisirCouleurContourAdaptativeUC(
+        etatApplication,
+        serviceCouleurContourAdaptativeBabylon
+    );
+    const basculerMiseLumiereNormalesUC = new BasculerMiseLumiereNormalesUC(etatApplication);
+    const basculerMiseLumiereCouleursUC = new BasculerMiseLumiereCouleursUC(etatApplication);
 
     const changerVitesseCameraUC = new ChangerVitesseCameraUC(etatApplication);
     const reinitialiserCameraUC = new ReinitialiserCameraUC(etatApplication);
@@ -420,6 +540,7 @@ async function main() {
     const supprimerModeleActuelUC = new SupprimerModeleActuelUC(etatApplication);
     const normaliserModeleUC = new NormaliserModeleUC(etatApplication);
     const choisirVueEntropieUC = new ChoisirVueEntropieUC(etatApplication);
+    const choisirVueSaillanceUC = new ChoisirVueSaillanceUC(etatApplication);
 
     const chargerProfilLocalUC = new ChargerProfilLocalUC(etatApplication, stockageProfilLocal);
     const sauvegarderProfilLocalUC = new SauvegarderProfilLocalUC(etatApplication, stockageProfilLocal);
@@ -475,6 +596,7 @@ async function main() {
         changerSaturationUC,
         changerNetteteUC,
         changerTextureUC,
+        changerTailleMotifTextureUC,
         reinitialiserApparenceUC,
         postTraitApparence,
         postTraitNettete,
@@ -489,10 +611,15 @@ async function main() {
         activerContourCouleurUC,
         changerEpaisseurContourUC,
         changerCouleurContourUC,
+        choisirCouleurContourAdaptativeUC,
+        basculerMiseLumiereNormalesUC,
+        basculerMiseLumiereCouleursUC,
         desactiverContoursUC,
         reinitialiserContoursUC,
         postTraitContProfNorm,
-        postTraitContoursCouleur
+        postTraitContoursCouleur,
+        postTraitMiseLumiereNormales,
+        postTraitMiseLumiereCouleurs
     });
 
     const controleurCamera = new ControleurCamera({
@@ -534,7 +661,9 @@ async function main() {
         postTraitApparence,
         postTraitNettete,
         postTraitContProfNorm,
-        postTraitContoursCouleur
+        postTraitContoursCouleur,
+        postTraitMiseLumiereNormales,
+        postTraitMiseLumiereCouleurs
     });
 
     const controleurLumiere = new ControleurLumiere({
@@ -556,11 +685,13 @@ async function main() {
     controleurAccess.brancherDepuisNomsGUI(NOMS_GUI.access);
     brancherModele3D(controleurModele3D);
     brancherTestEntropie(serviceEntropieVueBabylon);
+    brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC);
 
     controleurProfil.chargerProfilAuDemarrage();
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
     rafraichirTexteEntropie();
+    rafraichirTexteSaillance();
 
     // On ne crée pas les post-traitements au démarrage :
     // ils seront créés seulement quand une valeur quitte son état neutre.
@@ -703,6 +834,17 @@ function brancherApparence(controleur) {
         if (boutonOriginal) controleur.brancherTexture({ bouton: boutonOriginal, typeTexture: "originale" });
         if (boutonDamier) controleur.brancherTexture({ bouton: boutonDamier, typeTexture: "damier" });
         if (boutonRayures) controleur.brancherTexture({ bouton: boutonRayures, typeTexture: "rayures" });
+
+        controleur.brancherTailleMotifTexture({
+            slider: obtenir(c, texture.tailleMotifSlider),
+            texteValeur: null
+        });
+
+        controleur.brancherReinitialisationTexture({
+            bouton: obtenir(c, texture.reinitialiserBtn),
+            slider: obtenir(c, texture.tailleMotifSlider),
+            texteValeur:null
+        });
     }
 
     const reset = obtenir(c, n.reinitialiserBtn);
@@ -729,10 +871,24 @@ function brancherContours(controleur) {
     if (obtenir(c, n.reliefBtn)) controleur.brancherRelief(obtenir(c, n.reliefBtn));
     if (obtenir(c, n.couleurBtn)) controleur.brancherContourCouleur(obtenir(c, n.couleurBtn));
 
+    const boutonCouleurOptimale = obtenirPremier(c, n.couleurOptimaleBtns);
+    if (boutonCouleurOptimale) controleur.brancherCouleurAdaptative(boutonCouleurOptimale);
+
     controleur.brancherSliderEpaisseur({
         slider: obtenir(c, n.epaisseurSlider),
         texteValeur: obtenir(c, n.epaisseurValeurTxt)
     });
+
+    controleur.brancherMiseLumiereNormales(obtenirPremier(c, n.miseLumiereNormalesBtns));
+    controleur.brancherMiseLumiereCouleurs(obtenirPremier(c, n.miseLumiereCouleursBtns));
+
+    if (typeof controleur.brancherParametresMiseLumiere === "function") {
+        controleur.brancherParametresMiseLumiere({
+            sliderFrequence: obtenir(c, n.highlightFrequenceSlider),
+            sliderLuminance: obtenir(c, n.highlightLuminositeSlider),
+            sliderLargeur: obtenir(c, n.highlightLargeurSlider)
+        });
+    }
 
     n.couleurs.forEach((nom) => {
         const bouton = obtenir(c, nom);
@@ -784,6 +940,84 @@ function rafraichirTexteEntropie() {
         ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieResultTxt");
 
     preparerTexteDynamique(texte, "Vue optimale : --");
+}
+
+function rafraichirTexteSaillance() {
+    const c = etatApplication.gui?.controles ?? {};
+    const texte = c.SaillanceTxt
+        ?? c.SaillanceBtnTxt
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
+
+    preparerTexteDynamique(texte, "Vue GMM : --");
+}
+
+function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC = null) {
+    const c = etatApplication.gui.controles;
+    const bouton = c.SaillanceBtn
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtn");
+    const texteResultat = c.SaillanceTxt
+        ?? c.SaillanceBtnTxt
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
+
+    if (!bouton || !serviceSaillanceVueBabylon) {
+        console.warn("[Saillance] Bouton ou service introuvable.");
+        return;
+    }
+
+    if (texteResultat) {
+        preparerTexteDynamique(texteResultat, "Vue GMM : --");
+    }
+
+    bouton.onPointerClickObservable.clear();
+    bouton.onPointerClickObservable.add(async () => {
+        if (texteResultat) {
+            texteResultat.text = "Recherche GMM...";
+            texteResultat._markAsDirty?.();
+            etatApplication.gui.advancedTexture?.markAsDirty?.();
+        }
+
+        try {
+            choisirVueSaillanceUC?.executer?.();
+
+            const scene = etatApplication.scenes.scene3D;
+            const camera = etatApplication.camera.cameraBabylon;
+            const meshes = obtenirMeshesModelePourEntropie(scene);
+
+            const resultat = await serviceSaillanceVueBabylon.placerCameraSurVueSaillanceMaximale({
+                scene,
+                camera,
+                meshes,
+                conserverRayonCourant: true,
+                texteResultat
+            });
+
+            if (!resultat) {
+                if (texteResultat) {
+                    texteResultat.text = "Vue GMM : erreur";
+                    texteResultat._markAsDirty?.();
+                }
+                return;
+            }
+
+            if (texteResultat) {
+                texteResultat.text = `Vue GMM : ${Math.round((resultat.scoreGlobal ?? 0) * 100)}%`;
+                texteResultat._markAsDirty?.();
+                etatApplication.gui.advancedTexture?.markAsDirty?.();
+            }
+
+            console.log("[Vue optimale par saillance GMM]", resultat);
+        } catch (erreur) {
+            console.error("[Saillance] Erreur pendant le calcul de vue :", erreur);
+
+            if (texteResultat) {
+                texteResultat.text = "Vue GMM : erreur";
+                texteResultat._markAsDirty?.();
+                etatApplication.gui.advancedTexture?.markAsDirty?.();
+            }
+        }
+    });
 }
 
 function brancherTestEntropie(serviceEntropieVueBabylon) {
