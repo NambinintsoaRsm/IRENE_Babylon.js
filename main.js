@@ -949,7 +949,7 @@ function rafraichirTexteSaillance() {
         ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
         ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
 
-    preparerTexteDynamique(texte, "Vue saillance : --");
+    preparerTexteDynamique(texte, "Vue GMM : --");
 }
 
 function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC = null) {
@@ -967,13 +967,13 @@ function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC
     }
 
     if (texteResultat) {
-        preparerTexteDynamique(texteResultat, "Vue saillance : --");
+        preparerTexteDynamique(texteResultat, "Vue GMM : --");
     }
 
     bouton.onPointerClickObservable.clear();
     bouton.onPointerClickObservable.add(async () => {
         if (texteResultat) {
-            texteResultat.text = "Recherche saillance...";
+            texteResultat.text = "Recherche GMM...";
             texteResultat._markAsDirty?.();
             etatApplication.gui.advancedTexture?.markAsDirty?.();
         }
@@ -995,24 +995,24 @@ function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC
 
             if (!resultat) {
                 if (texteResultat) {
-                    texteResultat.text = "Vue saillance : erreur";
+                    texteResultat.text = "Vue GMM : erreur";
                     texteResultat._markAsDirty?.();
                 }
                 return;
             }
 
             if (texteResultat) {
-                texteResultat.text = `Vue saillance : ${Math.round((resultat.scoreGlobal ?? 0) * 100)}%`;
+                texteResultat.text = `Vue GMM : ${Math.round((resultat.scoreGlobal ?? 0) * 100)}%`;
                 texteResultat._markAsDirty?.();
                 etatApplication.gui.advancedTexture?.markAsDirty?.();
             }
 
-            console.log("[Vue optimale par saillance]", resultat);
+            console.log("[Vue optimale par saillance GMM]", resultat);
         } catch (erreur) {
             console.error("[Saillance] Erreur pendant le calcul de vue :", erreur);
 
             if (texteResultat) {
-                texteResultat.text = "Vue saillance : erreur";
+                texteResultat.text = "Vue GMM : erreur";
                 texteResultat._markAsDirty?.();
                 etatApplication.gui.advancedTexture?.markAsDirty?.();
             }
