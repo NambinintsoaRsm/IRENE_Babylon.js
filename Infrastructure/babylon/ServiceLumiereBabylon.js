@@ -10,7 +10,7 @@ export class ServiceLumiereBabylon {
     constructor() {
         this.observateurRotation = null;
         this.typeActif = "principale";
-        this.intensiteActuelle = 1.6;
+        this.intensiteActuelle = 1.4;
         this.temperatureActuelle = 50;
         this.couleurActuelle = new BABYLON.Color3(1, 1, 1);
         this.facteurVitesseRotation = 0.35;
@@ -29,7 +29,7 @@ export class ServiceLumiereBabylon {
     }
 
     appliquerIntensite(scene, valeur) {
-        const intensite = Math.max(0, Math.min(5, Number(valeur) || 0));
+        const intensite = Math.max(0, Math.min(4, Number(valeur) || 0));
         this.intensiteActuelle = intensite;
         this.appliquerType(scene, this.typeActif, { garderRotation: true });
     }
@@ -89,12 +89,12 @@ export class ServiceLumiereBabylon {
         this.typeActif = nouveauType;
 
         if (this.typeActif === "haut") {
-            this.activerDirectionnelle(scene, lumieres, new BABYLON.Vector3(0, -1, 0));
+            this.activerDirectionnelle(scene, lumieres, new BABYLON.Vector3(-0.35, -1, -0.45));
             return;
         }
 
         if (this.typeActif === "bas") {
-            this.activerDirectionnelle(scene, lumieres, new BABYLON.Vector3(0, 1, 0));
+            this.activerDirectionnelle(scene, lumieres, new BABYLON.Vector3(-0.35, 1, -0.45));
             return;
         }
 
@@ -121,7 +121,7 @@ export class ServiceLumiereBabylon {
      */
     activerPrincipale(lumieres) {
         if (lumieres.lumierePrincipale) {
-            lumieres.lumierePrincipale.intensity = this.intensiteActuelle * 1.05;
+            lumieres.lumierePrincipale.intensity = this.intensiteActuelle;
             lumieres.lumierePrincipale.direction = new BABYLON.Vector3(0, 1, 0);
         }
 
@@ -144,15 +144,15 @@ export class ServiceLumiereBabylon {
 
         if (lumieres.lumierePrincipale) {
             // Base faible pour éviter un objet trop noir.
-            lumieres.lumierePrincipale.intensity = this.intensiteActuelle * 0.45;
+            lumieres.lumierePrincipale.intensity = this.intensiteActuelle * 0.12;
             lumieres.lumierePrincipale.direction = new BABYLON.Vector3(0, 1, 0);
         }
 
         if (lumieres.lumiereDirectionnelle) {
             lumieres.lumiereDirectionnelle.setEnabled?.(true);
-            lumieres.lumiereDirectionnelle.intensity = this.intensiteActuelle * 1.35;
+            lumieres.lumiereDirectionnelle.intensity = this.intensiteActuelle * 1.60;
             lumieres.lumiereDirectionnelle.direction = directionNormalisee.clone();
-            lumieres.lumiereDirectionnelle.position = directionNormalisee.scale(-8);
+            lumieres.lumiereDirectionnelle.position = directionNormalisee.scale(-12);
         }
 
         this.appliquerCouleurAuxLumieres(lumieres, this.couleurActuelle);
@@ -161,7 +161,7 @@ export class ServiceLumiereBabylon {
     directionDepuisAngleRotation() {
         return new BABYLON.Vector3(
             -Math.cos(this.angleRotation),
-            -0.7,
+            -0.45,
             -Math.sin(this.angleRotation)
         ).normalize();
     }
@@ -233,7 +233,7 @@ export class ServiceLumiereBabylon {
     reinitialiser(scene) {
         this.arreterRotation(scene);
         this.typeActif = "principale";
-        this.intensiteActuelle = 1.6;
+        this.intensiteActuelle = 0.8;
         this.temperatureActuelle = 50;
         this.angleRotation = 0;
         this.rotationEnPause = false;

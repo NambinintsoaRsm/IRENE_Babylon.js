@@ -98,20 +98,18 @@ export class ServiceMateriauxBabylon {
         }
 
         if ("roughness" in material) {
-            const roughnessActuelle = Number(material.roughness);
-            material.roughness = Number.isFinite(roughnessActuelle)
-                ? Math.min(Math.max(roughnessActuelle, 0.35), 0.62)
-                : 0.5;
+            // Valeur élevée = surface mate : la lumière reste visible, mais sans reflet brillant.
+            material.roughness = 0.9;
         }
 
-        // Augmente l'effet des lumières directes sans transformer l'objet en matériau émissif.
+        // Intensité plus douce que le correctif précédent : l'effet reste visible sans surexposer.
         if ("directIntensity" in material) {
-            material.directIntensity = 1.75;
+            material.directIntensity = 1.25;
         }
 
-        // On garde une faible contribution environnementale pour éviter un rendu trop plat.
+        // Très faible contribution de l'environnement pour éviter l'aspect brillant des GLB/PBR.
         if ("environmentIntensity" in material) {
-            material.environmentIntensity = 0.45;
+            material.environmentIntensity = 0.04;
         }
 
         // Certains GLB ont une albedoColor grise qui multiplie la texture et l'assombrit.
@@ -124,8 +122,30 @@ export class ServiceMateriauxBabylon {
             material.usePhysicalLightFalloff = false;
         }
 
+        // Suppression des reflets brillants.
         if ("specularIntensity" in material) {
-            material.specularIntensity = 0.35;
+            material.specularIntensity = 0;
+        }
+
+        if ("reflectivityColor" in material) {
+            material.reflectivityColor = BABYLON.Color3.Black();
+        }
+
+        if ("reflectionColor" in material) {
+            material.reflectionColor = BABYLON.Color3.Black();
+        }
+
+        if (material.reflectionTexture) {
+            material.reflectionTexture.level = 0;
+        }
+
+        if ("microSurface" in material) {
+            // MicroSurface basse = reflet beaucoup plus diffus, donc moins brillant.
+            material.microSurface = 0.15;
+        }
+
+        if ("ambientTextureStrength" in material) {
+            material.ambientTextureStrength = 0.45;
         }
     }
 
@@ -139,7 +159,11 @@ export class ServiceMateriauxBabylon {
         }
 
         if ("specularColor" in material) {
-            material.specularColor = new BABYLON.Color3(0.15, 0.15, 0.15);
+            material.specularColor = BABYLON.Color3.Black();
+        }
+
+        if ("specularPower" in material) {
+            material.specularPower = 1;
         }
     }
 

@@ -48,10 +48,10 @@ export class ControleurLumiere {
     brancherIntensite({ slider, texteValeur }) {
         if (!slider) return;
 
-        slider.minimum = 0.2;
-        slider.maximum = 2.5;
+        slider.minimum = 0.1;
+        slider.maximum = 4;
         slider.step = 0.1;
-        slider.value = 1.2;
+        slider.value = 0.8;
         slider.isPointerBlocker = true;
 
         this.serviceLumiereBabylon.appliquerIntensite(this.etatApplication.scenes.scene3D, slider.value);
@@ -338,7 +338,7 @@ export class ControleurLumiere {
             this.mettreAJourTexteBoutonOption(option.bouton, option.libelle);
         });
 
-        if (intensite) intensite.value = 1.2;
+        if (intensite) intensite.value = 1.4;
         if (temperature) temperature.value = 50;
         if (texteSelection) texteSelection.text = "Principale";
         if (liste) {
