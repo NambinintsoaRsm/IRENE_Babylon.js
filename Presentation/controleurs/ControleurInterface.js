@@ -406,6 +406,8 @@ export class ControleurInterface {
             this.changerThemeInterfaceUC.executer(theme);
             this.serviceStyleInterfaceGUI.appliquerTheme(this.etatApplication);
             this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
+            this.serviceControlesSpeciauxGUI?.signalerChangementDisposition?.(this.etatApplication);
+            this.serviceControlesSpeciauxGUI?.reappliquerSliderTemperatureApresRendu?.(this.etatApplication);
             this.mettreAJourCocheGras(this.obtenir(controles, "PoliGrasBtnTxt"), this.etatApplication.interface.parametres.gras);
         });
     }

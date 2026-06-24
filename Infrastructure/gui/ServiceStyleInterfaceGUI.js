@@ -44,6 +44,8 @@ export class ServiceStyleInterfaceGUI {
         });
 
         this.appliquerExceptions(etatApplication, theme);
+        this.appliquerFondBoutonsOptionsSelonTheme(etatApplication, theme);
+        this.corrigerContrasteBoutons(advancedTexture);
         advancedTexture.markAsDirty();
 
         return theme;
@@ -150,9 +152,17 @@ export class ServiceStyleInterfaceGUI {
         });
 
         const sliderTemperature = controles.LumTempSlider;
-        if (sliderTemperature?.metadata?.nePasEcraserFond) {
-            sliderTemperature.color = "#00000000";
+        if (sliderTemperature) {
+            // Le slider Température garde son fond chaud/froid.
+            // On ne remet pas le fond du thème ici, sinon le dégradé disparaît
+            // après un changement de menu ou de position.
+            sliderTemperature.metadata = sliderTemperature.metadata || {};
+            sliderTemperature.metadata.nePasEcraserFond = true;
+            sliderTemperature.metadata.estSliderTemperature = true;
             sliderTemperature.displayValueBar = false;
+            sliderTemperature.color = "#00000000";
+            sliderTemperature.borderColor = "#00000000";
+            sliderTemperature.thumbColor = "#f2f2f2";
         }
 
         const flecheMenuRect = controles.FlecheMenuRect;
@@ -179,6 +189,198 @@ export class ServiceStyleInterfaceGUI {
             // Boutons de choix de thème : leur couleur est une information.
             "BlancBtn", "NoirBtn", "GrisBtn", "GrisFoncBtn"
         ];
+    }
+
+
+    appliquerFondBoutonsOptionsSelonTheme(etatApplication, theme) {
+        const controles = etatApplication?.gui?.controles ?? {};
+        const themeActif = etatApplication?.interface?.parametres?.theme;
+
+        if (!this.estThemeSombre(themeActif, theme)) {
+            return;
+        }
+
+        this.nomsBoutonsOptionsAvecFondAdaptatif().forEach((nom) => {
+            const bouton = controles[nom]
+                ?? etatApplication?.gui?.advancedTexture?.getControlByName?.(nom)
+                ?? null;
+
+            if (!bouton) {
+                return;
+            }
+
+            bouton.metadata = bouton.metadata || {};
+
+            // Sur thème noir, les boutons d'options restent noirs par défaut.
+            // Seul le bouton sélectionné passe en clair avec un texte foncé.
+            const actif = bouton.metadata.estOptionActive === true
+                || bouton.metadata.estBoutonOptionActive === true
+                || bouton.metadata.estActif === true;
+
+            bouton.background = actif ? "#FFFFFFFF" : this.couleurFondOptionInactiveSelonTheme(themeActif);
+            bouton.color = actif ? "#FFFFFFFF" : "#AFAFAFFF";
+
+            this.appliquerCouleurTexteBouton(
+                bouton,
+                actif ? "#111111FF" : "#FFFFFFFF"
+            );
+        });
+    }
+
+    nomsBoutonsOptionsAvecFondAdaptatif() {
+        return [
+            // Panneau Contours.
+            "ContDBtn", "ContNBtn", "ContCBtn",
+            "ContLumNormBtn", "ContNormLumBtn", "ContTestNormBtn", "ReliefLumBtn", "ReliefTestBtn",
+            "ContLumCoulBtn", "ContCoulLumBtn", "ContTestCoulBtn", "CouleurLumBtn", "CouleurTestBtn",
+
+            // Panneau Highlight. Les noms varient selon les versions du JSON/snippet.
+            "HighNormBtn", "HighNormalBtn", "HighNBtn", "HighReliefBtn", "HighBtnNormale",
+            "HighCoulBtn", "HighCouleurBtn", "HighColorBtn", "HighCBtn", "HighBtnCouleur",
+
+            // Panneau Texture.
+            "TxtuBtn0", "TxtuBtn1", "TxtuBtn2",
+
+            // Panneau Lumières.
+            "LumTypBtn0", "LumTypBtn1", "LumTypBtn2",
+
+            // Panneau Modèles.
+            "MdlBtn0", "MdlBtn1"
+        ];
+    }
+
+    estThemeSombre(themeActif, theme) {
+        if (themeActif === "noir" || themeActif === "gris-fonce") {
+            return true;
+        }
+
+        const couleurFond = this.normaliserCouleurHex(theme?.fondPrincipal);
+
+        if (!couleurFond) {
+            return false;
+        }
+
+        const r = parseInt(couleurFond.slice(1, 3), 16);
+        const g = parseInt(couleurFond.slice(3, 5), 16);
+        const b = parseInt(couleurFond.slice(5, 7), 16);
+        const luminanceSimple = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+        return luminanceSimple < 0.22;
+    }
+
+    appliquerCouleurTexteBouton(bouton, couleurTexte) {
+        if (bouton?.textBlock) {
+            bouton.textBlock.color = couleurTexte;
+            bouton.textBlock._markAsDirty?.();
+        }
+
+        if (Array.isArray(bouton?.children)) {
+            bouton.children.forEach((enfant) => {
+                this.corrigerContrasteTexteRecursif(enfant, couleurTexte);
+            });
+        }
+    }
+
+    corrigerContrasteBoutons(advancedTexture) {
+        if (!advancedTexture?.getDescendants) {
+            return;
+        }
+
+        advancedTexture.getDescendants().forEach((controle) => {
+            if (!(controle instanceof BABYLON.GUI.Button)) {
+                return;
+            }
+
+            this.corrigerContrasteBouton(controle);
+        });
+    }
+
+    corrigerContrasteBouton(bouton) {
+        if (!bouton) {
+            return;
+        }
+
+        const couleurFond = this.normaliserCouleurHex(bouton.background);
+
+        if (!couleurFond) {
+            return;
+        }
+
+        const couleurTexte = this.couleurTexteLisible(couleurFond);
+
+        bouton.color = bouton.color || couleurTexte;
+
+        if (bouton.textBlock) {
+            bouton.textBlock.color = couleurTexte;
+            bouton.textBlock._markAsDirty?.();
+        }
+
+        if (Array.isArray(bouton.children)) {
+            bouton.children.forEach((enfant) => {
+                this.corrigerContrasteTexteRecursif(enfant, couleurTexte);
+            });
+        }
+    }
+
+    corrigerContrasteTexteRecursif(controle, couleurTexte) {
+        if (!controle) {
+            return;
+        }
+
+        if (controle instanceof BABYLON.GUI.TextBlock) {
+            controle.color = couleurTexte;
+            controle._markAsDirty?.();
+            return;
+        }
+
+        if (Array.isArray(controle.children)) {
+            controle.children.forEach((enfant) => {
+                this.corrigerContrasteTexteRecursif(enfant, couleurTexte);
+            });
+        }
+    }
+
+    normaliserCouleurHex(couleur) {
+        if (typeof couleur !== "string") {
+            return null;
+        }
+
+        const texte = couleur.trim();
+
+        if (!texte.startsWith("#")) {
+            return null;
+        }
+
+        if (texte.length === 4) {
+            const r = texte[1];
+            const g = texte[2];
+            const b = texte[3];
+            return `#${r}${r}${g}${g}${b}${b}`;
+        }
+
+        if (texte.length >= 7) {
+            return texte.slice(0, 7);
+        }
+
+        return null;
+    }
+
+    couleurTexteLisible(couleurFond) {
+        const r = parseInt(couleurFond.slice(1, 3), 16) / 255;
+        const g = parseInt(couleurFond.slice(3, 5), 16) / 255;
+        const b = parseInt(couleurFond.slice(5, 7), 16) / 255;
+
+        const luminance = 0.2126 * this.lineariserCanalCouleur(r)
+            + 0.7152 * this.lineariserCanalCouleur(g)
+            + 0.0722 * this.lineariserCanalCouleur(b);
+
+        return luminance > 0.55 ? "#111111FF" : "#FFFFFFFF";
+    }
+
+    lineariserCanalCouleur(valeur) {
+        return valeur <= 0.03928
+            ? valeur / 12.92
+            : Math.pow((valeur + 0.055) / 1.055, 2.4);
     }
 
     appliquerBorduresBoutons(etatApplication, taille) {
@@ -230,6 +432,7 @@ export class ServiceStyleInterfaceGUI {
             "ContoRect",
             "TextuRect",
             "LumRect",
+            "HighRect",
             "ModelRect"
         ].map((nom) => controles[nom]).filter(Boolean);
 
