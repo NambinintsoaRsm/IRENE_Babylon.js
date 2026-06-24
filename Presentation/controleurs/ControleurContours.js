@@ -1,5 +1,6 @@
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
 import { constantesContours } from "../../Configuration/constantesContours.js";
+import { obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
 
 /**
  * Contrôleur des contours.
@@ -361,24 +362,78 @@ export class ControleurContours {
 
         this.boutonsType.forEach(({ bouton }, typeContour) => {
             const actif = this.estContourActif(parametres, typeContour);
-
-            bouton.background = actif
-                ? this.couleurActiveFaibleSelonTheme()
-                : bouton.metadata.backgroundOriginal;
-            bouton.thickness = actif
-                ? Math.max(Number(bouton.metadata.thicknessOriginal ?? 1), 2)
-                : bouton.metadata.thicknessOriginal;
-            bouton.color = bouton.metadata.colorOriginal;
+            this.appliquerStyleBoutonOption({ bouton, actif });
         });
     }
 
     couleurActiveFaibleSelonTheme() {
-        const theme = this.etatApplication.interface?.parametres?.theme;
+        return this.couleurFondOptionActive();
+    }
 
-        if (theme === "noir") return "#1A1A1AFF";
-        if (theme === "gris-fonce") return "#444444FF";
-        if (theme === "gris-clair") return "#DADADAFF";
-        return "#F2F2F2FF";
+    obtenirThemeActif() {
+        const themeActif = this.etatApplication.interface?.parametres?.theme;
+        return obtenirThemeInterface(themeActif);
+    }
+
+    couleurFondOptionInactive() {
+        const themeActif = this.etatApplication.interface?.parametres?.theme;
+        const theme = this.obtenirThemeActif();
+
+        if (themeActif === "noir") {
+            return "#000000FF";
+        }
+
+        if (themeActif === "gris-fonce") {
+            return "#3A3A3AFF";
+        }
+
+        return theme?.boutonFond || "#FFFFFFFF";
+    }
+
+    couleurFondOptionActive() {
+        const themeActif = this.etatApplication.interface?.parametres?.theme;
+
+        if (themeActif === "noir" || themeActif === "gris-fonce") {
+            // Sur panneau foncé, l'option choisie passe en clair.
+            // Le texte est ensuite forcé en foncé par contraste.
+            return "#FFFFFFFF";
+        }
+
+        return "#3A3A3AFF";
+    }
+
+    appliquerStyleBoutonOption({ bouton, actif }) {
+        if (!bouton) return;
+
+        const fond = actif ? this.couleurFondOptionActive() : this.couleurFondOptionInactive();
+        const theme = this.obtenirThemeActif();
+
+        bouton.metadata = bouton.metadata || {};
+        bouton.metadata.estOptionActive = Boolean(actif);
+
+        bouton.background = fond;
+        bouton.color = theme?.boutonBordure || bouton.metadata?.colorOriginal || "#000000FF";
+        bouton.thickness = actif
+            ? Math.max(Number(bouton.metadata?.thicknessOriginal ?? 1), 2)
+            : bouton.metadata?.thicknessOriginal;
+
+        this.appliquerCouleurTexteBouton(bouton, this.couleurTexteLisible(fond));
+    }
+
+    appliquerCouleurTexteBouton(bouton, couleurTexte) {
+        if (bouton?.textBlock) {
+            bouton.textBlock.color = couleurTexte;
+            bouton.textBlock._markAsDirty?.();
+        }
+
+        if (Array.isArray(bouton?.children)) {
+            bouton.children.forEach((enfant) => {
+                if (enfant instanceof BABYLON.GUI.TextBlock) {
+                    enfant.color = couleurTexte;
+                    enfant._markAsDirty?.();
+                }
+            });
+        }
     }
 
     mettreAJourBoutonsCouleurs(boutonActif) {
@@ -403,13 +458,7 @@ export class ControleurContours {
                 ? Boolean(lireActif())
                 : false;
 
-            bouton.background = actif
-                ? this.couleurActiveFaibleSelonTheme()
-                : bouton.metadata.backgroundOriginal;
-            bouton.thickness = actif
-                ? Math.max(Number(bouton.metadata.thicknessOriginal ?? 1), 2)
-                : bouton.metadata.thicknessOriginal;
-            bouton.color = bouton.metadata.colorOriginal;
+            this.appliquerStyleBoutonOption({ bouton, actif });
         });
     }
 

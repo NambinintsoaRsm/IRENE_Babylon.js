@@ -568,7 +568,8 @@ async function main() {
         serviceBlocagePointeurGUI,
         bloquerCameraUC,
         debloquerCameraUC,
-        serviceCameraBabylon
+        serviceCameraBabylon,
+        serviceControlesSpeciauxGUI
     });
 
     const controleurInterface = new ControleurInterface({

@@ -15,7 +15,16 @@ export const constantesSaillance = Object.freeze({
         pasAlphaDegres: 30,
         betasDegres: Object.freeze([20, 45, 70, 90, 110, 135, 160]),
         facteurRayonObjet: 3,
-        distanceMinimale: 1.5
+        distanceMinimale: 1.5,
+
+        // Pour la saillance, on ne garde pas la distance courante de la caméra.
+        // Au lancement, la distance est recalculée pour que l'objet occupe environ
+        // 80 % de l'image finale analysée.
+        cadrageAutomatique: Object.freeze({
+            actif: true,
+            occupationImageMin: 0.8,
+            margeSecurite: 1
+        })
     }),
 
     analyseImage: Object.freeze({

@@ -46,6 +46,70 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         };
     }
 
+    calculerRayonRecherche({ camera, rayonModele, conserverRayonCourant, configuration }) {
+        const cadrage = configuration?.cadrageAutomatique
+            ?? constantesSaillance.cadrageAutomatique
+            ?? null;
+
+        if (!cadrage?.actif) {
+            return super.calculerRayonRecherche({
+                camera,
+                rayonModele,
+                conserverRayonCourant,
+                configuration
+            });
+        }
+
+        return this.calculerRayonPourOccupationImage({
+            camera,
+            rayonModele,
+            configuration,
+            cadrage
+        });
+    }
+
+    calculerRayonPourOccupationImage({ camera, rayonModele, configuration = {}, cadrage = {} }) {
+        const occupation = this.limiterValeur(
+            Number(cadrage.occupationImageMin ?? 0.8),
+            0.1,
+            0.95
+        );
+        const margeSecurite = Math.max(0.5, Number(cadrage.margeSecurite ?? 1));
+        const distanceMinimale = Math.max(
+            Number(configuration.distanceMinimale ?? 0),
+            Number(camera?.lowerRadiusLimit ?? 0) || 0
+        );
+
+        const scene = camera?.getScene?.();
+        const engine = scene?.getEngine?.();
+        const largeur = Math.max(1, Number(engine?.getRenderWidth?.()) || 16);
+        const hauteur = Math.max(1, Number(engine?.getRenderHeight?.()) || 9);
+        const ratioAspect = largeur / hauteur;
+
+        const fovCamera = Number(camera?.fov) || Math.PI / 4;
+        const fovVertical = camera?.fovMode === BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED
+            ? 2 * Math.atan(Math.tan(fovCamera / 2) / ratioAspect)
+            : fovCamera;
+        const fovHorizontal = 2 * Math.atan(Math.tan(fovVertical / 2) * ratioAspect);
+
+        const rayon = Math.max(Number(rayonModele) || 0.5, 0.5);
+        const distanceVerticale = rayon / (occupation * Math.tan(fovVertical / 2));
+        const distanceHorizontale = rayon / (occupation * Math.tan(fovHorizontal / 2));
+
+        let distance = Math.max(distanceVerticale, distanceHorizontale, distanceMinimale) * margeSecurite;
+
+        if (Number.isFinite(camera?.upperRadiusLimit) && camera.upperRadiusLimit > 0) {
+            distance = Math.min(distance, camera.upperRadiusLimit);
+        }
+
+        return distance;
+    }
+
+    limiterValeur(valeur, min, max) {
+        if (!Number.isFinite(valeur)) return min;
+        return Math.min(max, Math.max(min, valeur));
+    }
+
     creerScoreImageVide() {
         return {
             scoreGlobal: 0,
@@ -545,11 +609,11 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
 
         // Histogramme de distribution : une barre = une plage de scores.
         // Exemple : combien de vues ont un score entre 40% et 50%.
-        /*this.telechargerTexte(
+        this.telechargerTexte(
             this.creerSvgHistogrammeDistributionScores(vuesAnalysees, exportHistogramme),
             exportHistogramme.nomFichierSvg || "saillance_gmm_histogramme.svg",
             "image/svg+xml;charset=utf-8"
-        );*/
+        );
     }
 
     creerSvgHistogrammeDistributionScores(vuesAnalysees, configurationHistogramme = {}) {

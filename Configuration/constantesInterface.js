@@ -139,11 +139,17 @@ export const constantesInterface = Object.freeze({
     }),
 
     flechesMenu: Object.freeze({
+        // Menu à droite : l'onglet est à gauche du menu.
+        // Ouvert => la flèche indique le repli vers la droite.
+        // Fermé  => la flèche indique l'ouverture vers la gauche.
         [PositionMenu.DROITE]: Object.freeze({
-            ouvert: "◀",
-            ferme: "▶"
+            ouvert: "▶",
+            ferme: "◀"
         }),
 
+        // Menu à gauche : l'onglet est à droite du menu.
+        // Ouvert => la flèche indique le repli vers la gauche.
+        // Fermé  => la flèche indique l'ouverture vers la droite.
         [PositionMenu.GAUCHE]: Object.freeze({
             ouvert: "◀",
             ferme: "▶"
