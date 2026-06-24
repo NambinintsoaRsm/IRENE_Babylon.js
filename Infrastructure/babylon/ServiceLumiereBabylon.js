@@ -10,7 +10,7 @@ export class ServiceLumiereBabylon {
     constructor() {
         this.observateurRotation = null;
         this.typeActif = "principale";
-        this.intensiteActuelle = 1.2;
+        this.intensiteActuelle = 1.6;
         this.temperatureActuelle = 50;
         this.couleurActuelle = new BABYLON.Color3(1, 1, 1);
         this.facteurVitesseRotation = 0.35;
@@ -29,7 +29,7 @@ export class ServiceLumiereBabylon {
     }
 
     appliquerIntensite(scene, valeur) {
-        const intensite = Math.max(0, Math.min(3, Number(valeur) || 0));
+        const intensite = Math.max(0, Math.min(5, Number(valeur) || 0));
         this.intensiteActuelle = intensite;
         this.appliquerType(scene, this.typeActif, { garderRotation: true });
     }
@@ -121,7 +121,7 @@ export class ServiceLumiereBabylon {
      */
     activerPrincipale(lumieres) {
         if (lumieres.lumierePrincipale) {
-            lumieres.lumierePrincipale.intensity = this.intensiteActuelle;
+            lumieres.lumierePrincipale.intensity = this.intensiteActuelle * 1.05;
             lumieres.lumierePrincipale.direction = new BABYLON.Vector3(0, 1, 0);
         }
 
@@ -144,13 +144,13 @@ export class ServiceLumiereBabylon {
 
         if (lumieres.lumierePrincipale) {
             // Base faible pour éviter un objet trop noir.
-            lumieres.lumierePrincipale.intensity = this.intensiteActuelle * 0.35;
+            lumieres.lumierePrincipale.intensity = this.intensiteActuelle * 0.45;
             lumieres.lumierePrincipale.direction = new BABYLON.Vector3(0, 1, 0);
         }
 
         if (lumieres.lumiereDirectionnelle) {
             lumieres.lumiereDirectionnelle.setEnabled?.(true);
-            lumieres.lumiereDirectionnelle.intensity = this.intensiteActuelle;
+            lumieres.lumiereDirectionnelle.intensity = this.intensiteActuelle * 1.35;
             lumieres.lumiereDirectionnelle.direction = directionNormalisee.clone();
             lumieres.lumiereDirectionnelle.position = directionNormalisee.scale(-8);
         }
@@ -233,7 +233,7 @@ export class ServiceLumiereBabylon {
     reinitialiser(scene) {
         this.arreterRotation(scene);
         this.typeActif = "principale";
-        this.intensiteActuelle = 1.2;
+        this.intensiteActuelle = 1.6;
         this.temperatureActuelle = 50;
         this.angleRotation = 0;
         this.rotationEnPause = false;
@@ -288,7 +288,9 @@ export class ServiceLumiereBabylon {
         }
 
         lumieres.lumierePrincipale.diffuse = this.couleurActuelle;
+        lumieres.lumierePrincipale.specular = this.couleurActuelle;
         lumieres.lumiereDirectionnelle.diffuse = this.couleurActuelle;
+        lumieres.lumiereDirectionnelle.specular = this.couleurActuelle;
 
         return lumieres;
     }
