@@ -17,9 +17,9 @@ export const constantesSaillance = Object.freeze({
         facteurRayonObjet: 3,
         distanceMinimale: 1.5,
 
-        // Pour la saillance, on ne garde pas la distance courante de la caméra.
-        // Au lancement, la distance est recalculée pour que l'objet occupe environ
-        // 80 % de l'image finale analysée.
+        // Pour la saillance, on fixe automatiquement la distance au lancement :
+        // l'objet doit occuper environ 80 % de l'image analysée, indépendamment
+        // de la distance courante de la caméra après interaction utilisateur.
         cadrageAutomatique: Object.freeze({
             actif: true,
             occupationImageMin: 0.8,
@@ -88,9 +88,8 @@ export const constantesSaillance = Object.freeze({
     }),
 
     exportHistogramme: Object.freeze({
-        // Histogramme de distribution : une barre = une plage de scores.
-        // Exemple : combien de vues ont un score entre 40% et 50%.
-        actif: true,
+        // L'histogramme reste désactivé sur cette branche.
+        actif: false,
         nomFichierSvg: "saillance_gmm_histogramme.svg",
         largeurSvg: 920,
         hauteurSvg: 560,

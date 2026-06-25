@@ -41,6 +41,7 @@ export class ControleurInterface {
         this.serviceStyleBoutonsGUI = serviceStyleBoutonsGUI;
         this.serviceDropdownGUI = serviceDropdownGUI;
         this.servicePolicesNavigateur = servicePolicesNavigateur;
+        this.serviceControlesSpeciauxGUI = serviceControlesSpeciauxGUI;
     }
 
     brancherDepuisNomsGUI(nomsGUI, serviceAnimationGUI = null) {
@@ -406,8 +407,7 @@ export class ControleurInterface {
             this.changerThemeInterfaceUC.executer(theme);
             this.serviceStyleInterfaceGUI.appliquerTheme(this.etatApplication);
             this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
-            this.serviceControlesSpeciauxGUI?.signalerChangementDisposition?.(this.etatApplication);
-            this.serviceControlesSpeciauxGUI?.reappliquerSliderTemperatureApresRendu?.(this.etatApplication);
+            this.serviceControlesSpeciauxGUI?.reappliquerSliderTemperatureApresRendu(this.etatApplication);
             this.mettreAJourCocheGras(this.obtenir(controles, "PoliGrasBtnTxt"), this.etatApplication.interface.parametres.gras);
         });
     }
@@ -569,6 +569,7 @@ export class ControleurInterface {
             this.reinitialiserInterfaceUC.executer();
             this.serviceStyleInterfaceGUI.appliquerTheme(this.etatApplication);
             this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
+            this.serviceControlesSpeciauxGUI?.reappliquerSliderTemperatureApresRendu(this.etatApplication);
         });
     }
 }

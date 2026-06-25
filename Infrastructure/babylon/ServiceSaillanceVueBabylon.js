@@ -130,6 +130,39 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         };
     }
 
+    calculerRayonRecherche({ camera, rayonModele, conserverRayonCourant, configuration }) {
+        const cadrage = configuration?.cadrageAutomatique;
+
+        if (cadrage?.actif !== false) {
+            const occupation = this.limiterEntre0Et1(Number(cadrage?.occupationImageMin ?? 0.8)) || 0.8;
+            const margeSecurite = Math.max(0.5, Number(cadrage?.margeSecurite ?? 1));
+            const fovVertical = Number(camera?.fov) || Math.PI / 4;
+            const distanceCadrage = rayonModele / (occupation * Math.tan(fovVertical / 2));
+
+            let rayon = Math.max(
+                distanceCadrage * margeSecurite,
+                Number(configuration?.distanceMinimale ?? 1.5)
+            );
+
+            if (Number.isFinite(camera?.lowerRadiusLimit) && camera.lowerRadiusLimit > 0) {
+                rayon = Math.max(rayon, camera.lowerRadiusLimit);
+            }
+
+            if (Number.isFinite(camera?.upperRadiusLimit) && camera.upperRadiusLimit > 0) {
+                rayon = Math.min(rayon, camera.upperRadiusLimit);
+            }
+
+            return rayon;
+        }
+
+        return super.calculerRayonRecherche({
+            camera,
+            rayonModele,
+            conserverRayonCourant,
+            configuration
+        });
+    }
+
     calculerScoreDepuisPixels(pixels, width, height, configurationAnalyse = {}) {
         const carte = this.calculerCarteSaillanceAchanta(pixels, width, height, configurationAnalyse);
 

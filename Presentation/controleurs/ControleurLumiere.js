@@ -339,7 +339,10 @@ export class ControleurLumiere {
         });
 
         if (intensite) intensite.value = 1.2;
-        if (temperature) temperature.value = 50;
+        if (temperature) {
+            temperature.value = 50;
+            this.appliquerFondTemperatureSliderApresRendu(temperature);
+        }
         if (texteSelection) texteSelection.text = "Principale";
         if (liste) {
             liste.isVisible = false;

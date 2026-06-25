@@ -683,6 +683,7 @@ async function main() {
     brancherContours(controleurContours);
     controleurCamera.brancherDepuisNomsGUI(NOMS_GUI.camera);
     controleurLumiere.brancherDepuisNomsGUI();
+    serviceControlesSpeciauxGUI.installerSuiviSliderTemperature(etatApplication);
     controleurAccess.brancherDepuisNomsGUI(NOMS_GUI.access);
     brancherModele3D(controleurModele3D);
     brancherTestEntropie(serviceEntropieVueBabylon);
@@ -990,7 +991,7 @@ function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC
                 scene,
                 camera,
                 meshes,
-                conserverRayonCourant: true,
+                conserverRayonCourant: false,
                 texteResultat
             });
 
