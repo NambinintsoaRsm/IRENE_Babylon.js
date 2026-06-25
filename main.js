@@ -717,8 +717,7 @@ async function main() {
 
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
-    rafraichirTexteEntropie();
-    rafraichirTexteSaillance();
+
 
     // On crée une première sauvegarde légère dès que l’interface est prête.
     // Comme ça, la clé existe déjà dans localStorage même avant fermeture du navigateur.
@@ -970,51 +969,23 @@ function preparerTexteDynamique(textBlock, texteParDefaut = "") {
     etatApplication.gui.advancedTexture?.markAsDirty?.();
 }
 
-function rafraichirTexteEntropie() {
-    const c = etatApplication.gui?.controles ?? {};
-    const texte = c.EntropieTxt
-        ?? c.EntropieResultTxt
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieTxt")
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieResultTxt");
 
-    preparerTexteDynamique(texte, "Vue optimale : --");
-}
 
-function rafraichirTexteSaillance() {
-    const c = etatApplication.gui?.controles ?? {};
-    const texte = c.SaillanceTxt
-        ?? c.SaillanceBtnTxt
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
-
-    preparerTexteDynamique(texte, "Vue GMM : --");
-}
 
 function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC = null) {
     const c = etatApplication.gui.controles;
     const bouton = c.SaillanceBtn
         ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtn");
-    const texteResultat = c.SaillanceTxt
-        ?? c.SaillanceBtnTxt
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
+
 
     if (!bouton || !serviceSaillanceVueBabylon) {
         console.warn("[Saillance] Bouton ou service introuvable.");
         return;
     }
 
-    if (texteResultat) {
-        preparerTexteDynamique(texteResultat, "Vue GMM : --");
-    }
-
     bouton.onPointerClickObservable.clear();
     bouton.onPointerClickObservable.add(async () => {
-        if (texteResultat) {
-            texteResultat.text = "Recherche GMM...";
-            texteResultat._markAsDirty?.();
-            etatApplication.gui.advancedTexture?.markAsDirty?.();
-        }
+
 
         try {
             choisirVueSaillanceUC?.executer?.();
@@ -1027,33 +998,12 @@ function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC
                 scene,
                 camera,
                 meshes,
-                conserverRayonCourant: false,
-                texteResultat
+                conserverRayonCourant: false
             });
-
-            if (!resultat) {
-                if (texteResultat) {
-                    texteResultat.text = "Vue GMM : erreur";
-                    texteResultat._markAsDirty?.();
-                }
-                return;
-            }
-
-            if (texteResultat) {
-                texteResultat.text = `Vue GMM : ${Math.round((resultat.scoreGlobal ?? 0) * 100)}%`;
-                texteResultat._markAsDirty?.();
-                etatApplication.gui.advancedTexture?.markAsDirty?.();
-            }
 
             console.log("[Vue optimale par saillance GMM]", resultat);
         } catch (erreur) {
             console.error("[Saillance] Erreur pendant le calcul de vue :", erreur);
-
-            if (texteResultat) {
-                texteResultat.text = "Vue GMM : erreur";
-                texteResultat._markAsDirty?.();
-                etatApplication.gui.advancedTexture?.markAsDirty?.();
-            }
         }
     });
 }
