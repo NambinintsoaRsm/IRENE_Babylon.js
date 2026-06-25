@@ -1,5 +1,3 @@
-import { ProfilUtilisateur } from "../../Domain/profil/ProfilUtilisateur.js";
-
 export class SauvegarderProfilLocalUC {
     constructor(etatApplication, stockageProfilLocal) {
         this.etatApplication = etatApplication;
@@ -11,18 +9,13 @@ export class SauvegarderProfilLocalUC {
             throw new Error("Service de stockage du profil introuvable.");
         }
 
-        const profil = new ProfilUtilisateur({
-            interfaceUtilisateur: this.etatApplication.interface.parametres,
-            apparence: this.etatApplication.apparence.parametres,
-            contours: this.etatApplication.contours.parametres,
-            camera: this.etatApplication.camera.parametres,
-            modele3DId: this.etatApplication.modele3d?.modeleActuel?.id ?? null
-        });
+        const donneesSauvegardees = this.stockageProfilLocal.sauvegarderDepuisEtat(this.etatApplication);
+        const profil = this.stockageProfilLocal.charger();
 
-        this.stockageProfilLocal.sauvegarder(profil);
+        if (profil) {
+            this.etatApplication.profil.profilActuel = profil;
+        }
 
-        this.etatApplication.profil.profilActuel = profil;
-
-        return profil;
+        return profil ?? donneesSauvegardees;
     }
 }

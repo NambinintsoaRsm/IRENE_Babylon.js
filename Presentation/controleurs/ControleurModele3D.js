@@ -122,6 +122,7 @@ export class ControleurModele3D {
             );
 
             this.appliquerVueInitialeModele(meshes);
+            this.appliquerTextureSauvegardeeSurModele(meshes);
 
             return this.etatApplication.modele3d;
         } catch (erreur) {
@@ -181,6 +182,22 @@ export class ControleurModele3D {
         if (this.serviceCameraBabylon?.memoriserVueCouranteModele) {
             this.serviceCameraBabylon.memoriserVueCouranteModele(this.etatApplication);
         }
+    }
+
+
+    appliquerTextureSauvegardeeSurModele(meshes) {
+        const textureActive = this.etatApplication.apparence?.parametres?.textureActive;
+        const tailleMotif = this.etatApplication.apparence?.parametres?.textureMotifTaille ?? 0;
+
+        if (!this.serviceMateriauxBabylon || !textureActive || textureActive === "originale") {
+            return;
+        }
+
+        this.serviceMateriauxBabylon.appliquerTextureProcedurale(
+            meshes,
+            textureActive,
+            { decalageMotif: tailleMotif }
+        );
     }
 
     afficherChargement(message = "Chargement...") {

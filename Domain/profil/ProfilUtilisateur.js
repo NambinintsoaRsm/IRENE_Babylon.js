@@ -9,13 +9,28 @@ export class ProfilUtilisateur {
                     apparence = new ParametresApparence(),
                     contours = new ParametresContours(),
                     camera = new ParametresCamera(),
-                    modele3DId = null
+                    modele3DId = null,
+                    lumiere = null,
+                    miseLumiere = null,
+                    fondScene = null,
+                    accessibilite = null,
+                    dateSauvegarde = null,
+                    versionSauvegarde = 1
                 } = {}) {
         this.interfaceUtilisateur = interfaceUtilisateur;
         this.apparence = apparence;
         this.contours = contours;
         this.camera = camera;
         this.modele3DId = modele3DId;
+
+        // Sections extensibles : elles permettent d'ajouter plus tard les
+        // préférences navigateur/OS sans casser le format de sauvegarde.
+        this.lumiere = lumiere;
+        this.miseLumiere = miseLumiere;
+        this.fondScene = fondScene;
+        this.accessibilite = accessibilite;
+        this.dateSauvegarde = dateSauvegarde;
+        this.versionSauvegarde = versionSauvegarde;
 
         this.valider();
     }
@@ -48,7 +63,13 @@ export class ProfilUtilisateur {
             apparence: nouveauxParametres.apparence ?? this.apparence,
             contours: nouveauxParametres.contours ?? this.contours,
             camera: nouveauxParametres.camera ?? this.camera,
-            modele3DId: nouveauxParametres.modele3DId ?? this.modele3DId
+            modele3DId: nouveauxParametres.modele3DId ?? this.modele3DId,
+            lumiere: nouveauxParametres.lumiere ?? this.lumiere,
+            miseLumiere: nouveauxParametres.miseLumiere ?? this.miseLumiere,
+            fondScene: nouveauxParametres.fondScene ?? this.fondScene,
+            accessibilite: nouveauxParametres.accessibilite ?? this.accessibilite,
+            dateSauvegarde: nouveauxParametres.dateSauvegarde ?? this.dateSauvegarde,
+            versionSauvegarde: nouveauxParametres.versionSauvegarde ?? this.versionSauvegarde
         });
     }
 }

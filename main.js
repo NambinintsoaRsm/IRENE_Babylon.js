@@ -442,6 +442,13 @@ async function main() {
     const boucleRenduBabylon = new BoucleRenduBabylon();
     const serviceControlesSpeciauxGUI = new ServiceControlesSpeciauxGUI();
 
+    etatApplication.services = {
+        ...(etatApplication.services ?? {}),
+        lumiere: serviceLumiereBabylon,
+        scene: serviceSceneBabylon,
+        materiaux: serviceMateriauxBabylon
+    };
+
     etatApplication.moteur = fabriqueMoteur.creer(canvas);
     etatApplication.scenes.scene3D = fabriqueScene3D.creer(etatApplication.moteur);
 
@@ -650,6 +657,11 @@ async function main() {
         constantesCamera
     });
 
+    const controleurLumiere = new ControleurLumiere({
+        etatApplication,
+        serviceLumiereBabylon
+    });
+
     const controleurProfil = new ControleurProfil({
         etatApplication,
         chargerProfilLocalUC,
@@ -659,17 +671,17 @@ async function main() {
         serviceStyleInterfaceGUI,
         serviceTexteGUI,
         serviceCameraBabylon,
+        serviceSceneBabylon,
+        serviceLumiereBabylon,
+        controleurLumiere,
+        serviceMateriauxBabylon,
+        serviceControlesSpeciauxGUI,
         postTraitApparence,
         postTraitNettete,
         postTraitContProfNorm,
         postTraitContoursCouleur,
         postTraitMiseLumiereNormales,
         postTraitMiseLumiereCouleurs
-    });
-
-    const controleurLumiere = new ControleurLumiere({
-        etatApplication,
-        serviceLumiereBabylon
     });
 
     const controleurAccess = new ControleurAccess({
@@ -690,10 +702,27 @@ async function main() {
     brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC);
 
     controleurProfil.chargerProfilAuDemarrage();
+    controleurProfil.installerSauvegardeAutomatique();
+
+    // Aide de test en développement : permet de forcer la sauvegarde depuis la console
+    // sans attendre la fermeture de l’onglet.
+    if (typeof window !== "undefined") {
+        window.saotraSauvegarde = {
+            cle: "saotra_reglages_utilisateur",
+            sauvegarder: () => controleurProfil.sauvegarderMaintenant(),
+            charger: () => JSON.parse(localStorage.getItem("saotra_reglages_utilisateur") || "null"),
+            effacer: () => localStorage.removeItem("saotra_reglages_utilisateur")
+        };
+    }
+
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
     rafraichirTexteEntropie();
     rafraichirTexteSaillance();
+
+    // On crée une première sauvegarde légère dès que l’interface est prête.
+    // Comme ça, la clé existe déjà dans localStorage même avant fermeture du navigateur.
+    controleurProfil.sauvegarderMaintenant();
 
     // On ne crée pas les post-traitements au démarrage :
     // ils seront créés seulement quand une valeur quitte son état neutre.
@@ -708,7 +737,14 @@ async function main() {
     boucleRenduBabylon.gererRedimensionnement(etatApplication.moteur);
 
     await chargerModeleInitial(controleurModele3D);
+
+    // Après chargement du modèle, on réapplique les réglages restaurés qui
+    // dépendent du modèle ou de la caméra réelle.
+    controleurProfil.appliquerEffetsVisuels();
+    controleurProfil.mettreAJourInterfaceDepuisEtat();
+    controleurProfil.sauvegarderMaintenant();
 }
+
 
 function brancherAnimationInterface(controleur) {
     const c = etatApplication.gui.controles;
@@ -1105,10 +1141,11 @@ function obtenirMeshesModelePourEntropie(scene) {
 }
 
 async function chargerModeleInitial(controleurModele3D) {
-    const premierModele = etatApplication.modele3d.modelesDisponibles[0];
+    const modeleInitial = etatApplication.modele3d.modeleSelectionne
+        ?? etatApplication.modele3d.modelesDisponibles[0];
 
-    if (premierModele) {
-        await controleurModele3D.changerModele(premierModele.id);
+    if (modeleInitial) {
+        await controleurModele3D.changerModele(modeleInitial.id);
     }
 }
 

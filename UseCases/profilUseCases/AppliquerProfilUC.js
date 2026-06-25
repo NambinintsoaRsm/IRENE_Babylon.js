@@ -29,6 +29,27 @@ export class AppliquerProfilUC {
         this.etatApplication.contours.parametres = profil.contours;
         this.etatApplication.camera.parametres = profil.camera;
 
+        if (profil.miseLumiere) {
+            this.etatApplication.contours.parametresMiseLumiere = {
+                ...(this.etatApplication.contours.parametresMiseLumiere ?? {}),
+                ...(profil.miseLumiere.parametres ?? {})
+            };
+            this.etatApplication.contours.miseLumiereNormalesActif = Boolean(profil.miseLumiere.normalesActif);
+            this.etatApplication.contours.miseLumiereCouleursActif = Boolean(profil.miseLumiere.couleursActif);
+        }
+
+        if (profil.lumiere) {
+            this.etatApplication.lumiere = this.etatApplication.lumiere || {};
+            this.etatApplication.lumiere.parametres = { ...profil.lumiere };
+        }
+
+        if (profil.accessibilite) {
+            this.etatApplication.accessibilite = {
+                ...(this.etatApplication.accessibilite ?? {}),
+                ...profil.accessibilite
+            };
+        }
+
         this.etatApplication.profil.profilActuel = profil;
 
         if (this.etatApplication.modele3d && profil.modele3DId) {

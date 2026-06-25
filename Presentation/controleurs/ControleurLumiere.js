@@ -223,6 +223,54 @@ export class ControleurLumiere {
         });
     }
 
+
+    appliquerDepuisSauvegarde(parametres = {}) {
+        if (!parametres || typeof parametres !== "object") {
+            return;
+        }
+
+        const typeActif = parametres.typeActif || "principale";
+        const optionActuelle = this.creerOptionDepuisType(typeActif);
+        const toutesOptions = [
+            this.creerOptionDepuisType("principale"),
+            this.creerOptionDepuisType("haut"),
+            this.creerOptionDepuisType("bas"),
+            this.creerOptionDepuisType("tournante")
+        ];
+        const optionsListe = toutesOptions.filter((option) => option.type !== optionActuelle.type);
+
+        this.optionCourante = optionActuelle;
+
+        const texteSelection = this.obtenir("LumDropBtnTxt");
+        if (texteSelection) {
+            texteSelection.metadata = texteSelection.metadata || {};
+            texteSelection.metadata.texteDynamique = true;
+            texteSelection.text = optionActuelle.libelle;
+            texteSelection._markAsDirty?.();
+        }
+
+        this.optionsBoutons.forEach((optionBouton, index) => {
+            const nouvelleOption = optionsListe[index];
+            if (!optionBouton?.bouton || !nouvelleOption) return;
+
+            optionBouton.type = nouvelleOption.type;
+            optionBouton.libelle = nouvelleOption.libelle;
+            optionBouton.bouton.metadata = optionBouton.bouton.metadata || {};
+            optionBouton.bouton.metadata.optionLumiere = {
+                type: nouvelleOption.type,
+                libelle: nouvelleOption.libelle
+            };
+            this.mettreAJourTexteBoutonOption(optionBouton.bouton, nouvelleOption.libelle);
+        });
+    }
+
+    creerOptionDepuisType(type) {
+        if (type === "haut") return { type: "haut", libelle: "Haut" };
+        if (type === "bas") return { type: "bas", libelle: "Bas" };
+        if (type === "tournante") return { type: "tournante", libelle: "Tournante" };
+        return { type: "principale", libelle: "Principale" };
+    }
+
     mettreAJourTexteBoutonOption(bouton, libelle) {
         const texte = bouton?.textBlock
             || bouton?.children?.find?.((enfant) => enfant instanceof BABYLON.GUI.TextBlock);
