@@ -184,6 +184,7 @@ const NOMS_GUI = Object.freeze({
         reliefBtn: "ContNBtn",
         couleurBtn: "ContCBtn",
         couleurOptimaleBtns: [
+            "ContoAutoBtn",
             "ContAutoBtn",
             "ContCouleurAutoBtn",
             "CoulAutoBtn",
@@ -485,7 +486,6 @@ async function main() {
      await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
 
     etatApplication.gui.controles = recupererTousLesControles(etatApplication.gui.advancedTexture);
-    creerOuRecupererBoutonEntropie(etatApplication.gui.advancedTexture);
     creerOuRecupererBoutonSaillance(etatApplication.gui.advancedTexture);
 
     etatApplication.accessibilite = {
@@ -654,6 +654,7 @@ async function main() {
         serviceMateriauxBabylon,
         serviceCameraBabylon,
         serviceEntropieVueBabylon,
+        serviceSaillanceVueBabylon,
         constantesCamera
     });
 
@@ -674,6 +675,7 @@ async function main() {
         serviceSceneBabylon,
         serviceLumiereBabylon,
         controleurLumiere,
+        controleurContours,
         serviceMateriauxBabylon,
         serviceControlesSpeciauxGUI,
         postTraitApparence,
@@ -698,7 +700,6 @@ async function main() {
     serviceControlesSpeciauxGUI.installerSuiviSliderTemperature(etatApplication);
     controleurAccess.brancherDepuisNomsGUI(NOMS_GUI.access);
     brancherModele3D(controleurModele3D);
-    brancherTestEntropie(serviceEntropieVueBabylon);
     brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC);
 
     controleurProfil.chargerProfilAuDemarrage();
@@ -739,7 +740,7 @@ async function main() {
 
     // Après chargement du modèle, on réapplique les réglages restaurés qui
     // dépendent du modèle ou de la caméra réelle.
-    controleurProfil.appliquerEffetsVisuels();
+    controleurProfil.appliquerEffetsVisuels({ appliquerCamera: false });
     controleurProfil.mettreAJourInterfaceDepuisEtat();
     controleurProfil.sauvegarderMaintenant();
 }
@@ -917,7 +918,6 @@ function brancherContours(controleur) {
     });
 
     controleur.brancherMiseLumiereNormales(obtenirPremier(c, n.miseLumiereNormalesBtns));
-    controleur.brancherMiseLumiereCouleurs(obtenirPremier(c, n.miseLumiereCouleursBtns));
 
     if (typeof controleur.brancherParametresMiseLumiere === "function") {
         controleur.brancherParametresMiseLumiere({

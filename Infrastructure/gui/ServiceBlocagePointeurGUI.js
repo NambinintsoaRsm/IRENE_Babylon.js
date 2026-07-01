@@ -42,9 +42,31 @@ export class ServiceBlocagePointeurGUI {
 
             if (!sourisSurGUI && this.cameraBloquee) {
                 camera.attachControl(canvas, true);
+                this.desactiverDeplacementClicDroit(camera, canvas);
                 this.cameraBloquee = false;
             }
         });
+    }
+
+    desactiverDeplacementClicDroit(camera, canvas = null) {
+        if (!camera) return;
+
+        camera.panningSensibility = 0;
+
+        if (typeof BABYLON !== "undefined" && BABYLON.Vector3) {
+            camera.panningAxis = BABYLON.Vector3.Zero();
+        }
+
+        const pointeurs = camera.inputs?.attached?.pointers;
+        if (pointeurs) {
+            pointeurs.buttons = [0];
+            pointeurs.panningSensibility = 0;
+        }
+
+        if (canvas && !canvas.__saotraClicDroitDesactive) {
+            canvas.addEventListener("contextmenu", (evenement) => evenement.preventDefault());
+            canvas.__saotraClicDroitDesactive = true;
+        }
     }
 
     bloquerInteractionsModele(controle) {

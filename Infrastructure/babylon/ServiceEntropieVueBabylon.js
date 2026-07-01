@@ -31,7 +31,8 @@ export class ServiceEntropieVueBabylon {
         modeObjetBase = false,
         exporterCsv = constantesEntropie.exportCsv.actif,
         nomFichierCsv = constantesEntropie.exportCsv.nomFichier,
-        configuration = constantesEntropie
+        configuration = constantesEntropie,
+        masquerParcoursAnalyse = false
     } = {}) {
         if (!scene || !camera) {
             throw new Error("Scène ou caméra introuvable pour choisir la vue par entropie.");
@@ -44,16 +45,24 @@ export class ServiceEntropieVueBabylon {
             return null;
         }
 
-        const etatCameraInitial = this.capturerEtatCamera(camera);
-        const etatRenduInitial = modeObjetBase
-            ? this.preparerAnalyseObjetBase({ scene, camera, meshes: meshesValides, configuration })
-            : null;
+        const cameraAffichage = camera;
+        const contexteCameraAnalyse = this.preparerCameraAnalyse({
+            scene,
+            camera: cameraAffichage,
+            meshes: meshesValides,
+            masquerParcoursAnalyse,
+            configuration
+        });
+        const cameraAnalyse = contexteCameraAnalyse.cameraAnalyse;
+
+        const etatCameraInitial = this.capturerEtatCamera(cameraAffichage);
+        let etatRenduInitial = null;
 
         const infosModele = this.calculerInfosModele(meshesValides);
         const vues = this.genererVuesSpheriques(configuration.parcoursSpherique);
 
         const rayonRecherche = this.calculerRayonRecherche({
-            camera,
+            camera: cameraAnalyse,
             rayonModele: infosModele.rayon,
             conserverRayonCourant,
             configuration: configuration.parcoursSpherique
@@ -63,30 +72,34 @@ export class ServiceEntropieVueBabylon {
         let meilleureVue = null;
 
         try {
+            etatRenduInitial = modeObjetBase
+                ? this.preparerAnalyseObjetBase({ scene, camera: cameraAnalyse, meshes: meshesValides, configuration })
+                : null;
+
             for (let index = 0; index < vues.length; index++) {
                 const vue = vues[index];
 
-                camera.alpha = vue.alpha;
-                camera.beta = vue.beta;
-                camera.radius = rayonRecherche;
-                camera.setTarget(infosModele.centre);
+                cameraAnalyse.alpha = vue.alpha;
+                cameraAnalyse.beta = vue.beta;
+                cameraAnalyse.radius = rayonRecherche;
+                cameraAnalyse.setTarget(infosModele.centre);
 
                 if (texteResultat) {
                     texteResultat.text = `Analyse ${index + 1}/${vues.length}...`;
                     texteResultat._markAsDirty?.();
                 }
 
-                await this.rendreEtAttendre(scene);
+                await this.rendreEtAttendre(scene, contexteCameraAnalyse);
 
-                const score = await this.calculerScoreImage(scene, configuration.analyseImage);
+                const score = await this.calculerScoreImage(scene, configuration.analyseImage, contexteCameraAnalyse);
 
                 const resultatVue = {
                     index: index + 1,
-                    alpha: camera.alpha,
-                    beta: camera.beta,
+                    alpha: cameraAnalyse.alpha,
+                    beta: cameraAnalyse.beta,
                     alphaDegres: vue.alphaDegres,
                     betaDegres: vue.betaDegres,
-                    distance: camera.radius,
+                    distance: cameraAnalyse.radius,
                     rayonObjet: infosModele.rayon,
                     cible: infosModele.centre.clone(),
                     ...score
@@ -98,50 +111,143 @@ export class ServiceEntropieVueBabylon {
                     meilleureVue = resultatVue;
                 }
             }
+
+            if (!meilleureVue) {
+                this.restaurerCameraAnalyse(contexteCameraAnalyse);
+                this.restaurerEtatCamera(cameraAffichage, etatCameraInitial);
+
+                if (texteResultat) {
+                    texteResultat.text = "Vue optimale : erreur";
+                }
+
+                return null;
+            }
+
+            // À partir d'ici, on revient sur la vraie caméra visible.
+            // Le parcours d'analyse a pu être effectué avec une caméra clone,
+            // ce qui évite d'afficher toutes les vues intermédiaires à l'écran.
+            this.restaurerCameraAnalyse(contexteCameraAnalyse);
+
+            cameraAffichage.alpha = meilleureVue.alpha;
+            cameraAffichage.beta = meilleureVue.beta;
+            cameraAffichage.radius = meilleureVue.distance;
+            cameraAffichage.setTarget(meilleureVue.cible);
+
+            await this.rendreEtAttendre(scene);
+
+            const csv = this.creerCsvVuesEntropie({
+                vuesAnalysees,
+                infosModele,
+                configuration
+            });
+
+            if (exporterCsv) {
+                this.telechargerCsv(csv, nomFichierCsv);
+            }
+
+            if (texteResultat) {
+                texteResultat.text = `Vue optimale : ${Math.round(meilleureVue.scoreGlobal * 100)}%`;
+                texteResultat._markAsDirty?.();
+            }
+
+            return {
+                ...meilleureVue,
+                vuesAnalysees,
+                csv,
+                configurationEntropie: configuration
+            };
         } finally {
             if (etatRenduInitial) {
                 this.restaurerAnalyseObjetBase(etatRenduInitial);
             }
+
+            this.restaurerCameraAnalyse(contexteCameraAnalyse);
+        }
+    }
+
+    preparerCameraAnalyse({ scene, camera, meshes = [], masquerParcoursAnalyse = false, configuration = {} } = {}) {
+        if (!masquerParcoursAnalyse || !scene || !camera?.clone) {
+            return {
+                cameraAnalyse: camera,
+                cameraAffichage: camera,
+                cameraActiveInitiale: null,
+                cameraClone: null,
+                renderTarget: null,
+                largeurRenderTarget: null,
+                hauteurRenderTarget: null,
+                renduHorsEcran: false,
+                restauree: true
+            };
         }
 
-        if (!meilleureVue) {
-            this.restaurerEtatCamera(camera, etatCameraInitial);
+        const cameraClone = camera.clone(`${camera.name || "Camera"}_analyse_saotra`);
 
-            if (texteResultat) {
-                texteResultat.text = "Vue optimale : erreur";
-            }
-
-            return null;
+        if (camera.target?.clone && typeof cameraClone.setTarget === "function") {
+            cameraClone.setTarget(camera.target.clone());
         }
 
-        camera.alpha = meilleureVue.alpha;
-        camera.beta = meilleureVue.beta;
-        camera.radius = meilleureVue.distance;
-        camera.setTarget(meilleureVue.cible);
+        cameraClone.alpha = camera.alpha;
+        cameraClone.beta = camera.beta;
+        cameraClone.radius = camera.radius;
+        cameraClone.lowerRadiusLimit = camera.lowerRadiusLimit;
+        cameraClone.upperRadiusLimit = camera.upperRadiusLimit;
+        cameraClone.minZ = camera.minZ;
+        cameraClone.maxZ = camera.maxZ;
+        cameraClone.fov = camera.fov;
+        cameraClone.fovMode = camera.fovMode;
 
-        await this.rendreEtAttendre(scene);
+        const engine = scene.getEngine?.();
+        const tailleMax = Number(configuration?.analyseImage?.resolutionRenduHorsEcran ?? 512);
+        const largeurCanvas = Math.max(64, Number(engine?.getRenderWidth?.(true)) || 512);
+        const hauteurCanvas = Math.max(64, Number(engine?.getRenderHeight?.(true)) || 512);
+        const facteur = Math.min(1, tailleMax / Math.max(largeurCanvas, hauteurCanvas));
+        const largeur = Math.max(64, Math.round(largeurCanvas * facteur));
+        const hauteur = Math.max(64, Math.round(hauteurCanvas * facteur));
 
-        const csv = this.creerCsvVuesEntropie({
-            vuesAnalysees,
-            infosModele,
-            configuration
-        });
+        let renderTarget = null;
 
-        if (exporterCsv) {
-            this.telechargerCsv(csv, nomFichierCsv);
-        }
+        if (typeof BABYLON !== "undefined" && BABYLON.RenderTargetTexture) {
+            renderTarget = new BABYLON.RenderTargetTexture(
+                "SaotraAnalyseSaillanceRTT",
+                { width: largeur, height: hauteur },
+                scene,
+                false,
+                true
+            );
 
-        if (texteResultat) {
-            texteResultat.text = `Vue optimale : ${Math.round(meilleureVue.scoreGlobal * 100)}%`;
-            texteResultat._markAsDirty?.();
+            renderTarget.activeCamera = cameraClone;
+            renderTarget.renderList = Array.isArray(meshes) ? meshes.filter(Boolean) : null;
+            renderTarget.clearColor = scene.clearColor?.clone?.() ?? scene.clearColor;
+            renderTarget.ignoreCameraViewport = true;
         }
 
         return {
-            ...meilleureVue,
-            vuesAnalysees,
-            csv,
-            configurationEntropie: configuration
+            cameraAnalyse: cameraClone,
+            cameraAffichage: camera,
+            cameraActiveInitiale: scene.activeCamera,
+            cameraClone,
+            renderTarget,
+            largeurRenderTarget: largeur,
+            hauteurRenderTarget: hauteur,
+            renduHorsEcran: Boolean(renderTarget),
+            restauree: false
         };
+    }
+
+    restaurerCameraAnalyse(contexte) {
+        if (!contexte || contexte.restauree) {
+            return;
+        }
+
+        const scene = contexte.cameraClone?.getScene?.();
+
+        if (scene && contexte.cameraActiveInitiale) {
+            scene.activeCamera = contexte.cameraActiveInitiale;
+        }
+
+        contexte.renderTarget?.dispose?.();
+        contexte.cameraClone?.dispose?.();
+        contexte.restauree = true;
     }
 
     filtrerMeshesAnalysables(meshes) {
@@ -331,11 +437,19 @@ export class ServiceEntropieVueBabylon {
     }
 
     limiterBeta(beta) {
-        const marge = 0.08;
+        // Babylon ne supporte pas parfaitement beta = 0 ou beta = PI.
+        // On garde donc une marge quasiment invisible pour obtenir une vue dessus/dessous
+        // perpendiculaire sans provoquer de blocage de caméra.
+        const marge = 0.0001;
         return Math.max(marge, Math.min(Math.PI - marge, beta));
     }
 
-    rendreEtAttendre(scene) {
+    rendreEtAttendre(scene, contexteCameraAnalyse = null) {
+        if (contexteCameraAnalyse?.renderTarget) {
+            contexteCameraAnalyse.renderTarget.render(false);
+            return Promise.resolve();
+        }
+
         return new Promise((resolve) => {
             scene.onAfterRenderObservable.addOnce(() => {
                 requestAnimationFrame(() => resolve());
@@ -345,15 +459,22 @@ export class ServiceEntropieVueBabylon {
         });
     }
 
-    async calculerScoreImage(scene, configurationAnalyse) {
+    async calculerScoreImage(scene, configurationAnalyse, contexteCameraAnalyse = null) {
         const engine = scene.getEngine();
-        const width = engine.getRenderWidth(true);
-        const height = engine.getRenderHeight(true);
+        const renderTarget = contexteCameraAnalyse?.renderTarget ?? null;
+        const width = renderTarget
+            ? Number(contexteCameraAnalyse.largeurRenderTarget ?? renderTarget.getRenderWidth?.())
+            : engine.getRenderWidth(true);
+        const height = renderTarget
+            ? Number(contexteCameraAnalyse.hauteurRenderTarget ?? renderTarget.getRenderHeight?.())
+            : engine.getRenderHeight(true);
 
         let pixels;
 
         try {
-            pixels = engine.readPixels(0, 0, width, height);
+            pixels = renderTarget
+                ? renderTarget.readPixels()
+                : engine.readPixels(0, 0, width, height);
 
             // Selon le backend Babylon/WebGL/WebGPU, readPixels peut renvoyer
             // directement un tableau de pixels ou une Promise. Sans await, les

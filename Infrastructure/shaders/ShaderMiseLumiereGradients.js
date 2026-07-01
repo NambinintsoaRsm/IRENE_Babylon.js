@@ -93,7 +93,7 @@ const FONCTIONS_HIGHLIGHT_COMMUNES = `
     float minLightness,
     float maxLightness
 ) {
-    float influence = clamp(masque * facteurClignotement, 0.0, 1.0);
+    float influence = clamp(pow(clamp(masque, 0.0, 1.0), 0.70) * facteurClignotement, 0.0, 1.0);
 
     // Si le pixel n'appartient pas à la zone de highlight,
     // on retourne exactement la couleur originale.
@@ -211,11 +211,9 @@ export function creerShaderMiseLumiereNormalesSiNecessaire() {
         }
 
         float crestMask(vec2 texelBase, float largeur) {
-            // Version allégée : on ne calcule les voisins lointains que si
-            // le slider de largeur les demande réellement.
             // Largeur 1 = crête locale seulement.
-            // Largeur 2 à 8 = dilatation progressive du masque autour du gradient.
-            float largeurBornee = floor(clamp(largeur, 1.0, 8.0));
+            // Largeur 2 à 10 = dilatation progressive du masque autour du gradient.
+            float largeurBornee = floor(clamp(largeur, 1.0, 10.0));
             float masque = continuousNormalAt(vUV, texelBase);
 
             if (largeurBornee >= 2.0) {
@@ -239,8 +237,14 @@ export function creerShaderMiseLumiereNormalesSiNecessaire() {
             if (largeurBornee >= 8.0) {
                 masque = max(masque, voisinsNormales(texelBase, 7.0) * 0.42);
             }
+            if (largeurBornee >= 9.0) {
+                masque = max(masque, voisinsNormales(texelBase, 8.0) * 0.36);
+            }
+            if (largeurBornee >= 10.0) {
+                masque = max(masque, voisinsNormales(texelBase, 9.0) * 0.30);
+            }
 
-            return smoothstep(0.34, 0.60, clamp(masque, 0.0, 1.0));
+            return smoothstep(0.20, 0.48, clamp(masque, 0.0, 1.0));
         }
 
         void main(void) {

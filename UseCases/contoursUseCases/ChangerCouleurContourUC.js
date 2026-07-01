@@ -14,7 +14,13 @@ export class ChangerCouleurContourUC {
             throw new Error("Paramètres de contours introuvables.");
         }
 
-        contours.parametres.couleur = couleur;
+        if (typeof contours.parametres.choisirCouleurManuelle === "function") {
+            contours.parametres.choisirCouleurManuelle(couleur);
+        } else {
+            contours.parametres.couleur = couleur;
+            contours.parametres.couleurAutomatiqueActive = false;
+            contours.parametres.couleurManuelleChoisie = true;
+        }
 
         return contours.parametres;
     }

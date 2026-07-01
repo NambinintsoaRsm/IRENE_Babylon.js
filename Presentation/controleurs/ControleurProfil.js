@@ -17,6 +17,7 @@ export class ControleurProfil {
                     serviceSceneBabylon = null,
                     serviceLumiereBabylon = null,
                     controleurLumiere = null,
+                    controleurContours = null,
                     serviceMateriauxBabylon = null,
                     serviceControlesSpeciauxGUI = null,
                     postTraitApparence = null,
@@ -39,6 +40,7 @@ export class ControleurProfil {
         this.serviceSceneBabylon = serviceSceneBabylon;
         this.serviceLumiereBabylon = serviceLumiereBabylon;
         this.controleurLumiere = controleurLumiere;
+        this.controleurContours = controleurContours;
         this.serviceMateriauxBabylon = serviceMateriauxBabylon;
         this.serviceControlesSpeciauxGUI = serviceControlesSpeciauxGUI;
 
@@ -123,11 +125,11 @@ export class ControleurProfil {
         });
     }
 
-    appliquerEffetsVisuels() {
+    appliquerEffetsVisuels({ appliquerCamera = true } = {}) {
         this.serviceStyleInterfaceGUI.appliquerTheme(this.etatApplication);
         this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
 
-        if (this.etatApplication.camera.cameraBabylon) {
+        if (appliquerCamera && this.etatApplication.camera.cameraBabylon) {
             this.serviceCameraBabylon.appliquerParametres(
                 this.etatApplication.camera.cameraBabylon,
                 this.etatApplication.camera.parametres
@@ -245,6 +247,7 @@ export class ControleurProfil {
         if (contours) {
             this.reglerSlider(c.ContEpaiSlider, contours.epaisseur);
             this.reglerTexte(c.ContEpaiValTxt, String(Math.round(contours.epaisseur ?? 1)));
+            this.controleurContours?.mettreAJourInterfaceDepuisEtat?.();
         }
 
         if (lumiere) {

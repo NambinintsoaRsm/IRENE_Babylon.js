@@ -6,7 +6,7 @@ export class ChoisirCouleurContourAdaptativeUC {
         this.serviceCouleurContourAdaptative = serviceCouleurContourAdaptative;
     }
 
-    async executer() {
+    async executer(options = {}) {
         const contours = this.etatApplication?.contours;
 
         if (!contours?.parametres) {
@@ -19,8 +19,18 @@ export class ChoisirCouleurContourAdaptativeUC {
 
         const resultat = await this.serviceCouleurContourAdaptative.choisir(this.etatApplication);
 
-        contours.parametres.couleur = resultat.couleur;
-        contours.parametres.activer(TypeContour.SILHOUETTE);
+        if (typeof contours.parametres.choisirCouleurAutomatique === "function") {
+            contours.parametres.choisirCouleurAutomatique(resultat.couleur);
+        } else {
+            contours.parametres.couleur = resultat.couleur;
+            contours.parametres.couleurAutomatiqueCalculee = resultat.couleur;
+            contours.parametres.couleurAutomatiqueActive = true;
+            contours.parametres.couleurManuelleChoisie = false;
+        }
+
+        if (options?.activerSilhouette === true) {
+            contours.parametres.activer(TypeContour.SILHOUETTE);
+        }
 
         return {
             parametres: contours.parametres,

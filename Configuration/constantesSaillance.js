@@ -13,7 +13,9 @@ export const constantesSaillance = Object.freeze({
     parcoursSpherique: Object.freeze({
         // Même logique que l'entropie : vues réparties sur une sphère autour de l'objet.
         pasAlphaDegres: 30,
-        betasDegres: Object.freeze([20, 45, 70, 90, 110, 135, 160]),
+        // On ajoute les vues quasi verticales pour tester aussi le dessus
+        // et le dessous de l'objet pendant la recherche GMM.
+        betasDegres: Object.freeze([0, 20, 45, 70, 90, 110, 135, 160, 180]),
         facteurRayonObjet: 3,
         distanceMinimale: 1.5,
 

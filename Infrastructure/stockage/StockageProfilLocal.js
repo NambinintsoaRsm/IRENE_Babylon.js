@@ -222,7 +222,11 @@ export class StockageProfilLocal {
                     typesActifs: profil.contours.typesActifs,
                     epaisseur: profil.contours.epaisseur,
                     seuil: profil.contours.seuil,
-                    couleur: profil.contours.couleur
+                    couleur: profil.contours.couleur,
+                    couleurAutomatiqueActive: profil.contours.couleurAutomatiqueActive,
+                    couleurManuelleChoisie: profil.contours.couleurManuelleChoisie,
+                    couleurAutomatiqueCalculee: profil.contours.couleurAutomatiqueCalculee,
+                    signatureCouleurAutomatique: profil.contours.signatureCouleurAutomatique
                 },
 
                 camera: {
@@ -282,7 +286,11 @@ export class StockageProfilLocal {
                 typesActifs: reglages.contours?.typesActifs,
                 epaisseur: reglages.contours?.epaisseur,
                 seuil: reglages.contours?.seuil,
-                couleur: reglages.contours?.couleur
+                couleur: reglages.contours?.couleur,
+                couleurAutomatiqueActive: reglages.contours?.couleurAutomatiqueActive ?? true,
+                couleurManuelleChoisie: reglages.contours?.couleurManuelleChoisie ?? false,
+                couleurAutomatiqueCalculee: reglages.contours?.couleurAutomatiqueCalculee ?? null,
+                signatureCouleurAutomatique: reglages.contours?.signatureCouleurAutomatique ?? null
             }),
 
             camera: new ParametresCamera({
