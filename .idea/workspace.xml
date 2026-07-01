@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="suppression label salliance">
+      <change beforePath="$PROJECT_DIR$/Configuration/constantesContours.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesContours.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/constantesSaillance.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesSaillance.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/contours/ParametresContours.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/contours/ParametresContours.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCameraBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCameraBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceEntropieVueBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceEntropieVueBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceNormalisationModeleBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceNormalisationModeleBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceOrientationModeleBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceOrientationModeleBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceBlocagePointeurGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceBlocagePointeurGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderMiseLumiereGradients.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/shaders/ShaderMiseLumiereGradients.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurContours.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurContours.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurModele3D.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurModele3D.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/ChangerCouleurContourUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/contoursUseCases/ChangerCouleurContourUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/ReinitialiserContoursUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/contoursUseCases/ReinitialiserContoursUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/modele3dUseCases/ListerModelesUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/modele3dUseCases/ListerModelesUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/profilUseCases/AppliquerProfilUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/profilUseCases/AppliquerProfilUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Util/BabylonUtils.js" beforeDir="false" afterPath="$PROJECT_DIR$/Util/BabylonUtils.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/main.js" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="JavaScript File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="glb-test" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;NambinintsoaRsm&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/NambinintsoaRsm/IRENE_Babylon.js.git&quot;,
+    &quot;accountId&quot;: &quot;da3653bd-c106-472c-8b77-851efc621622&quot;
+  },
+  &quot;recentNewPullRequestHead&quot;: {
+    &quot;server&quot;: {
+      &quot;useHttp&quot;: false,
+      &quot;host&quot;: &quot;github.com&quot;,
+      &quot;port&quot;: null,
+      &quot;suffix&quot;: null
+    },
+    &quot;owner&quot;: &quot;NambinintsoaRsm&quot;,
+    &quot;repository&quot;: &quot;IRENE_Babylon.js&quot;
+  }
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3Ea1WOb8xjuMkRSAkovrjRmyU92" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Node.js.ParametresCamera.js.executor&quot;: &quot;Run&quot;,
+    &quot;Node.js.ServiceCameraBabylon.js.executor&quot;: &quot;Run&quot;,
+    &quot;Node.js.ServiceLumiereBabylon.js.executor&quot;: &quot;Run&quot;,
+    &quot;Node.js.constantesContours.js.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/rasoamanana-nambinintsoa-saotra/WebstormProjects/IRENE_Babylon.js&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/Presentation/gui" />
+      <recent name="$PROJECT_DIR$/Presentation" />
+      <recent name="$PROJECT_DIR$/UseCases/profilUseCases" />
+      <recent name="$PROJECT_DIR$/Domain/contours" />
+      <recent name="$PROJECT_DIR$/Domain/apparence" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-3bd3a6803838-JavaScript-WS-261.22158.274" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="" />
+      <created>1780401897169</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1780401897169</updated>
+      <workItem from="1780401898338" duration="6081000" />
+      <workItem from="1780991025105" duration="72831000" />
+      <workItem from="1781537650927" duration="50000" />
+      <workItem from="1781593094278" duration="2935000" />
+      <workItem from="1781602621014" duration="7283000" />
+      <workItem from="1781689555197" duration="27036000" />
+      <workItem from="1782117699297" duration="2326000" />
+      <workItem from="1782121267450" duration="25991000" />
+      <workItem from="1782381641543" duration="231000" />
+      <workItem from="1782382088530" duration="19420000" />
+      <workItem from="1782821229719" duration="2153000" />
+    </task>
+    <task id="LOCAL-00001" summary="animIntUseCases interfaceUseCases apparenceUseCases">
+      <option name="closed" value="true" />
+      <created>1780992796753</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1780992796754</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Infrastructure et changement mineur">
+      <option name="closed" value="true" />
+      <created>1781012627581</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1781012627581</updated>
+    </task>
+    <task id="LOCAL-00003" summary="assets">
+      <option name="closed" value="true" />
+      <created>1781013613556</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1781013613556</updated>
+    </task>
+    <task id="LOCAL-00004" summary="assets gui">
+      <option name="closed" value="true" />
+      <created>1781014415713</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1781014415713</updated>
+    </task>
+    <task id="LOCAL-00005" summary="11 juin">
+      <option name="closed" value="true" />
+      <created>1781162481227</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1781162481227</updated>
+    </task>
+    <task id="LOCAL-00006" summary="11 juin dernier vers">
+      <option name="closed" value="true" />
+      <created>1781187524226</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1781187524226</updated>
+    </task>
+    <task id="LOCAL-00007" summary="version de test 15 juin 10:25">
+      <option name="closed" value="true" />
+      <created>1781512016340</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1781512016340</updated>
+    </task>
+    <task id="LOCAL-00008" summary="correction épaisseur des contours">
+      <option name="closed" value="true" />
+      <created>1781512455612</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1781512455612</updated>
+    </task>
+    <task id="LOCAL-00009" summary="test highlight , entropie + csv , correction bug background">
+      <option name="closed" value="true" />
+      <created>1781618990551</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1781618990551</updated>
+    </task>
+    <task id="LOCAL-00010" summary="ajout des fichiers non versionnés">
+      <option name="closed" value="true" />
+      <created>1781682441774</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1781682441774</updated>
+    </task>
+    <task id="LOCAL-00011" summary="mise à jours : 22juin">
+      <option name="closed" value="true" />
+      <created>1782137305085</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1782137305086</updated>
+    </task>
+    <task id="LOCAL-00012" summary="mise à jours : saillance">
+      <option name="closed" value="true" />
+      <created>1782217721042</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1782217721042</updated>
+    </task>
+    <task id="LOCAL-00013" summary="ajout des modèles en glb">
+      <option name="closed" value="true" />
+      <created>1782221529159</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1782221529159</updated>
+    </task>
+    <task id="LOCAL-00014" summary="changement en glb">
+      <option name="closed" value="true" />
+      <created>1782222501299</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1782222501299</updated>
+    </task>
+    <task id="LOCAL-00015" summary="pot ajouté">
+      <option name="closed" value="true" />
+      <created>1782224454063</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1782224454063</updated>
+    </task>
+    <task id="LOCAL-00016" summary="v2 glb">
+      <option name="closed" value="true" />
+      <created>1782225738965</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1782225738965</updated>
+    </task>
+    <task id="LOCAL-00017" summary="correction lumière et backface culling">
+      <option name="closed" value="true" />
+      <created>1782285743457</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1782285743457</updated>
+    </task>
+    <task id="LOCAL-00018" summary="correction lumière">
+      <option name="closed" value="true" />
+      <created>1782288115341</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1782288115341</updated>
+    </task>
+    <task id="LOCAL-00019" summary="changement de modele">
+      <option name="closed" value="true" />
+      <created>1782288577835</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1782288577835</updated>
+    </task>
+    <task id="LOCAL-00020" summary="correction background, contraste">
+      <option name="closed" value="true" />
+      <created>1782298654039</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1782298654039</updated>
+    </task>
+    <task id="LOCAL-00021" summary="correction après merge">
+      <option name="closed" value="true" />
+      <created>1782385089785</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1782385089786</updated>
+    </task>
+    <task id="LOCAL-00022" summary="vitesse caméra réduite , gui modifié">
+      <option name="closed" value="true" />
+      <created>1782388415148</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1782388415148</updated>
+    </task>
+    <task id="LOCAL-00023" summary="mise en place de la sauvegarde">
+      <option name="closed" value="true" />
+      <created>1782395194485</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1782395194485</updated>
+    </task>
+    <task id="LOCAL-00024" summary="suppression label salliance">
+      <option name="closed" value="true" />
+      <created>1782397622196</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1782397622196</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="Branch">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="origin/main" />
+                </option>
+              </RecentGroup>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="main" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="animIntUseCases interfaceUseCases apparenceUseCases" />
+    <MESSAGE value="Infrastructure et changement mineur" />
+    <MESSAGE value="assets" />
+    <MESSAGE value="assets gui" />
+    <MESSAGE value="11 juin" />
+    <MESSAGE value="11 juin dernier vers" />
+    <MESSAGE value="version de test 15 juin 10:25" />
+    <MESSAGE value="correction épaisseur des contours" />
+    <MESSAGE value="test highlight , entropie + csv , correction bug background" />
+    <MESSAGE value="ajout des fichiers non versionnés" />
+    <MESSAGE value="mise à jours : 22juin" />
+    <MESSAGE value="mise à jours : saillance" />
+    <MESSAGE value="ajout des modèles en glb" />
+    <MESSAGE value="changement en glb" />
+    <MESSAGE value="pot ajouté" />
+    <MESSAGE value="v2 glb" />
+    <MESSAGE value="correction lumière et backface culling" />
+    <MESSAGE value="correction lumière" />
+    <MESSAGE value="changement de modele" />
+    <MESSAGE value="correction background, contraste" />
+    <MESSAGE value="Revert &quot;correction background, contraste&quot;&#10;&#10;This reverts commit 8b60e0eb51c003c790d89710c399240c1225b553." />
+    <MESSAGE value="correction après merge" />
+    <MESSAGE value="vitesse caméra réduite , gui modifié" />
+    <MESSAGE value="mise en place de la sauvegarde" />
+    <MESSAGE value="suppression label salliance" />
+    <option name="LAST_COMMIT_MESSAGE" value="suppression label salliance" />
+    <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
+  </component>
+</project>
