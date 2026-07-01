@@ -6,7 +6,8 @@ export class ParametresApparence {
                     nettete = 0,
                     textureActive = null,
                     textureMotifTaille = 0,
-                    materiauActif = null
+                    materiauActif = null,
+                    fondScene = 0
                 } = {}) {
         this.contraste = contraste;
         this.luminosite = luminosite;
@@ -15,6 +16,7 @@ export class ParametresApparence {
         this.textureActive = textureActive;
         this.textureMotifTaille = textureMotifTaille;
         this.materiauActif = materiauActif;
+        this.fondScene = fondScene;
 
         this.valider();
     }
@@ -39,6 +41,10 @@ export class ParametresApparence {
         if (!Number.isFinite(this.textureMotifTaille)) {
             throw new Error("La taille du motif de texture est invalide.");
         }
+
+        if (!Number.isFinite(this.fondScene) || this.fondScene < 0 || this.fondScene > 100) {
+            throw new Error("Le fond de scène est invalide.");
+        }
     }
 
     copierAvec(nouveauxParametres = {}) {
@@ -49,7 +55,8 @@ export class ParametresApparence {
             nettete: nouveauxParametres.nettete ?? this.nettete,
             textureActive: nouveauxParametres.textureActive ?? this.textureActive,
             textureMotifTaille: nouveauxParametres.textureMotifTaille ?? this.textureMotifTaille,
-            materiauActif: nouveauxParametres.materiauActif ?? this.materiauActif
+            materiauActif: nouveauxParametres.materiauActif ?? this.materiauActif,
+            fondScene: nouveauxParametres.fondScene ?? this.fondScene
         });
     }
 }

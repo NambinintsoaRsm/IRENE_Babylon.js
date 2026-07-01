@@ -19,6 +19,7 @@ export class ControleurModele3D {
         serviceMateriauxBabylon,
         serviceCameraBabylon = null,
         serviceEntropieVueBabylon = null,
+        serviceSaillanceVueBabylon = null,
         constantesCamera = null
     }) {
         this.etatApplication = etatApplication;
@@ -39,6 +40,7 @@ export class ControleurModele3D {
 
         // Entropie volontairement désactivée pour le moment.
         this.serviceEntropieVueBabylon = null;
+        this.serviceSaillanceVueBabylon = serviceSaillanceVueBabylon;
 
         this.constantesCamera = constantesCamera;
         this.indicateurChargement = null;
@@ -122,6 +124,12 @@ export class ControleurModele3D {
             );
 
             this.appliquerVueInitialeModele(meshes);
+            this.appliquerTextureSauvegardeeSurModele(meshes);
+
+            // La vue de départ devient la vue optimale par saillance GMM.
+            // Le calcul est effectué hors écran pour éviter d'afficher la caméra en rotation.
+            this.afficherChargement("Recherche de la meilleure vue...");
+            await this.appliquerVueSaillanceInitiale(meshes);
 
             return this.etatApplication.modele3d;
         } catch (erreur) {
@@ -181,6 +189,72 @@ export class ControleurModele3D {
         if (this.serviceCameraBabylon?.memoriserVueCouranteModele) {
             this.serviceCameraBabylon.memoriserVueCouranteModele(this.etatApplication);
         }
+    }
+
+
+    async appliquerVueSaillanceInitiale(meshes) {
+        const scene = this.etatApplication.scenes?.scene3D;
+        const camera = this.etatApplication.camera?.cameraBabylon;
+
+        if (!scene || !camera || !this.serviceSaillanceVueBabylon?.placerCameraSurVueSaillanceMaximale) {
+            return null;
+        }
+
+        try {
+            const resultat = await this.serviceSaillanceVueBabylon.placerCameraSurVueSaillanceMaximale({
+                scene,
+                camera,
+                meshes,
+                conserverRayonCourant: false,
+                texteResultat: null,
+                exporterCsv: false,
+                masquerParcoursAnalyse: true
+            });
+
+            if (!resultat) {
+                return null;
+            }
+
+            this.etatApplication.camera.parametres = this.etatApplication.camera.parametres.copierAvec({
+                alpha: camera.alpha,
+                beta: camera.beta,
+                rayon: camera.radius,
+                cible: camera.target?.clone?.() ?? resultat.cible,
+                distanceMin: camera.lowerRadiusLimit,
+                distanceMax: camera.upperRadiusLimit
+            });
+
+            if (this.serviceCameraBabylon?.memoriserVueCouranteModele) {
+                this.serviceCameraBabylon.memoriserVueCouranteModele(this.etatApplication);
+            }
+
+            console.info("[Saillance] Vue initiale GMM appliquée au chargement du modèle.", {
+                score: resultat.scoreGlobal,
+                alphaDegres: resultat.alphaDegres,
+                betaDegres: resultat.betaDegres
+            });
+
+            return resultat;
+        } catch (erreur) {
+            console.warn("[Saillance] Impossible d'appliquer la vue initiale GMM. Vue initiale classique conservée.", erreur);
+            return null;
+        }
+    }
+
+
+    appliquerTextureSauvegardeeSurModele(meshes) {
+        const textureActive = this.etatApplication.apparence?.parametres?.textureActive;
+        const tailleMotif = this.etatApplication.apparence?.parametres?.textureMotifTaille ?? 0;
+
+        if (!this.serviceMateriauxBabylon || !textureActive || textureActive === "originale") {
+            return;
+        }
+
+        this.serviceMateriauxBabylon.appliquerTextureProcedurale(
+            meshes,
+            textureActive,
+            { decalageMotif: tailleMotif }
+        );
     }
 
     afficherChargement(message = "Chargement...") {

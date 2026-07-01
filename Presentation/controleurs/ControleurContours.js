@@ -45,6 +45,7 @@ export class ControleurContours {
         this.boutonsMiseLumiere = new Map();
         this.sliderEpaisseur = null;
         this.texteEpaisseur = null;
+        this.promesseCouleurAdaptative = null;
     }
 
     brancherSilhouette(bouton) {
@@ -116,22 +117,36 @@ export class ControleurContours {
         this.boutonsType.set(typeContour, { bouton });
 
         bouton.onPointerClickObservable.clear();
-        bouton.onPointerClickObservable.add(() => {
+        bouton.onPointerClickObservable.add(async () => {
             const parametres = this.etatApplication.contours.parametres;
             const dejaActif = this.estContourActif(parametres, typeContour);
 
-            if (dejaActif) {
-                this.desactiverContoursUC.executer(typeContour);
-            } else {
-                if (typeContour === TypeContour.SILHOUETTE) this.activerSilhouetteUC.executer();
-                if (typeContour === TypeContour.RELIEF) this.activerReliefUC.executer();
-                if (typeContour === TypeContour.COULEUR) this.activerContourCouleurUC.executer();
-            }
+            try {
+                if (dejaActif) {
+                    this.desactiverContoursUC.executer(typeContour);
+                } else {
+                    if (typeContour === TypeContour.SILHOUETTE) this.activerSilhouetteUC.executer();
+                    if (typeContour === TypeContour.RELIEF) this.activerReliefUC.executer();
+                    if (typeContour === TypeContour.COULEUR) this.activerContourCouleurUC.executer();
 
-            this.mettreAJourSliderEpaisseurSiContoursDesactives();
-            this.appliquerContours();
-            this.mettreAJourBoutonsTypes();
-        });    }
+                    // Si l'utilisateur n'a pas choisi de couleur manuelle,
+                    // le contour utilise automatiquement la couleur calculée.
+                    await this.recalculerCouleurAdaptativeSiNecessaire({
+                        forcer: false,
+                        raison: "activation-contour"
+                    });
+                }
+
+                this.mettreAJourSliderEpaisseurSiContoursDesactives();
+                this.appliquerContours();
+                this.mettreAJourBoutonsTypes();
+                this.mettreAJourBoutonsCouleurs(null);
+                this.mettreAJourBoutonCouleurAdaptative();
+            } catch (erreur) {
+                console.error("Erreur pendant l'activation du contour.", erreur);
+            }
+        });
+    }
 
     brancherSliderEpaisseur({ slider, texteValeur = null }) {
         if (!slider) return;
@@ -181,6 +196,7 @@ export class ControleurContours {
             this.changerCouleurContourUC.executer(couleur);
             this.appliquerContours();
             this.mettreAJourBoutonsCouleurs(bouton);
+            this.mettreAJourBoutonCouleurAdaptative();
         });
     }
 
@@ -192,27 +208,124 @@ export class ControleurContours {
         bouton.metadata.backgroundOriginal = bouton.metadata.backgroundOriginal ?? bouton.background;
         bouton.metadata.thicknessOriginal = bouton.metadata.thicknessOriginal ?? bouton.thickness;
         bouton.metadata.colorOriginal = bouton.metadata.colorOriginal ?? bouton.color;
+        bouton.metadata.cocheCouleurAdaptative = this.obtenirTexteCocheCouleurAdaptative(bouton);
+
+        if (bouton.metadata.cocheCouleurAdaptative) {
+            bouton.metadata.cocheCouleurAdaptative.metadata = bouton.metadata.cocheCouleurAdaptative.metadata || {};
+            bouton.metadata.cocheCouleurAdaptative.metadata.texteDynamique = true;
+        }
 
         bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(async () => {
-            if (!this.choisirCouleurContourAdaptativeUC) {
-                console.warn("Choix automatique de couleur indisponible.");
+            const parametres = this.etatApplication.contours?.parametres;
+
+            if (!parametres) {
                 return;
+            }
+
+            const prochainEtat = !Boolean(parametres.couleurAutomatiqueActive);
+            parametres.couleurAutomatiqueActive = prochainEtat;
+
+            if (prochainEtat) {
+                parametres.couleurManuelleChoisie = false;
             }
 
             bouton.isEnabled = false;
 
             try {
-                const { resultat } = await this.choisirCouleurContourAdaptativeUC.executer();
+                if (prochainEtat) {
+                    await this.recalculerCouleurAdaptativeSiNecessaire({
+                        forcer: true,
+                        raison: "checkbox-auto"
+                    });
+                    this.appliquerContours();
+                }
 
-                this.appliquerContours();
                 this.mettreAJourBoutonsCouleurs(null);
-                this.mettreAJourBoutonCouleurAdaptative(resultat?.couleur);
+                this.mettreAJourBoutonCouleurAdaptative();
             } catch (erreur) {
                 console.error("Erreur pendant le choix automatique de couleur de contour.", erreur);
             } finally {
                 bouton.isEnabled = true;
             }
+        });
+
+        this.mettreAJourBoutonCouleurAdaptative();
+    }
+
+    async recalculerCouleurAdaptativeSiNecessaire({ forcer = false, raison = "" } = {}) {
+        const parametres = this.etatApplication.contours?.parametres;
+
+        if (!parametres || !this.choisirCouleurContourAdaptativeUC) {
+            return null;
+        }
+
+        const autoActif = Boolean(parametres.couleurAutomatiqueActive);
+        const couleurManuelleChoisie = Boolean(parametres.couleurManuelleChoisie);
+
+        if (!forcer && !autoActif && couleurManuelleChoisie) {
+            return null;
+        }
+
+        const signatureCourante = this.obtenirSignatureCouleurAdaptative();
+        const signatureIdentique = parametres.signatureCouleurAutomatique === signatureCourante;
+
+        if (!forcer && autoActif && parametres.couleurAutomatiqueCalculee && signatureIdentique) {
+            return null;
+        }
+
+        if (this.promesseCouleurAdaptative) {
+            return this.promesseCouleurAdaptative;
+        }
+
+        this.promesseCouleurAdaptative = this.choisirCouleurContourAdaptativeUC
+            .executer({ activerSilhouette: false, raison })
+            .then((resultat) => {
+                const parametresActuels = this.etatApplication.contours?.parametres;
+                if (parametresActuels) {
+                    parametresActuels.signatureCouleurAutomatique = this.obtenirSignatureCouleurAdaptative();
+                }
+                this.mettreAJourBoutonCouleurAdaptative();
+                return resultat;
+            })
+            .finally(() => {
+                this.promesseCouleurAdaptative = null;
+            });
+
+        return this.promesseCouleurAdaptative;
+    }
+
+    obtenirSignatureCouleurAdaptative() {
+        const scene = this.etatApplication.scenes?.scene3D;
+        const camera = this.etatApplication.camera?.cameraBabylon;
+        const clearColor = scene?.clearColor;
+        const cible = camera?.target;
+
+        const arrondir = (valeur) => {
+            const nombre = Number(valeur);
+            return Number.isFinite(nombre) ? Math.round(nombre * 1000) / 1000 : null;
+        };
+
+        return JSON.stringify({
+            modele: this.etatApplication.modele3d?.modeleActuel?.id
+                ?? this.etatApplication.modele3d?.modeleSelectionne?.id
+                ?? null,
+            texture: this.etatApplication.apparence?.parametres?.textureActive ?? null,
+            tailleMotif: this.etatApplication.apparence?.parametres?.textureMotifTaille ?? null,
+            fondScene: this.etatApplication.apparence?.parametres?.fondScene ?? null,
+            clearColor: clearColor
+                ? [arrondir(clearColor.r), arrondir(clearColor.g), arrondir(clearColor.b), arrondir(clearColor.a)]
+                : null,
+            camera: camera
+                ? {
+                    alpha: arrondir(camera.alpha),
+                    beta: arrondir(camera.beta),
+                    rayon: arrondir(camera.radius),
+                    cible: cible
+                        ? [arrondir(cible.x), arrondir(cible.y), arrondir(cible.z)]
+                        : null
+                }
+                : null
         });
     }
 
@@ -462,16 +575,81 @@ export class ControleurContours {
         });
     }
 
-    mettreAJourBoutonCouleurAdaptative(couleur = null) {
+    mettreAJourBoutonCouleurAdaptative() {
+        const parametres = this.etatApplication.contours?.parametres;
+        const autoActif = Boolean(parametres?.couleurAutomatiqueActive);
+
         Object.values(this.etatApplication.gui.controles).forEach((controle) => {
             if (!controle?.metadata?.estBoutonCouleurAdaptative) return;
 
-            controle.background = couleur ?? controle.metadata.backgroundOriginal;
-            controle.color = this.couleurTexteLisible(couleur ?? controle.metadata.backgroundOriginal);
-            controle.thickness = couleur
-                ? Math.max(Number(controle.metadata.thicknessOriginal ?? 1), 3)
-                : controle.metadata.thicknessOriginal;
+            controle.background = controle.metadata.backgroundOriginal;
+            controle.color = controle.metadata.colorOriginal;
+            controle.thickness = controle.metadata.thicknessOriginal;
+
+            const coche = controle.metadata.cocheCouleurAdaptative
+                ?? this.obtenirTexteCocheCouleurAdaptative(controle);
+
+            controle.metadata.cocheCouleurAdaptative = coche;
+            this.mettreAJourCocheCouleurAdaptative(coche, autoActif);
         });
+    }
+
+    obtenirTexteCocheCouleurAdaptative(bouton) {
+        const controles = this.etatApplication.gui?.controles ?? {};
+
+        return controles.ContoAutoBtnTxt
+            ?? controles.ContAutoBtnTxt
+            ?? controles.ContCouleurAutoBtnTxt
+            ?? bouton?.textBlock
+            ?? this.trouverPremierTextBlock(bouton);
+    }
+
+    trouverPremierTextBlock(controle) {
+        if (!controle) {
+            return null;
+        }
+
+        if (controle instanceof BABYLON.GUI.TextBlock) {
+            return controle;
+        }
+
+        if (Array.isArray(controle.children)) {
+            for (const enfant of controle.children) {
+                const trouve = this.trouverPremierTextBlock(enfant);
+
+                if (trouve) {
+                    return trouve;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    mettreAJourCocheCouleurAdaptative(textBlock, actif) {
+        if (!textBlock) {
+            return;
+        }
+
+        textBlock.metadata = textBlock.metadata || {};
+        textBlock.metadata.texteDynamique = true;
+        textBlock.text = actif ? "✓" : "";
+        textBlock.color = this.etatApplication.interface?.parametres?.theme === "noir"
+            || this.etatApplication.interface?.parametres?.theme === "gris-fonce"
+            ? "#FFFFFFFF"
+            : "#000000FF";
+        textBlock.fontWeight = "700";
+        textBlock.fontSize = "30px";
+        textBlock.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        textBlock.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        textBlock._markAsDirty?.();
+    }
+
+    mettreAJourInterfaceDepuisEtat() {
+        this.mettreAJourBoutonsTypes();
+        this.mettreAJourBoutonsMiseLumiere();
+        this.mettreAJourBoutonCouleurAdaptative();
+        this.mettreAJourSliderEpaisseur(this.etatApplication.contours?.parametres?.epaisseur ?? 1);
     }
 
     couleurTexteLisible(couleur) {

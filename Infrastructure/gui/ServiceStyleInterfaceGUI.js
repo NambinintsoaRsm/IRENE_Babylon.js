@@ -227,6 +227,18 @@ export class ServiceStyleInterfaceGUI {
         });
     }
 
+    couleurFondOptionInactiveSelonTheme(themeActif) {
+        const theme = String(themeActif || "").toLowerCase();
+
+        if (theme === "gris-fonce" || theme === "grisfonce" || theme.includes("fonce")) {
+            return "#1A1A1AFF";
+        }
+
+        // En thème noir, les boutons d'options doivent rester noirs
+        // tant qu'ils ne sont pas sélectionnés.
+        return "#000000FF";
+    }
+
     nomsBoutonsOptionsAvecFondAdaptatif() {
         return [
             // Panneau Contours.

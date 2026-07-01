@@ -77,11 +77,129 @@ export function supprimerMeshes(meshes = []) {
         return;
     }
 
+    const racinesModele = new Set();
+    const noeudsSansRacine = [];
+
     meshes.forEach((mesh) => {
+        if (!mesh || typeof mesh.dispose !== "function") {
+            return;
+        }
+
+        const racine = trouverRacineModeleSaotra(mesh);
+
+        if (racine) {
+            racinesModele.add(racine);
+        } else {
+            noeudsSansRacine.push(mesh);
+        }
+    });
+
+    // Si les meshes sont rattachés à une racine commune, on supprime la racine.
+    // Cela évite de laisser un TransformNode vide dans la scène.
+    racinesModele.forEach((racine) => {
+        if (racine && typeof racine.dispose === "function") {
+            racine.dispose();
+        }
+    });
+
+    noeudsSansRacine.forEach((mesh) => {
         if (mesh && typeof mesh.dispose === "function") {
             mesh.dispose();
         }
     });
+}
+
+export function trouverRacineModeleSaotra(noeud) {
+    let courant = noeud;
+
+    while (courant) {
+        if (courant.metadata?.saotraRacineModele === true) {
+            return courant;
+        }
+
+        courant = courant.parent ?? null;
+    }
+
+    return null;
+}
+
+
+export function creerOuTrouverRacineModeleSaotra(noeuds = [], options = {}) {
+    const nom = options.nom ?? "SaotraModeleRacine";
+
+    if (!Array.isArray(noeuds) || noeuds.length === 0) {
+        return null;
+    }
+
+    const racineExistante = trouverRacineExistanteDansListe(noeuds);
+
+    if (racineExistante) {
+        racineExistante.metadata = {
+            ...(racineExistante.metadata ?? {}),
+            saotraRacineModele: true
+        };
+
+        return racineExistante;
+    }
+
+    const meshesValides = filtrerMeshesValides(noeuds);
+
+    if (meshesValides.length === 0) {
+        return null;
+    }
+
+    const scene = meshesValides[0]?.getScene?.() ?? null;
+    const racine = new BABYLON.TransformNode(nom, scene);
+
+    racine.metadata = {
+        ...(racine.metadata ?? {}),
+        saotraRacineModele: true
+    };
+
+    racine.position = BABYLON.Vector3.Zero();
+    racine.scaling = BABYLON.Vector3.One();
+    racine.rotation = BABYLON.Vector3.Zero();
+    racine.rotationQuaternion = null;
+
+    meshesValides.forEach((mesh) => {
+        if (!mesh || mesh === racine || mesh.parent === racine) {
+            return;
+        }
+
+        // setParent conserve la position absolue au moment du rattachement.
+        // Ainsi, l'objet reste visuellement identique, mais les futures rotations
+        // et normalisations s'appliquent à l'ensemble du modèle.
+        if (typeof mesh.setParent === "function") {
+            mesh.setParent(racine);
+        } else {
+            mesh.parent = racine;
+        }
+    });
+
+    racine.computeWorldMatrix(true);
+    meshesValides.forEach((mesh) => mesh.computeWorldMatrix?.(true));
+
+    return racine;
+}
+
+function trouverRacineExistanteDansListe(noeuds = []) {
+    for (const noeud of noeuds) {
+        const racineSaotra = trouverRacineModeleSaotra(noeud);
+
+        if (racineSaotra) {
+            return racineSaotra;
+        }
+    }
+
+    const racineBabylon = noeuds.find((noeud) => {
+        return noeud && noeud.name === "__root__";
+    });
+
+    if (racineBabylon) {
+        return racineBabylon;
+    }
+
+    return null;
 }
 
 export function appliquerBackFaceCulling(meshes = [], valeur = false) {

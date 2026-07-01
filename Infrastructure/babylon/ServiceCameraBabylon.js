@@ -36,6 +36,7 @@ export class ServiceCameraBabylon {
 
         camera.attachControl(canvas, true);
         this.appliquerParametres(camera, parametresCamera);
+        this.desactiverDeplacementClicDroit(camera, canvas);
 
         return camera;
     }
@@ -59,8 +60,43 @@ export class ServiceCameraBabylon {
         camera.angularSensibilityY = parametresCamera.sensibiliteRotation ?? constantesCamera.sensibiliteRotation;
         camera.lowerRadiusLimit = parametresCamera.distanceMin ?? constantesCamera.distanceMin;
         camera.upperRadiusLimit = parametresCamera.distanceMax ?? constantesCamera.distanceMax;
+        this.desactiverDeplacementClicDroit(camera);
 
         return camera;
+    }
+
+    /**
+     * Désactive le déplacement latéral de la caméra au clic droit.
+     *
+     * Objectif :
+     * - garder le clic gauche pour tourner autour de l'objet ;
+     * - garder la molette pour zoomer ;
+     * - empêcher le clic droit de déplacer / translater la cible de la caméra.
+     */
+    desactiverDeplacementClicDroit(camera, canvas = null) {
+        if (!camera) return;
+
+        // ArcRotateCamera : une valeur à 0 désactive le panning.
+        camera.panningSensibility = 0;
+
+        // Sécurité supplémentaire : aucune translation autorisée sur les axes de panning.
+        if (typeof BABYLON !== "undefined" && BABYLON.Vector3) {
+            camera.panningAxis = BABYLON.Vector3.Zero();
+        }
+
+        // Sécurité sur l'input pointeur : seul le bouton gauche reste utilisé.
+        // Cela garde la rotation autour de l'objet, mais ignore le clic droit caméra.
+        const pointeurs = camera.inputs?.attached?.pointers;
+        if (pointeurs) {
+            pointeurs.buttons = [0];
+            pointeurs.panningSensibility = 0;
+        }
+
+        // Évite l'ouverture du menu contextuel navigateur sur le canvas.
+        if (canvas && !canvas.__saotraClicDroitDesactive) {
+            canvas.addEventListener("contextmenu", (evenement) => evenement.preventDefault());
+            canvas.__saotraClicDroitDesactive = true;
+        }
     }
 
     memoriserPositionInitiale(etatApplication) {
@@ -171,6 +207,7 @@ export class ServiceCameraBabylon {
         camera.wheelPrecision = constantesCamera.wheelPrecision;
         camera.angularSensibilityX = constantesCamera.sensibiliteRotation;
         camera.angularSensibilityY = constantesCamera.sensibiliteRotation;
+        this.desactiverDeplacementClicDroit(camera);
     }
 
     creerResultatCamera(camera, cible) {
@@ -199,5 +236,6 @@ export class ServiceCameraBabylon {
         if (!camera) throw new Error("Caméra Babylon introuvable.");
         if (!canvas) throw new Error("Canvas introuvable pour débloquer la caméra.");
         camera.attachControl(canvas, true);
+        this.desactiverDeplacementClicDroit(camera, canvas);
     }
 }

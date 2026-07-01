@@ -75,9 +75,10 @@ export class ControleurApparence {
         slider.minimum = 0;
         slider.maximum = 100;
         slider.step = 1;
-        slider.value = 0;
+        const valeurInitiale = this.etatApplication.apparence?.parametres?.fondScene ?? 0;
+        slider.value = valeurInitiale;
 
-        this.appliquerFondScene(0, texteValeur);
+        this.appliquerFondScene(valeurInitiale, texteValeur);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
@@ -86,9 +87,17 @@ export class ControleurApparence {
     }
 
     appliquerFondScene(valeur, texteValeur) {
+        const valeurBornee = Math.max(0, Math.min(100, Number(valeur) || 0));
+
+        if (this.etatApplication.apparence?.parametres?.copierAvec) {
+            this.etatApplication.apparence.parametres = this.etatApplication.apparence.parametres.copierAvec({
+                fondScene: valeurBornee
+            });
+        }
+
         const resultat = this.serviceSceneBabylon.appliquerFondSceneDepuisPourcentage(
             this.etatApplication.scenes.scene3D,
-            valeur
+            valeurBornee
         );
 
         if (texteValeur && resultat) {

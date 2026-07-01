@@ -10,6 +10,12 @@ export class PostTraitMiseLumiereNormales {
             throw new Error("GeometryBufferRenderer indisponible pour la mise en lumière des normales.");
         }
 
+        const conteneur = {
+            postProcess: null,
+            normalRenderer,
+            parametresMiseLumiere
+        };
+
         const postProcess = new BABYLON.PostProcess(
             "PostTraitMiseLumiereNormales",
             nomShader.replace("PixelShader", ""),
@@ -31,11 +37,18 @@ export class PostTraitMiseLumiereNormales {
             camera
         );
 
+        conteneur.postProcess = postProcess;
+
         postProcess.onApply = (effect) => {
-            this.appliquerUniforms({ effect, scene, normalRenderer, parametresMiseLumiere });
+            this.appliquerUniforms({
+                effect,
+                scene,
+                normalRenderer,
+                parametresMiseLumiere: conteneur.parametresMiseLumiere
+            });
         };
 
-        return { postProcess, normalRenderer };
+        return conteneur;
     }
 
     appliquerUniforms({ effect, scene, normalRenderer, parametresMiseLumiere }) {
@@ -80,7 +93,7 @@ export class PostTraitMiseLumiereNormales {
         const largeur = this.borner(
             Number(parametres?.largeur),
             Number(largeurConfig.min ?? 1),
-            Number(largeurConfig.max ?? 5),
+            Number(largeurConfig.max ?? 10),
             Number(largeurConfig.defaut ?? 2)
         );
 
@@ -122,6 +135,8 @@ export class PostTraitMiseLumiereNormales {
 
         if (!etatApplication.contours.postTraitMiseLumiereNormales) {
             etatApplication.contours.postTraitMiseLumiereNormales = this.creer(scene, camera, parametresMiseLumiere);
+        } else {
+            etatApplication.contours.postTraitMiseLumiereNormales.parametresMiseLumiere = parametresMiseLumiere;
         }
 
         return etatApplication.contours.postTraitMiseLumiereNormales;

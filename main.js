@@ -184,6 +184,7 @@ const NOMS_GUI = Object.freeze({
         reliefBtn: "ContNBtn",
         couleurBtn: "ContCBtn",
         couleurOptimaleBtns: [
+            "ContoAutoBtn",
             "ContAutoBtn",
             "ContCouleurAutoBtn",
             "CoulAutoBtn",
@@ -442,6 +443,13 @@ async function main() {
     const boucleRenduBabylon = new BoucleRenduBabylon();
     const serviceControlesSpeciauxGUI = new ServiceControlesSpeciauxGUI();
 
+    etatApplication.services = {
+        ...(etatApplication.services ?? {}),
+        lumiere: serviceLumiereBabylon,
+        scene: serviceSceneBabylon,
+        materiaux: serviceMateriauxBabylon
+    };
+
     etatApplication.moteur = fabriqueMoteur.creer(canvas);
     etatApplication.scenes.scene3D = fabriqueScene3D.creer(etatApplication.moteur);
 
@@ -478,7 +486,6 @@ async function main() {
      await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
 
     etatApplication.gui.controles = recupererTousLesControles(etatApplication.gui.advancedTexture);
-    creerOuRecupererBoutonEntropie(etatApplication.gui.advancedTexture);
     creerOuRecupererBoutonSaillance(etatApplication.gui.advancedTexture);
 
     etatApplication.accessibilite = {
@@ -647,7 +654,13 @@ async function main() {
         serviceMateriauxBabylon,
         serviceCameraBabylon,
         serviceEntropieVueBabylon,
+        serviceSaillanceVueBabylon,
         constantesCamera
+    });
+
+    const controleurLumiere = new ControleurLumiere({
+        etatApplication,
+        serviceLumiereBabylon
     });
 
     const controleurProfil = new ControleurProfil({
@@ -659,17 +672,18 @@ async function main() {
         serviceStyleInterfaceGUI,
         serviceTexteGUI,
         serviceCameraBabylon,
+        serviceSceneBabylon,
+        serviceLumiereBabylon,
+        controleurLumiere,
+        controleurContours,
+        serviceMateriauxBabylon,
+        serviceControlesSpeciauxGUI,
         postTraitApparence,
         postTraitNettete,
         postTraitContProfNorm,
         postTraitContoursCouleur,
         postTraitMiseLumiereNormales,
         postTraitMiseLumiereCouleurs
-    });
-
-    const controleurLumiere = new ControleurLumiere({
-        etatApplication,
-        serviceLumiereBabylon
     });
 
     const controleurAccess = new ControleurAccess({
@@ -683,16 +697,32 @@ async function main() {
     brancherContours(controleurContours);
     controleurCamera.brancherDepuisNomsGUI(NOMS_GUI.camera);
     controleurLumiere.brancherDepuisNomsGUI();
+    serviceControlesSpeciauxGUI.installerSuiviSliderTemperature(etatApplication);
     controleurAccess.brancherDepuisNomsGUI(NOMS_GUI.access);
     brancherModele3D(controleurModele3D);
-    brancherTestEntropie(serviceEntropieVueBabylon);
     brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC);
 
     controleurProfil.chargerProfilAuDemarrage();
+    controleurProfil.installerSauvegardeAutomatique();
+
+    // Aide de test en développement : permet de forcer la sauvegarde depuis la console
+    // sans attendre la fermeture de l’onglet.
+    if (typeof window !== "undefined") {
+        window.saotraSauvegarde = {
+            cle: "saotra_reglages_utilisateur",
+            sauvegarder: () => controleurProfil.sauvegarderMaintenant(),
+            charger: () => JSON.parse(localStorage.getItem("saotra_reglages_utilisateur") || "null"),
+            effacer: () => localStorage.removeItem("saotra_reglages_utilisateur")
+        };
+    }
+
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
-    rafraichirTexteEntropie();
-    rafraichirTexteSaillance();
+
+
+    // On crée une première sauvegarde légère dès que l’interface est prête.
+    // Comme ça, la clé existe déjà dans localStorage même avant fermeture du navigateur.
+    controleurProfil.sauvegarderMaintenant();
 
     // On ne crée pas les post-traitements au démarrage :
     // ils seront créés seulement quand une valeur quitte son état neutre.
@@ -707,7 +737,14 @@ async function main() {
     boucleRenduBabylon.gererRedimensionnement(etatApplication.moteur);
 
     await chargerModeleInitial(controleurModele3D);
+
+    // Après chargement du modèle, on réapplique les réglages restaurés qui
+    // dépendent du modèle ou de la caméra réelle.
+    controleurProfil.appliquerEffetsVisuels({ appliquerCamera: false });
+    controleurProfil.mettreAJourInterfaceDepuisEtat();
+    controleurProfil.sauvegarderMaintenant();
 }
+
 
 function brancherAnimationInterface(controleur) {
     const c = etatApplication.gui.controles;
@@ -881,7 +918,6 @@ function brancherContours(controleur) {
     });
 
     controleur.brancherMiseLumiereNormales(obtenirPremier(c, n.miseLumiereNormalesBtns));
-    controleur.brancherMiseLumiereCouleurs(obtenirPremier(c, n.miseLumiereCouleursBtns));
 
     if (typeof controleur.brancherParametresMiseLumiere === "function") {
         controleur.brancherParametresMiseLumiere({
@@ -933,51 +969,23 @@ function preparerTexteDynamique(textBlock, texteParDefaut = "") {
     etatApplication.gui.advancedTexture?.markAsDirty?.();
 }
 
-function rafraichirTexteEntropie() {
-    const c = etatApplication.gui?.controles ?? {};
-    const texte = c.EntropieTxt
-        ?? c.EntropieResultTxt
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieTxt")
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieResultTxt");
 
-    preparerTexteDynamique(texte, "Vue optimale : --");
-}
 
-function rafraichirTexteSaillance() {
-    const c = etatApplication.gui?.controles ?? {};
-    const texte = c.SaillanceTxt
-        ?? c.SaillanceBtnTxt
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
-
-    preparerTexteDynamique(texte, "Vue GMM : --");
-}
 
 function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC = null) {
     const c = etatApplication.gui.controles;
     const bouton = c.SaillanceBtn
         ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtn");
-    const texteResultat = c.SaillanceTxt
-        ?? c.SaillanceBtnTxt
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceTxt")
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtnTxt");
+
 
     if (!bouton || !serviceSaillanceVueBabylon) {
         console.warn("[Saillance] Bouton ou service introuvable.");
         return;
     }
 
-    if (texteResultat) {
-        preparerTexteDynamique(texteResultat, "Vue GMM : --");
-    }
-
     bouton.onPointerClickObservable.clear();
     bouton.onPointerClickObservable.add(async () => {
-        if (texteResultat) {
-            texteResultat.text = "Recherche GMM...";
-            texteResultat._markAsDirty?.();
-            etatApplication.gui.advancedTexture?.markAsDirty?.();
-        }
+
 
         try {
             choisirVueSaillanceUC?.executer?.();
@@ -990,33 +998,12 @@ function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC
                 scene,
                 camera,
                 meshes,
-                conserverRayonCourant: true,
-                texteResultat
+                conserverRayonCourant: false
             });
-
-            if (!resultat) {
-                if (texteResultat) {
-                    texteResultat.text = "Vue GMM : erreur";
-                    texteResultat._markAsDirty?.();
-                }
-                return;
-            }
-
-            if (texteResultat) {
-                texteResultat.text = `Vue GMM : ${Math.round((resultat.scoreGlobal ?? 0) * 100)}%`;
-                texteResultat._markAsDirty?.();
-                etatApplication.gui.advancedTexture?.markAsDirty?.();
-            }
 
             console.log("[Vue optimale par saillance GMM]", resultat);
         } catch (erreur) {
             console.error("[Saillance] Erreur pendant le calcul de vue :", erreur);
-
-            if (texteResultat) {
-                texteResultat.text = "Vue GMM : erreur";
-                texteResultat._markAsDirty?.();
-                etatApplication.gui.advancedTexture?.markAsDirty?.();
-            }
         }
     });
 }
@@ -1104,10 +1091,11 @@ function obtenirMeshesModelePourEntropie(scene) {
 }
 
 async function chargerModeleInitial(controleurModele3D) {
-    const premierModele = etatApplication.modele3d.modelesDisponibles[0];
+    const modeleInitial = etatApplication.modele3d.modeleSelectionne
+        ?? etatApplication.modele3d.modelesDisponibles[0];
 
-    if (premierModele) {
-        await controleurModele3D.changerModele(premierModele.id);
+    if (modeleInitial) {
+        await controleurModele3D.changerModele(modeleInitial.id);
     }
 }
 

@@ -244,6 +244,63 @@ export class ServiceLumiereBabylon {
 
 
 
+
+    obtenirParametresSauvegarde() {
+        return {
+            typeActif: this.typeActif,
+            intensite: this.intensiteActuelle,
+            temperature: this.temperatureActuelle,
+            angleRotation: this.angleRotation,
+            rotationEnPause: this.rotationEnPause,
+            facteurVitesseRotation: this.facteurVitesseRotation,
+            directionRotationActuelle: this.directionRotationActuelle
+                ? {
+                    x: this.directionRotationActuelle.x,
+                    y: this.directionRotationActuelle.y,
+                    z: this.directionRotationActuelle.z
+                }
+                : null
+        };
+    }
+
+    appliquerParametresSauvegarde(scene, parametres = {}) {
+        if (!parametres || typeof parametres !== "object") {
+            return;
+        }
+
+        this.arreterRotation(scene);
+
+        this.typeActif = parametres.typeActif || "principale";
+        this.intensiteActuelle = Number.isFinite(Number(parametres.intensite))
+            ? Number(parametres.intensite)
+            : this.intensiteActuelle;
+        this.temperatureActuelle = Number.isFinite(Number(parametres.temperature))
+            ? Number(parametres.temperature)
+            : this.temperatureActuelle;
+        this.angleRotation = Number.isFinite(Number(parametres.angleRotation))
+            ? Number(parametres.angleRotation)
+            : 0;
+        this.rotationEnPause = Boolean(parametres.rotationEnPause);
+        this.facteurVitesseRotation = Number.isFinite(Number(parametres.facteurVitesseRotation))
+            ? Number(parametres.facteurVitesseRotation)
+            : this.facteurVitesseRotation;
+
+        if (parametres.directionRotationActuelle) {
+            this.directionRotationActuelle = new BABYLON.Vector3(
+                Number(parametres.directionRotationActuelle.x) || -1,
+                Number(parametres.directionRotationActuelle.y) || -0.7,
+                Number(parametres.directionRotationActuelle.z) || 0
+            ).normalize();
+        }
+
+        this.appliquerTemperature(scene, this.temperatureActuelle);
+        this.appliquerType(scene, this.typeActif, { garderRotation: true });
+
+        if (this.typeActif === "tournante" && this.rotationEnPause) {
+            this.mettreRotationEnPause(scene);
+        }
+    }
+
     libelleType(type) {
         if (type === "haut") return "Haut";
         if (type === "bas") return "Bas";

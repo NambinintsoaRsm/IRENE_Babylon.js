@@ -7,7 +7,11 @@ export class ParametresContours {
         typesActifs = null,
         epaisseur = 1,
         seuil = 0.5,
-        couleur = "#000000"
+        couleur = "#000000",
+        couleurAutomatiqueActive = true,
+        couleurManuelleChoisie = false,
+        couleurAutomatiqueCalculee = null,
+        signatureCouleurAutomatique = null
     } = {}) {
         const listeTypes = Array.isArray(typesActifs)
             ? typesActifs
@@ -19,6 +23,10 @@ export class ParametresContours {
         this.epaisseur = epaisseur;
         this.seuil = seuil;
         this.couleur = couleur;
+        this.couleurAutomatiqueActive = Boolean(couleurAutomatiqueActive);
+        this.couleurManuelleChoisie = Boolean(couleurManuelleChoisie);
+        this.couleurAutomatiqueCalculee = couleurAutomatiqueCalculee;
+        this.signatureCouleurAutomatique = signatureCouleurAutomatique;
 
         this.valider();
     }
@@ -48,6 +56,22 @@ export class ParametresContours {
 
         if (typeof this.couleur !== "string" || this.couleur.trim() === "") {
             throw new Error("La couleur du contour est invalide.");
+        }
+
+        if (typeof this.couleurAutomatiqueActive !== "boolean") {
+            throw new Error("L'état de couleur automatique du contour est invalide.");
+        }
+
+        if (typeof this.couleurManuelleChoisie !== "boolean") {
+            throw new Error("L'état de couleur manuelle du contour est invalide.");
+        }
+
+        if (this.couleurAutomatiqueCalculee !== null && typeof this.couleurAutomatiqueCalculee !== "string") {
+            throw new Error("La couleur automatique calculée est invalide.");
+        }
+
+        if (this.signatureCouleurAutomatique !== null && typeof this.signatureCouleurAutomatique !== "string") {
+            throw new Error("La signature de couleur automatique est invalide.");
         }
     }
 
@@ -105,5 +129,26 @@ export class ParametresContours {
 
     changerSeuil(seuil) {
         this.seuil = seuil;
+    }
+
+    choisirCouleurManuelle(couleur) {
+        this.couleur = couleur;
+        this.couleurAutomatiqueActive = false;
+        this.couleurManuelleChoisie = true;
+    }
+
+    choisirCouleurAutomatique(couleur) {
+        this.couleur = couleur;
+        this.couleurAutomatiqueCalculee = couleur;
+        this.signatureCouleurAutomatique = null;
+        this.couleurAutomatiqueActive = true;
+        this.couleurManuelleChoisie = false;
+    }
+
+    activerCouleurAutomatique(active = true) {
+        this.couleurAutomatiqueActive = Boolean(active);
+        if (this.couleurAutomatiqueActive) {
+            this.couleurManuelleChoisie = false;
+        }
     }
 }

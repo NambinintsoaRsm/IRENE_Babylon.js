@@ -20,7 +20,11 @@ export class ReinitialiserContoursUC {
             typesActifs: source.typesActifs ?? [],
             epaisseur: source.epaisseur,
             seuil: source.seuil,
-            couleur: source.couleur
+            couleur: source.couleur,
+            couleurAutomatiqueActive: source.couleurAutomatiqueActive ?? true,
+            couleurManuelleChoisie: source.couleurManuelleChoisie ?? false,
+            couleurAutomatiqueCalculee: source.couleurAutomatiqueCalculee ?? null,
+            signatureCouleurAutomatique: source.signatureCouleurAutomatique ?? null
         });
 
         contours.parametres = parametresParDefaut;

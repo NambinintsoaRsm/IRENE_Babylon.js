@@ -48,10 +48,10 @@ export class ControleurLumiere {
     brancherIntensite({ slider, texteValeur }) {
         if (!slider) return;
 
-        slider.minimum = 0.1;
-        slider.maximum = 4;
+        slider.minimum = 0.2;
+        slider.maximum = 2.5;
         slider.step = 0.1;
-        slider.value = 0.8;
+        slider.value = 1.2;
         slider.isPointerBlocker = true;
 
         this.serviceLumiereBabylon.appliquerIntensite(this.etatApplication.scenes.scene3D, slider.value);
@@ -223,6 +223,54 @@ export class ControleurLumiere {
         });
     }
 
+
+    appliquerDepuisSauvegarde(parametres = {}) {
+        if (!parametres || typeof parametres !== "object") {
+            return;
+        }
+
+        const typeActif = parametres.typeActif || "principale";
+        const optionActuelle = this.creerOptionDepuisType(typeActif);
+        const toutesOptions = [
+            this.creerOptionDepuisType("principale"),
+            this.creerOptionDepuisType("haut"),
+            this.creerOptionDepuisType("bas"),
+            this.creerOptionDepuisType("tournante")
+        ];
+        const optionsListe = toutesOptions.filter((option) => option.type !== optionActuelle.type);
+
+        this.optionCourante = optionActuelle;
+
+        const texteSelection = this.obtenir("LumDropBtnTxt");
+        if (texteSelection) {
+            texteSelection.metadata = texteSelection.metadata || {};
+            texteSelection.metadata.texteDynamique = true;
+            texteSelection.text = optionActuelle.libelle;
+            texteSelection._markAsDirty?.();
+        }
+
+        this.optionsBoutons.forEach((optionBouton, index) => {
+            const nouvelleOption = optionsListe[index];
+            if (!optionBouton?.bouton || !nouvelleOption) return;
+
+            optionBouton.type = nouvelleOption.type;
+            optionBouton.libelle = nouvelleOption.libelle;
+            optionBouton.bouton.metadata = optionBouton.bouton.metadata || {};
+            optionBouton.bouton.metadata.optionLumiere = {
+                type: nouvelleOption.type,
+                libelle: nouvelleOption.libelle
+            };
+            this.mettreAJourTexteBoutonOption(optionBouton.bouton, nouvelleOption.libelle);
+        });
+    }
+
+    creerOptionDepuisType(type) {
+        if (type === "haut") return { type: "haut", libelle: "Haut" };
+        if (type === "bas") return { type: "bas", libelle: "Bas" };
+        if (type === "tournante") return { type: "tournante", libelle: "Tournante" };
+        return { type: "principale", libelle: "Principale" };
+    }
+
     mettreAJourTexteBoutonOption(bouton, libelle) {
         const texte = bouton?.textBlock
             || bouton?.children?.find?.((enfant) => enfant instanceof BABYLON.GUI.TextBlock);
@@ -338,8 +386,11 @@ export class ControleurLumiere {
             this.mettreAJourTexteBoutonOption(option.bouton, option.libelle);
         });
 
-        if (intensite) intensite.value = 1.4;
-        if (temperature) temperature.value = 50;
+        if (intensite) intensite.value = 1.2;
+        if (temperature) {
+            temperature.value = 50;
+            this.appliquerFondTemperatureSliderApresRendu(temperature);
+        }
         if (texteSelection) texteSelection.text = "Principale";
         if (liste) {
             liste.isVisible = false;

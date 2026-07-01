@@ -13,20 +13,18 @@ export const constantesSaillance = Object.freeze({
     parcoursSpherique: Object.freeze({
         // Même logique que l'entropie : vues réparties sur une sphère autour de l'objet.
         pasAlphaDegres: 30,
-        betasDegres: Object.freeze([20, 45, 70, 90, 110, 135, 160]),
-        // Le facteur reste disponible en secours si le cadrage automatique est désactivé.
+        // On ajoute les vues quasi verticales pour tester aussi le dessus
+        // et le dessous de l'objet pendant la recherche GMM.
+        betasDegres: Object.freeze([0, 20, 45, 70, 90, 110, 135, 160, 180]),
         facteurRayonObjet: 3,
         distanceMinimale: 1.5,
 
-        // Remarque tuteur : au lancement de l'algorithme, on fixe automatiquement
-        // la distance caméra-objet au lieu de garder la distance après navigation.
-        // Objectif : le modèle doit occuper environ 80% de l'image rendue.
+        // Pour la saillance, on fixe automatiquement la distance au lancement :
+        // l'objet doit occuper environ 80 % de l'image analysée, indépendamment
+        // de la distance courante de la caméra après interaction utilisateur.
         cadrageAutomatique: Object.freeze({
             actif: true,
             occupationImageMin: 0.8,
-
-            // 1 = cadrage calculé exactement ; > 1 éloigne légèrement la caméra ;
-            // < 1 rapproche un peu mais peut couper l'objet si le modèle est très allongé.
             margeSecurite: 1
         })
     }),
@@ -92,9 +90,8 @@ export const constantesSaillance = Object.freeze({
     }),
 
     exportHistogramme: Object.freeze({
-        // Histogramme de distribution : une barre = une plage de scores.
-        // Exemple : combien de vues ont un score entre 40% et 50%.
-        actif: true,
+        // L'histogramme reste désactivé sur cette branche.
+        actif: false,
         nomFichierSvg: "saillance_gmm_histogramme.svg",
         largeurSvg: 920,
         hauteurSvg: 560,

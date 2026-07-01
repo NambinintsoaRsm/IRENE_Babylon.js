@@ -53,8 +53,10 @@ export const constantesContours = Object.freeze({
      */
     miseLumiereGradients: Object.freeze({
         normales: Object.freeze({
-            seuilGradient: 0.3,
-            intensite: 0.9,
+            // Seuil abaissé : le masque normal détecte davantage de reliefs,
+            // ce qui rend le Highlight visible sur plus de modèles.
+            seuilGradient: 0.4,
+            intensite:0.9,
             voisinsMin: 2
         }),
 
@@ -78,14 +80,18 @@ export const constantesContours = Object.freeze({
              * Cela évite les effets extrêmes noir/blanc.
              */
             luminancePourcentage: Object.freeze({
-                min: 0,
-                max: 80,
-                defaut: 20,
-                step: 1,
-                // Plus lumineux : le slider peut maintenant renforcer davantage la lumière locale.
-                deltaMin: 0.05,
-                deltaMax: 0.28,
-                deltaDefaut: 0.12
+                // Aligné avec le GUI : HighLumSlider va de 1 à 10.
+                min: 1,
+                max: 8,
+                defaut: 1,
+                step: 0.001,
+
+                // Plage progressive pour éviter un changement trop brutal.
+                // deltaMin = effet léger au minimum.
+                // deltaMax = effet fort mais pas brûlé au maximum.
+                deltaMin: 0.02,
+                deltaMax: 0.20,
+                deltaDefaut: 0.06
             }),
 
             /**
@@ -94,12 +100,10 @@ export const constantesContours = Object.freeze({
              */
             largeur: Object.freeze({
                 min: 1,
-                // Augmenté pour pouvoir élargir davantage le trait Highlight.
-                // Attention : les grandes valeurs sont plus coûteuses, car elles élargissent
-                // le masque autour des gradients.
-                max: 5,
+                // Aligné avec le nouveau GUI : HighLargSlider va de 1 à 10.
+                max: 4,
                 defaut: 2,
-                step: 1
+                step: 0.5
             }),
 
             clignotement: Object.freeze({
@@ -110,7 +114,7 @@ export const constantesContours = Object.freeze({
 
             securiteLuminosite: Object.freeze({
                 minLightness: 0.08,
-                maxLightness: 0.98
+                maxLightness: 0.995
             })
         })
     }),
