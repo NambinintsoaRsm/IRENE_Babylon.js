@@ -95,19 +95,35 @@ export class StockageProfilLocal {
     }
 
     creerProfilDepuisEtat(etatApplication) {
-        const camera = this.lireCameraCourante(etatApplication);
+        const sauvegardeAccessibilite = this.lireSauvegardeAvantAccessibilite(etatApplication);
+        const sauvegardeHighlight = this.lireSauvegardeAvantPresetHighlight(etatApplication);
+        const camera = sauvegardeAccessibilite?.camera
+            ? this.lireCameraDepuisSauvegarde(etatApplication, sauvegardeAccessibilite.camera)
+            : this.lireCameraCourante(etatApplication);
 
         const profil = new ProfilUtilisateur({
-            interfaceUtilisateur: etatApplication.interface?.parametres,
-            apparence: etatApplication.apparence?.parametres,
+            // Si l'accessibilité est active, on sauvegarde les réglages normaux
+            // d'avant activation, puis seulement le booléen accessibilite.actif.
+            interfaceUtilisateur: sauvegardeAccessibilite?.interface
+                ? new ParametresInterface(sauvegardeAccessibilite.interface)
+                : etatApplication.interface?.parametres,
+            apparence: sauvegardeAccessibilite?.apparence
+                ? new ParametresApparence(sauvegardeAccessibilite.apparence)
+                : (sauvegardeHighlight?.apparence
+                    ? new ParametresApparence(sauvegardeHighlight.apparence)
+                    : etatApplication.apparence?.parametres),
             contours: etatApplication.contours?.parametres,
             camera: camera ?? etatApplication.camera?.parametres,
             modele3DId: etatApplication.modele3d?.modeleActuel?.id
                 ?? etatApplication.modele3d?.modeleSelectionne?.id
                 ?? null,
-            lumiere: this.lireLumiereCourante(etatApplication),
-            miseLumiere: this.lireMiseLumiereCourante(etatApplication),
-            fondScene: this.lireFondSceneCourant(etatApplication),
+            lumiere: this.lireLumiereCourante(etatApplication, sauvegardeAccessibilite),
+            miseLumiere: this.lireMiseLumiereCourante(etatApplication, sauvegardeHighlight),
+            fondScene: sauvegardeAccessibilite?.fondScene
+                ? this.lireFondSceneDepuisSauvegarde(sauvegardeAccessibilite.fondScene)
+                : (sauvegardeHighlight?.fondScene
+                    ? this.lireFondSceneDepuisSauvegarde(sauvegardeHighlight.fondScene)
+                    : this.lireFondSceneCourant(etatApplication)),
             accessibilite: this.lireAccessibiliteCourante(etatApplication),
             dateSauvegarde: new Date().toISOString(),
             versionSauvegarde: this.version
@@ -144,7 +160,62 @@ export class StockageProfilLocal {
         });
     }
 
-    lireLumiereCourante(etatApplication) {
+
+    lireSauvegardeAvantAccessibilite(etatApplication) {
+        const accessibilite = etatApplication.accessibilite;
+
+        if (!accessibilite?.actif || !accessibilite?.sauvegardeAvantActivation) {
+            return null;
+        }
+
+        return accessibilite.sauvegardeAvantActivation;
+    }
+
+    lireSauvegardeAvantPresetHighlight(etatApplication) {
+        const contours = etatApplication.contours;
+
+        if (!contours?.sauvegardeAvantPresetHighlight) {
+            return null;
+        }
+
+        return contours.sauvegardeAvantPresetHighlight;
+    }
+
+    lireCameraDepuisSauvegarde(etatApplication, sauvegardeCamera) {
+        const parametres = etatApplication.camera?.parametres;
+
+        return new ParametresCamera({
+            alpha: parametres?.alpha,
+            beta: parametres?.beta,
+            rayon: parametres?.rayon,
+            cible: parametres?.cible,
+            zoom: parametres?.zoom,
+            wheelPrecision: Number.isFinite(sauvegardeCamera?.wheelPrecision)
+                ? sauvegardeCamera.wheelPrecision
+                : parametres?.wheelPrecision,
+            sensibiliteRotation: Number.isFinite(sauvegardeCamera?.angularSensibilityX)
+                ? sauvegardeCamera.angularSensibilityX
+                : parametres?.sensibiliteRotation,
+            distanceMin: parametres?.distanceMin,
+            distanceMax: parametres?.distanceMax,
+            estBloquee: Boolean(parametres?.estBloquee)
+        });
+    }
+
+    lireFondSceneDepuisSauvegarde(fondScene) {
+        if (!fondScene || !Number.isFinite(fondScene.r)) {
+            return 0;
+        }
+
+        const moyenne = (Number(fondScene.r) + Number(fondScene.g) + Number(fondScene.b)) / 3;
+        return Math.round((1 - moyenne) * 100);
+    }
+
+    lireLumiereCourante(etatApplication, sauvegardeAccessibilite = null) {
+        if (sauvegardeAccessibilite?.lumiere) {
+            return sauvegardeAccessibilite.lumiere;
+        }
+
         const service = etatApplication.services?.lumiere;
 
         if (service?.obtenirParametresSauvegarde) {
@@ -154,7 +225,18 @@ export class StockageProfilLocal {
         return etatApplication.lumiere?.parametres ?? null;
     }
 
-    lireMiseLumiereCourante(etatApplication) {
+    lireMiseLumiereCourante(etatApplication, sauvegardeHighlight = null) {
+        if (sauvegardeHighlight) {
+            return {
+                normalesActif: Boolean(sauvegardeHighlight.miseLumiereNormalesActif),
+                couleursActif: Boolean(sauvegardeHighlight.miseLumiereCouleursActif),
+                parametres: {
+                    ...(sauvegardeHighlight.parametresMiseLumiere ?? {}),
+                    presetActif: null
+                }
+            };
+        }
+
         return {
             normalesActif: Boolean(etatApplication.contours?.miseLumiereNormalesActif),
             couleursActif: Boolean(etatApplication.contours?.miseLumiereCouleursActif),
@@ -220,13 +302,14 @@ export class StockageProfilLocal {
                     actif: profil.contours.actif,
                     typeActif: profil.contours.typeActif,
                     typesActifs: profil.contours.typesActifs,
-                    epaisseur: profil.contours.epaisseur,
+                    epaisseur: this.desContoursSontActifs(profil.contours) ? profil.contours.epaisseur : 1,
                     seuil: profil.contours.seuil,
                     couleur: profil.contours.couleur,
                     couleurAutomatiqueActive: profil.contours.couleurAutomatiqueActive,
                     couleurManuelleChoisie: profil.contours.couleurManuelleChoisie,
                     couleurAutomatiqueCalculee: profil.contours.couleurAutomatiqueCalculee,
-                    signatureCouleurAutomatique: profil.contours.signatureCouleurAutomatique
+                    signatureCouleurAutomatique: profil.contours.signatureCouleurAutomatique,
+                    longueurChaineNormales: profil.contours.longueurChaineNormales
                 },
 
                 camera: {
@@ -257,6 +340,7 @@ export class StockageProfilLocal {
 
         // Compatibilité avec l'ancien format : les réglages étaient à la racine.
         const reglages = donnees.reglages ?? donnees;
+        const contoursSauvegardes = this.normaliserContoursSauvegardes(reglages.contours ?? {});
 
         return new ProfilUtilisateur({
             interfaceUtilisateur: new ParametresInterface({
@@ -281,16 +365,17 @@ export class StockageProfilLocal {
             }),
 
             contours: new ParametresContours({
-                actif: reglages.contours?.actif,
-                typeActif: reglages.contours?.typeActif,
-                typesActifs: reglages.contours?.typesActifs,
-                epaisseur: reglages.contours?.epaisseur,
-                seuil: reglages.contours?.seuil,
-                couleur: reglages.contours?.couleur,
-                couleurAutomatiqueActive: reglages.contours?.couleurAutomatiqueActive ?? true,
-                couleurManuelleChoisie: reglages.contours?.couleurManuelleChoisie ?? false,
-                couleurAutomatiqueCalculee: reglages.contours?.couleurAutomatiqueCalculee ?? null,
-                signatureCouleurAutomatique: reglages.contours?.signatureCouleurAutomatique ?? null
+                actif: contoursSauvegardes.actif,
+                typeActif: contoursSauvegardes.typeActif,
+                typesActifs: contoursSauvegardes.typesActifs,
+                epaisseur: contoursSauvegardes.epaisseur,
+                seuil: contoursSauvegardes.seuil,
+                couleur: contoursSauvegardes.couleur,
+                couleurAutomatiqueActive: contoursSauvegardes.couleurAutomatiqueActive ?? true,
+                couleurManuelleChoisie: contoursSauvegardes.couleurManuelleChoisie ?? false,
+                couleurAutomatiqueCalculee: contoursSauvegardes.couleurAutomatiqueCalculee ?? null,
+                signatureCouleurAutomatique: contoursSauvegardes.signatureCouleurAutomatique ?? null,
+                longueurChaineNormales: contoursSauvegardes.longueurChaineNormales
             }),
 
             camera: new ParametresCamera({
@@ -315,4 +400,30 @@ export class StockageProfilLocal {
             versionSauvegarde: donnees.version ?? 1
         });
     }
+
+
+    desContoursSontActifs(contours) {
+        return Boolean(contours?.actif)
+            && (
+                (Array.isArray(contours?.typesActifs) && contours.typesActifs.length > 0)
+                || Boolean(contours?.typeActif)
+            );
+    }
+
+    normaliserContoursSauvegardes(contours) {
+        const typesActifs = Array.isArray(contours?.typesActifs)
+            ? [...new Set(contours.typesActifs)].filter((type) => type !== null)
+            : (contours?.typeActif ? [contours.typeActif] : []);
+
+        const actif = typesActifs.length > 0;
+
+        return {
+            ...contours,
+            actif,
+            typesActifs: actif ? typesActifs : [],
+            typeActif: actif ? typesActifs[typesActifs.length - 1] : null,
+            epaisseur: actif ? contours?.epaisseur : 1
+        };
+    }
+
 }

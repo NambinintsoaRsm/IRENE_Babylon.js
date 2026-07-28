@@ -3,6 +3,7 @@ import { constantesCamera } from "./Configuration/constantesCamera.js";
 import { constantesApparence } from "./Configuration/constantesApparence.js";
 import { constantesInterface } from "./Configuration/constantesInterface.js";
 import { constantesContours } from "./Configuration/constantesContours.js";
+import { configurationFormulaireAvis } from "./Configuration/formulaireAvis.js";
 import { etatApplication } from "./Etat/etatApplication.js";
 
 
@@ -30,6 +31,7 @@ import { ServiceDropdownGUI } from "./Infrastructure/gui/ServiceDropdownGUI.js";
 import { ServiceStyleInterfaceGUI } from "./Infrastructure/gui/ServiceStyleInterfaceGUI.js";
 import { ServiceStyleBoutonsGUI } from "./Infrastructure/gui/ServiceStyleBoutonsGUI.js";
 import { ServiceTexteGUI } from "./Infrastructure/gui/ServiceTexteGUI.js";
+import { ServiceTexteResponsiveGUI } from "./Infrastructure/gui/ServiceTexteResponsiveGUI.js";
 import { ServiceBlocagePointeurGUI } from "./Infrastructure/gui/ServiceBlocagePointeurGUI.js";
 import { ServiceListeModelesGUI } from "./Infrastructure/gui/ServiceListeModelesGUI.js";
 import { ServiceControlesSpeciauxGUI } from "./Infrastructure/gui/ServiceControlesSpeciauxGUI.js";
@@ -45,6 +47,9 @@ import { PostTraitMiseLumiereNormales } from "./Infrastructure/postTraitements/P
 import { PostTraitMiseLumiereCouleurs } from "./Infrastructure/postTraitements/PostTraitMiseLumiereCouleurs.js";
 
 import { StockageProfilLocal } from "./Infrastructure/stockage/StockageProfilLocal.js";
+import { ServiceDetectionModeles3D } from "./Infrastructure/modele3d/ServiceDetectionModeles3D.js";
+import { ServiceLoupe3D } from "./Infrastructure/loupe/ServiceLoupe3D.js";
+import { ServiceFormulaireAvisHTML } from "./Infrastructure/web/ServiceFormulaireAvisHTML.js";
 
 import { BasculerMenuUC } from "./UseCases/animIntUseCases/BasculerMenuUC.js";
 import { BasculerSectionUC } from "./UseCases/animIntUseCases/BasculerSectionUC.js";
@@ -75,8 +80,6 @@ import { ChangerCouleurContourUC } from "./UseCases/contoursUseCases/ChangerCoul
 import { DesactiverContoursUC } from "./UseCases/contoursUseCases/DesactiverContoursUC.js";
 import { ReinitialiserContoursUC } from "./UseCases/contoursUseCases/ReinitialiserContoursUC.js";
 import { ChoisirCouleurContourAdaptativeUC } from "./UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js";
-import { BasculerMiseLumiereNormalesUC } from "./UseCases/contoursUseCases/BasculerMiseLumiereNormalesUC.js";
-import { BasculerMiseLumiereCouleursUC } from "./UseCases/contoursUseCases/BasculerMiseLumiereCouleursUC.js";
 
 import { ChangerVitesseCameraUC } from "./UseCases/cameraUseCases/ChangerVitesseCameraUC.js";
 import { ReinitialiserCameraUC } from "./UseCases/cameraUseCases/ReinitialiserCameraUC.js";
@@ -106,8 +109,7 @@ import { ControleurModele3D } from "./Presentation/controleurs/ControleurModele3
 import { ControleurProfil } from "./Presentation/controleurs/ControleurProfil.js";
 import { ControleurLumiere } from "./Presentation/controleurs/ControleurLumiere.js";
 import { ControleurAccess } from "./Presentation/controleurs/ControleurAccess.js";
-import { creerBoutonEntropieFallback } from "./Presentation/gui/EntropieGUI.js";
-import { creerBoutonSaillanceFallback } from "./Presentation/gui/SaillanceGUI.js";
+import { ControleurAvis } from "./Presentation/controleurs/ControleurAvis.js";
 
 const NOMS_GUI = Object.freeze({
     menu: {
@@ -131,7 +133,6 @@ const NOMS_GUI = Object.freeze({
         contours: { bouton: "ContBtn", panneau: "ContoRect", retour: "ContRetourBtn" },
         texture: { bouton: "TextuBtn", panneau: "TextuRect", retour: "TxtuRetourBtn" },
         lumiere: { bouton: "LumBtn", panneau: "LumRect", retour: "LumRetourBtn" },
-        highlight: { bouton: "HighBtn", panneau: "HighRect", retour: "HighRetourBtn" },
         modeles: { bouton: "Mod3DBtn", panneau: "ModelRect", retour: "ModelRetourBtn" }
     },
 
@@ -193,25 +194,30 @@ const NOMS_GUI = Object.freeze({
             "CouleurOptimaleBtn",
             "ContCouleurOptBtn"
         ],
-        miseLumiereNormalesBtns: [
-            "ContLumNormBtn",
-            "ContNormLumBtn",
-            "ContTestNormBtn",
-            "ReliefLumBtn",
-            "ReliefTestBtn"
-        ],
-        miseLumiereCouleursBtns: [
-            "ContLumCoulBtn",
-            "ContCoulLumBtn",
-            "ContTestCoulBtn",
-            "CouleurLumBtn",
-            "CouleurTestBtn"
-        ],
         epaisseurSlider: "ContEpaiSlider",
         epaisseurValeurTxt: "ContEpaiValTxt",
-        highlightLargeurSlider: "HighLargSlider",
-        highlightLuminositeSlider: "HighLumSlider",
-        highlightFrequenceSlider: "HighFreqSlider",
+        presetSombreBtns: [
+            "SombreBtn",
+            "HighSombrBtn",
+            "HighSombreBtn",
+            "ContPresetSombreBtn",
+            "PresetSombreBtn",
+            "ContSombreBtn",
+            "ContourSombreBtn"
+        ],
+        presetClairBtns: [
+            "ClairBtn",
+            "HighClairBtn",
+            "ContPresetClairBtn",
+            "PresetClairBtn",
+            "ContClairBtn",
+            "ContourClairBtn"
+        ],
+        reinitialiserHighlightContoursBtns: [
+            "ContPresetReintBtn",
+            "ContReintHighlightBtn",
+            "ContReintReglagesBtn"
+        ],
         couleurs: ["ContBtn1", "ContBtn2", "ContBtn3", "ContBtn4", "ContBtn5", "ContBtn6", "ContBtn7", "ContBtn8"]
     },
 
@@ -231,16 +237,26 @@ const NOMS_GUI = Object.freeze({
     },
 
     modeles: {
+        scrollViewer: "ModelScroll",
         conteneurListe: "MdlScrollStkPnl",
         objet1Btn: "MdlBtn0",
         objet2Btn: "MdlBtn1"
     },
 
     access: {
-        bouton: "AccessBtn",
-        texte: "AccessBtnTxt",
-        boutonCourt: "AccBtn",
-        texteCourt: "AccBtnTxt"
+        bouton: "AccesBtn",
+        texte: "AccesBtnTxt",
+        panneau: "AccesRect",
+        retour: "AccesRetourBtn",
+        caseBtn: "AccessCheckBtn",
+        caseTxt: "AccessCheckBtnTxt",
+        anciensBoutons: ["AccessBtn", "AccBtn"],
+        anciensTextes: ["AccessBtnTxt", "AccBtnTxt"]
+    },
+
+    avis: {
+        bouton: "AvisBtn",
+        texte: "AvisBtnTxt"
     },
 
     entropie: {
@@ -316,14 +332,18 @@ function recupererTousLesControles(advancedTexture) {
         "LumIntSlider", "LumIntValTxt", "LumIntTxt",
         "LumTempSlider", "LumTempValTxt", "LumTempTxt",
         "LumReintBtn", "LumReintBtnTxt",
+        "EspaceRect", "EspaceTxt",
+
+        // Bouton flottant et fenêtre de confirmation de fermeture.
+        "FermBtn", "FermBtnTxt", "FermRect", "FermMainGrid", "FermBtnGrid", "Fermer",
+        "FermerBtn", "FermerBtnTxt", "AnnulerBtn", "AnnulerBtnTxt",
 
         "ZoomBtn", "ZoomBtnDropTxt", "ZoomBtnTxt", "ZoomReintBtn", "ZoomReintBtnTxt",
 
         "TextuTailleSlider", "TextuTailleTxt", "TxtuReintBtn", "TxtuReintBtnTxt",
+        "AccesBtn", "AccesBtnTxt", "AccesRect", "AccesRetourBtn", "AccesRetourBtnTxt",
+        "AccessCheckBtn", "AccessCheckBtnTxt",
         "AccessBtn", "AccessBtnTxt", "AccBtn", "AccBtnTxt",
-        "HighBtn", "HighBtnTxt", "HighBtnDropTxt", "HighRect", "HighRetourBtn", "HighRetourBtnTxt",
-        "HighLargSlider", "HighLumSlider", "HighFreqSlider",
-        "ContLumNormBtn", "ContLumNormBtnTxt", "ContLumCoulBtn", "ContLumCoulBtnTxt",
         "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt",
         "SaillanceBtn", "SaillanceTxt", "SaillanceBtnTxt"
     ].forEach((nom) => {
@@ -332,79 +352,489 @@ function recupererTousLesControles(advancedTexture) {
 
     return controles;
 }
-function creerOuRecupererBoutonEntropie(advancedTexture) {
-    const controles = etatApplication.gui.controles;
 
-    let bouton = controles.EntropieBtn
-        ?? controles.EntropieTestBtn
-        ?? advancedTexture?.getControlByName?.("EntropieBtn")
-        ?? advancedTexture?.getControlByName?.("EntropieTestBtn")
+/**
+ * Branche le bouton de fermeture défini dans guiTexture.json.
+ * La destination se modifie dans Configuration/chemins.js :
+ * chemins.navigation.fermetureApplication.
+ */
+function brancherFermetureApplication({ etatApplication, destination = "#" } = {}) {
+    const controles = etatApplication?.gui?.controles ?? {};
+    const panneau = controles.FermRect;
+    const boutonOuvrir = controles.FermBtn;
+    const icone = controles.FermBtnTxt;
+    const titre = controles.Fermer;
+    const boutonAnnuler = controles.AnnulerBtn;
+    const texteAnnuler = controles.AnnulerBtnTxt ?? boutonAnnuler?.textBlock ?? null;
+    const boutonFermer = controles.FermerBtn;
+    const texteFermer = controles.FermerBtnTxt ?? boutonFermer?.textBlock ?? null;
+    const grillePrincipale = controles.FermMainGrid
+        ?? etatApplication?.gui?.advancedTexture?.getControlByName?.("FermMainGrid")
+        ?? null;
+    const grilleBoutons = controles.FermBtnGrid
+        ?? etatApplication?.gui?.advancedTexture?.getControlByName?.("FermBtnGrid")
         ?? null;
 
-    let texte = controles.EntropieTxt
-        ?? controles.EntropieResultTxt
-        ?? advancedTexture?.getControlByName?.("EntropieTxt")
-        ?? advancedTexture?.getControlByName?.("EntropieResultTxt")
-        ?? null;
-
-    if (!bouton) {
-        const elements = creerBoutonEntropieFallback(advancedTexture);
-        controles.EntropiePanel = elements.panneau;
-        bouton = elements.bouton;
-        texte = elements.texteResultat;
+    if (!panneau || !boutonOuvrir || !boutonAnnuler || !boutonFermer) {
+        console.warn("[Fermeture] Contrôles GUI incomplets : FermBtn, FermRect, AnnulerBtn ou FermerBtn introuvable.");
+        return;
     }
 
-    if (bouton) {
-        controles.EntropieBtn = bouton;
-        controles.EntropieTestBtn = bouton;
+    if (icone) {
+        icone.metadata = icone.metadata || {};
+        icone.metadata.texteDynamique = true;
+        icone.metadata.nePasModifierTailleTexte = true;
+        icone.metadata.nePasAccessibilite = true;
+        icone.metadata.nePasAutoFit = true;
+        icone.text = "✕";
+        icone.fontSize = "28px";
+        icone.fontWeight = "700";
+        icone.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        icone.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
     }
 
-    if (texte) {
-        texte.metadata = texte.metadata || {};
-        texte.metadata.texteDynamique = true;
-        texte.isVisible = true;
-        controles.EntropieTxt = texte;
-        controles.EntropieResultTxt = texte;
-    }
+    let jetonOuverture = 0;
+    let canvasMesure = null;
+    let contexteMesure = null;
 
-    advancedTexture?.markAsDirty?.();
+    const obtenirThemeCourant = () => {
+        const nomTheme = etatApplication?.interface?.parametres?.theme;
+        return constantesInterface.themes?.[nomTheme]
+            ?? constantesInterface.themes?.[constantesInterface.themeDefaut]
+            ?? {};
+    };
+
+    const obtenirPoliceCourante = () => String(
+        etatApplication?.interface?.parametres?.police || "OpenDyslexic"
+    );
+
+    const obtenirPilePolice = (famille) => {
+        const nom = String(famille || "OpenDyslexic").replace(/["']/g, "").trim();
+        return nom.toLowerCase() === "arial"
+            ? "Arial, sans-serif"
+            : `"${nom}", Arial, sans-serif`;
+    };
+
+    const attendreImages = (nombre = 1) => new Promise((resolve) => {
+        let restantes = Math.max(1, Number(nombre) || 1);
+        const suivante = () => {
+            restantes -= 1;
+            if (restantes <= 0) {
+                resolve();
+                return;
+            }
+
+            if (typeof requestAnimationFrame === "function") {
+                requestAnimationFrame(suivante);
+            } else {
+                setTimeout(suivante, 0);
+            }
+        };
+
+        if (typeof requestAnimationFrame === "function") {
+            requestAnimationFrame(suivante);
+        } else {
+            setTimeout(suivante, 0);
+        }
+    });
+
+    const attendrePolice = async (famille) => {
+        if (typeof document === "undefined" || !document.fonts?.load) return;
+
+        const nom = String(famille || "OpenDyslexic").replace(/["']/g, "").trim();
+        const chargement = Promise.allSettled([
+            document.fonts.load(`400 28px "${nom}"`),
+            document.fonts.load(`700 28px "${nom}"`)
+        ]);
+
+        // Une police défaillante ne doit jamais bloquer l'ouverture de la fenêtre.
+        await Promise.race([
+            chargement,
+            new Promise((resolve) => setTimeout(resolve, 450))
+        ]);
+    };
+
+    const preparerContexteMesure = () => {
+        if (!canvasMesure && typeof document !== "undefined") {
+            canvasMesure = document.createElement("canvas");
+            contexteMesure = canvasMesure.getContext("2d");
+        }
+        return contexteMesure;
+    };
+
+    const ajusterUneLigne = ({ textBlock, texte, tailleMax, tailleMin, poids = "700", marge = 24 }) => {
+        if (!textBlock) return;
+
+        // La fenêtre utilise la police réellement sélectionnée dans IRENE.
+        // Arial et sans-serif restent dans la pile comme secours immédiat :
+        // le texte reste visible même si la police personnalisée se charge encore.
+        const famille = obtenirPoliceCourante();
+        const pile = obtenirPilePolice(famille);
+        const largeurMesuree = Number(textBlock?._currentMeasure?.width ?? 0);
+        const largeurParent = Number(textBlock?.parent?._currentMeasure?.width ?? 0);
+        const largeurDisponible = Math.max(80, (largeurMesuree || largeurParent || 320) - marge);
+        const contexte = preparerContexteMesure();
+
+        let taille = Math.max(tailleMin, tailleMax);
+        if (contexte) {
+            while (taille > tailleMin) {
+                contexte.font = `${poids} ${taille}px ${pile}`;
+                if (contexte.measureText(String(texte)).width <= largeurDisponible) break;
+                taille -= 1;
+            }
+        }
+
+        textBlock.metadata = {
+            ...(textBlock.metadata ?? {}),
+            texteDynamique: true,
+            nePasAutoFit: true,
+            nePasModifierTailleTexte: true,
+            nePasAccessibilite: true
+        };
+        textBlock.text = String(texte);
+        textBlock.fontFamily = pile;
+        textBlock.fontWeight = poids;
+        textBlock.fontSize = `${Math.max(tailleMin, taille)}px`;
+        textBlock.textWrapping = false;
+        textBlock.resizeToFit = false;
+        textBlock.clipContent = false;
+        textBlock.alpha = 1;
+        textBlock.isVisible = true;
+        textBlock.isEnabled = true;
+        textBlock.notRenderable = false;
+        textBlock.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        textBlock.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        textBlock._markAsDirty?.();
+    };
+
+    const stabiliserStructureFenetre = () => {
+        panneau.clipChildren = false;
+        panneau.clipContent = false;
+
+        if (grillePrincipale && titre && grilleBoutons) {
+            try {
+                grillePrincipale.removeControl?.(titre);
+                grillePrincipale.removeControl?.(grilleBoutons);
+                grillePrincipale.addControl?.(titre, 0, 0);
+                grillePrincipale.addControl?.(grilleBoutons, 1, 0);
+            } catch (_erreur) {
+                // Le JSON peut avoir déjà restauré correctement les cellules.
+            }
+        }
+
+        if (grilleBoutons) {
+            try {
+                grilleBoutons.removeControl?.(boutonAnnuler);
+                grilleBoutons.removeControl?.(boutonFermer);
+                grilleBoutons.addControl?.(boutonAnnuler, 0, 0);
+                grilleBoutons.addControl?.(boutonFermer, 0, 1);
+            } catch (_erreur) {
+                // Même principe : on conserve le placement existant si besoin.
+            }
+        }
+
+        if (titre) {
+            titre.width = "95%";
+            titre.height = "100%";
+            titre.clipContent = false;
+            titre.clipChildren = false;
+            titre.paddingTop = "0px";
+            titre.paddingBottom = "0px";
+            titre.isVisible = true;
+            titre.isEnabled = true;
+            titre.notRenderable = false;
+        }
+    };
+
+    const appliquerPresentationFenetre = () => {
+        stabiliserStructureFenetre();
+        const theme = obtenirThemeCourant();
+        const couleurTexte = theme.textePrincipal ?? "#FFFFFFFF";
+        const fondPanneau = theme.fondPrincipal ?? "#2B2B2BFF";
+        const bordurePanneau = theme.bordure ?? couleurTexte;
+        const fondBouton = theme.boutonFond ?? fondPanneau;
+        const bordureBouton = theme.boutonBordure ?? bordurePanneau;
+        const texteBouton = theme.boutonTexte ?? couleurTexte;
+        const accessibiliteActive = etatApplication?.accessibilite?.actif === true;
+        const remPx = Number(etatApplication?.accessibilite?.preferencesNavigateur?.remPx);
+        const tailleReference = accessibiliteActive && Number.isFinite(remPx) && remPx > 0
+            ? remPx
+            : 24;
+
+        panneau.background = fondPanneau;
+        panneau.color = bordurePanneau;
+        panneau.alpha = Math.max(0, Number(panneau.alpha) || 0);
+
+        [boutonAnnuler, boutonFermer].forEach((bouton) => {
+            bouton.background = fondBouton;
+            bouton.color = bordureBouton;
+            bouton.alpha = 1;
+            bouton.isVisible = true;
+            bouton.notRenderable = false;
+            bouton._markAsDirty?.();
+        });
+
+        if (titre) titre.color = couleurTexte;
+        if (texteAnnuler) texteAnnuler.color = texteBouton;
+        if (texteFermer) texteFermer.color = texteBouton;
+
+        ajusterUneLigne({
+            textBlock: titre,
+            texte: "Fermer l'application ?",
+            tailleMax: Math.min(50, Math.max(28, Math.round(tailleReference * 1.35))),
+            tailleMin: 22,
+            poids: "700",
+            marge: 36
+        });
+        ajusterUneLigne({
+            textBlock: texteAnnuler,
+            texte: "Annuler",
+            tailleMax: Math.min(40, Math.max(22, Math.round(tailleReference * 1.00))),
+            tailleMin: 18,
+            poids: "700",
+            marge: 30
+        });
+        ajusterUneLigne({
+            textBlock: texteFermer,
+            texte: "Fermer",
+            tailleMax: Math.min(40, Math.max(22, Math.round(tailleReference * 1.00))),
+            tailleMin: 18,
+            poids: "700",
+            marge: 30
+        });
+
+        // Les couleurs sont remises après l'ajustement afin que les métadonnées
+        // d'OpenDyslexic ou un ancien thème ne puissent pas rendre un texte invisible.
+        if (titre) titre.color = couleurTexte;
+        if (texteAnnuler) texteAnnuler.color = texteBouton;
+        if (texteFermer) texteFermer.color = texteBouton;
+
+        panneau._markAsDirty?.();
+        etatApplication.gui.advancedTexture?.markAsDirty?.();
+    };
+
+    const changerVisibilite = (visible, { transparent = false } = {}) => {
+        panneau.isVisible = visible;
+        panneau.notRenderable = !visible;
+        panneau.isEnabled = visible;
+        panneau.isHitTestVisible = visible;
+        panneau.isPointerBlocker = visible;
+        panneau.zIndex = 1000;
+        panneau.alpha = visible ? (transparent ? 0 : 1) : 1;
+        panneau._markAsDirty?.();
+        etatApplication.gui.advancedTexture?.markAsDirty?.();
+    };
+
+    const ouvrirFenetre = async () => {
+        const jeton = ++jetonOuverture;
+        const famille = obtenirPoliceCourante();
+
+        // Premier affichage immédiat avec la pile de secours. L'utilisateur ne
+        // voit jamais une fenêtre vide, même avec OpenDyslexic.
+        changerVisibilite(true, { transparent: false });
+        appliquerPresentationFenetre();
+
+        // Dès que la police active et le layout sont prêts, on recalcule une
+        // seconde fois la plus grande taille qui tient réellement.
+        await Promise.all([
+            attendrePolice(famille),
+            attendreImages(1)
+        ]);
+
+        if (jeton !== jetonOuverture || panneau.isVisible === false) return;
+
+        appliquerPresentationFenetre();
+        panneau.alpha = 1;
+        panneau._markAsDirty?.();
+        etatApplication.gui.advancedTexture?.markAsDirty?.();
+    };
+
+    changerVisibilite(false);
+
+    boutonOuvrir.onPointerClickObservable.clear();
+    boutonOuvrir.onPointerClickObservable.add(() => {
+        void ouvrirFenetre();
+    });
+
+    boutonAnnuler.onPointerClickObservable.clear();
+    boutonAnnuler.onPointerClickObservable.add(() => {
+        ++jetonOuverture;
+        changerVisibilite(false);
+    });
+
+    boutonFermer.onPointerClickObservable.clear();
+    boutonFermer.onPointerClickObservable.add(() => {
+        ++jetonOuverture;
+        changerVisibilite(false);
+
+        const url = String(destination ?? "#").trim() || "#";
+        window.location.assign(url);
+    });
 }
 
+function supprimerBoutonsEtPanneauxTest(advancedTexture) {
+    if (!advancedTexture?.getControlByName) return;
 
-function creerOuRecupererBoutonSaillance(advancedTexture) {
-    const controles = etatApplication.gui.controles;
+    const nomsTest = [
+        "AccessBtn",
+        "AccessBtnTxt",
+        "AccBtn",
+        "AccBtnTxt",
+        "EntropieBtn",
+        "EntropieTxt",
+        "EntropiePanel",
+        "EntropieTestBtn",
+        "EntropieResultTxt",
+        "SaillanceBtn",
+        "SaillanceTxt",
+        "SaillancePanel",
+        "SaillanceBtnTxt"
+    ];
 
-    let bouton = controles.SaillanceBtn
-        ?? advancedTexture?.getControlByName?.("SaillanceBtn")
-        ?? null;
+    nomsTest.forEach((nom) => {
+        const controle = advancedTexture.getControlByName(nom);
+        if (!controle) return;
 
-    let texte = controles.SaillanceTxt
-        ?? controles.SaillanceBtnTxt
-        ?? advancedTexture?.getControlByName?.("SaillanceTxt")
-        ?? advancedTexture?.getControlByName?.("SaillanceBtnTxt")
-        ?? null;
+        controle.isVisible = false;
+        controle.isEnabled = false;
+        controle.notRenderable = true;
+        controle.isHitTestVisible = false;
+        controle.isPointerBlocker = false;
 
-    if (!bouton) {
-        const elements = creerBoutonSaillanceFallback(advancedTexture);
-        controles.SaillancePanel = elements.panneau;
-        bouton = elements.bouton;
-        texte = elements.texteResultat;
-    }
+        if (controle.parent?.removeControl) {
+            controle.parent.removeControl(controle);
+        }
+    });
 
-    if (bouton) {
-        controles.SaillanceBtn = bouton;
-    }
-
-    if (texte) {
-        texte.metadata = texte.metadata || {};
-        texte.metadata.texteDynamique = true;
-        texte.isVisible = true;
-        controles.SaillanceTxt = texte;
-    }
-
-    advancedTexture?.markAsDirty?.();
+    advancedTexture.markAsDirty?.();
 }
 
+function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe3D }) {
+    const nomsBoutonsFlottants = ["AccesBtn", "LoupeBtn"];
+    const nomsPanneauxBloquants = [
+        "PoliRect",
+        "MenuRect",
+        "ContoRect",
+        "TextuRect",
+        "LumRect",
+        "ModelRect",
+        "AccesRect"
+    ];
+
+    // Quand un sous-menu du menu principal est déroulé, les boutons ronds du bas
+    // peuvent recouvrir les réglages. On les masque donc complètement dans ce cas.
+    const nomsPanneauxDeroulantsBloquants = [
+        "RegOptnRect",
+        "ConfOptnRect"
+    ];
+
+    const controles = () => etatApplication?.gui?.controles ?? {};
+
+    const obtenirControle = (nom) => {
+        const c = controles();
+        return c[nom]
+            ?? etatApplication?.gui?.advancedTexture?.getControlByName?.(nom)
+            ?? null;
+    };
+
+    const controleEffectivementVisible = (controle) => {
+        let courant = controle;
+
+        while (courant) {
+            if (courant.isVisible === false || courant.notRenderable === true) {
+                return false;
+            }
+            courant = courant.parent ?? null;
+        }
+
+        return Boolean(controle);
+    };
+
+    const estPanneauOuvert = () => [
+        ...nomsPanneauxBloquants,
+        ...nomsPanneauxDeroulantsBloquants
+    ].some((nom) => {
+        const panneau = obtenirControle(nom);
+        return controleEffectivementVisible(panneau);
+    });
+
+    const memoriserEtatInitial = (bouton) => {
+        if (!bouton) return;
+        bouton.metadata = bouton.metadata ?? {};
+
+        if (!bouton.metadata.etatInitialBoutonFlottant) {
+            bouton.metadata.etatInitialBoutonFlottant = {
+                isEnabled: bouton.isEnabled !== false,
+                isHitTestVisible: bouton.isHitTestVisible !== false,
+                isPointerBlocker: bouton.isPointerBlocker === true,
+                isVisible: bouton.isVisible !== false,
+                notRenderable: bouton.notRenderable === true,
+                alpha: Number.isFinite(Number(bouton.alpha)) ? Number(bouton.alpha) : 1
+            };
+        }
+    };
+
+    const appliquerDisponibilite = (bouton, disponible) => {
+        if (!bouton) return;
+        memoriserEtatInitial(bouton);
+
+        const initial = bouton.metadata.etatInitialBoutonFlottant;
+
+        if (!disponible) {
+            bouton.metadata.boutonFlottantSuspendu = true;
+
+            // On masque les boutons flottants pour qu'ils ne recouvrent pas les menus,
+            // mais on ne les met plus en isEnabled=false / notRenderable=true.
+            // Ces états peuvent rester coincés avec certains contrôles GUI et donner
+            // l'impression que toute l'interface est désactivée.
+            bouton.isVisible = false;
+            bouton.alpha = 0;
+            bouton.isHitTestVisible = false;
+            bouton.isPointerBlocker = false;
+            bouton._markAsDirty?.();
+            return;
+        }
+
+        if (bouton.metadata.boutonFlottantSuspendu) {
+            bouton.metadata.boutonFlottantSuspendu = false;
+            bouton.isVisible = initial.isVisible !== false;
+            bouton.notRenderable = initial.notRenderable === true;
+            bouton.isEnabled = initial.isEnabled !== false;
+            bouton.isHitTestVisible = initial.isHitTestVisible !== false;
+            bouton.isPointerBlocker = initial.isPointerBlocker === true;
+            bouton.alpha = initial.alpha ?? 1;
+            bouton._markAsDirty?.();
+        }
+    };
+
+    let dernierEtat = null;
+    let dernierControleMs = 0;
+    const delaiControleMs = 80;
+
+    const synchroniser = ({ forcer = false } = {}) => {
+        const maintenant = globalThis.performance?.now?.() ?? Date.now();
+        if (!forcer && maintenant - dernierControleMs < delaiControleMs) return;
+        dernierControleMs = maintenant;
+
+        const panneauOuvert = estPanneauOuvert();
+        const disponible = !panneauOuvert;
+
+        if (panneauOuvert && serviceLoupe3D?.actif) {
+            serviceLoupe3D.desactiver?.();
+        }
+
+        if (dernierEtat === disponible) return;
+        dernierEtat = disponible;
+
+        nomsBoutonsFlottants.forEach((nom) => appliquerDisponibilite(obtenirControle(nom), disponible));
+        etatApplication?.gui?.advancedTexture?.markAsDirty?.();
+    };
+
+    synchroniser({ forcer: true });
+    scene?.onBeforeRenderObservable?.add?.(() => synchroniser());
+
+    return synchroniser;
+}
 
 function majTexteValeur(textBlock, valeur, decimals = 1) {
     if (!textBlock) return;
@@ -442,6 +872,10 @@ async function main() {
     const serviceCouleurContourAdaptativeBabylon = new ServiceCouleurContourAdaptativeBabylon();
     const boucleRenduBabylon = new BoucleRenduBabylon();
     const serviceControlesSpeciauxGUI = new ServiceControlesSpeciauxGUI();
+    const serviceLoupe3D = new ServiceLoupe3D();
+    const serviceFormulaireAvisHTML = new ServiceFormulaireAvisHTML({
+        configuration: configurationFormulaireAvis
+    });
 
     etatApplication.services = {
         ...(etatApplication.services ?? {}),
@@ -472,8 +906,23 @@ async function main() {
     const serviceStyleInterfaceGUI = new ServiceStyleInterfaceGUI();
     const serviceStyleBoutonsGUI = new ServiceStyleBoutonsGUI();
     const serviceTexteGUI = new ServiceTexteGUI();
+    const serviceTexteResponsiveGUI = new ServiceTexteResponsiveGUI();
+
+    etatApplication.services = {
+        ...(etatApplication.services ?? {}),
+        texteGUI: serviceTexteGUI,
+        texteResponsive: serviceTexteResponsiveGUI
+    };
     const serviceBlocagePointeurGUI = new ServiceBlocagePointeurGUI();
     const serviceListeModelesGUI = new ServiceListeModelesGUI();
+
+    etatApplication.services = {
+        ...(etatApplication.services ?? {}),
+        listeModelesGUI: serviceListeModelesGUI
+    };
+    const serviceDetectionModeles3D = new ServiceDetectionModeles3D({
+        dossierModeles: chemins.modeles.dossier
+    });
 
     const servicePolicesNavigateur = new ServicePolicesNavigateur();
     const accessNav = new AccessNav();
@@ -486,7 +935,19 @@ async function main() {
      await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
 
     etatApplication.gui.controles = recupererTousLesControles(etatApplication.gui.advancedTexture);
-    creerOuRecupererBoutonSaillance(etatApplication.gui.advancedTexture);
+    supprimerBoutonsEtPanneauxTest(etatApplication.gui.advancedTexture);
+    serviceTexteResponsiveGUI.installer({
+        etatApplication,
+        advancedTexture: etatApplication.gui.advancedTexture
+    });
+    serviceLoupe3D.installer({
+        etatApplication,
+        scene: etatApplication.scenes.scene3D,
+        camera: etatApplication.camera.cameraBabylon,
+        canvas,
+        advancedTexture: etatApplication.gui.advancedTexture,
+        serviceCameraBabylon
+    });
 
     etatApplication.accessibilite = {
         preferencesNavigateur: accessNav.lire(),
@@ -533,15 +994,20 @@ async function main() {
         etatApplication,
         serviceCouleurContourAdaptativeBabylon
     );
-    const basculerMiseLumiereNormalesUC = new BasculerMiseLumiereNormalesUC(etatApplication);
-    const basculerMiseLumiereCouleursUC = new BasculerMiseLumiereCouleursUC(etatApplication);
-
     const changerVitesseCameraUC = new ChangerVitesseCameraUC(etatApplication);
     const reinitialiserCameraUC = new ReinitialiserCameraUC(etatApplication);
     const bloquerCameraUC = new BloquerCameraUC(etatApplication);
     const debloquerCameraUC = new DebloquerCameraUC(etatApplication);
 
-    const listerModelesUC = new ListerModelesUC(etatApplication);
+    const listerModelesUC = new ListerModelesUC(etatApplication, {
+        serviceDetectionModeles3D
+    });
+
+    try {
+        await listerModelesUC.actualiserDepuisDossier();
+    } catch (erreur) {
+        console.warn("[Modèles 3D] Détection automatique indisponible au démarrage. Catalogue de secours conservé.", erreur);
+    }
     const changerModeleActifUC = new ChangerModeleActifUC(etatApplication);
     const chargerModeleUC = new ChargerModeleUC(etatApplication);
     const supprimerModeleActuelUC = new SupprimerModeleActuelUC(etatApplication);
@@ -562,7 +1028,8 @@ async function main() {
         serviceSceneBabylon,
         serviceLumiereBabylon,
         postTraitApparence,
-        postTraitNettete
+        postTraitNettete,
+        sauvegarderProfilLocalUC
     });
 
     const controleurAnimationInterface = new ControleurAnimationInterface({
@@ -620,14 +1087,14 @@ async function main() {
         changerEpaisseurContourUC,
         changerCouleurContourUC,
         choisirCouleurContourAdaptativeUC,
-        basculerMiseLumiereNormalesUC,
-        basculerMiseLumiereCouleursUC,
         desactiverContoursUC,
         reinitialiserContoursUC,
         postTraitContProfNorm,
         postTraitContoursCouleur,
         postTraitMiseLumiereNormales,
-        postTraitMiseLumiereCouleurs
+        postTraitMiseLumiereCouleurs,
+        postTraitApparence,
+        serviceSceneBabylon
     });
 
     const controleurCamera = new ControleurCamera({
@@ -676,6 +1143,7 @@ async function main() {
         serviceLumiereBabylon,
         controleurLumiere,
         controleurContours,
+        controleurInterface,
         serviceMateriauxBabylon,
         serviceControlesSpeciauxGUI,
         postTraitApparence,
@@ -691,18 +1159,57 @@ async function main() {
         toggleAccessUC
     });
 
+    const controleurAvis = new ControleurAvis({
+        etatApplication,
+        serviceFormulaireAvisHTML,
+        configurationFormulaireAvis,
+        constantesInterface
+    });
+
+    // Après chaque changement de thème, on remet l’icône Accessibilité
+    // dans la même couleur que le texte du bouton.
+    const appliquerThemeInterfaceOriginal = serviceStyleInterfaceGUI.appliquerTheme.bind(serviceStyleInterfaceGUI);
+    serviceStyleInterfaceGUI.appliquerTheme = (...args) => {
+        const retour = appliquerThemeInterfaceOriginal(...args);
+        const synchroniserInterfaceSpeciale = () => {
+            controleurAccess.synchroniserEtatVisuel?.();
+            controleurContours.mettreAJourBoutonsPresets?.();
+            controleurContours.mettreAJourBoutonCouleurAdaptative?.();
+            serviceListeModelesGUI.actualiserStylesBoutonsModeles?.(etatApplication);
+            serviceTexteGUI.appliquerParametresTexte?.(etatApplication);
+        };
+        queueMicrotask?.(synchroniserInterfaceSpeciale);
+        setTimeout(synchroniserInterfaceSpeciale, 80);
+        return retour;
+    };
+
     brancherAnimationInterface(controleurAnimationInterface);
     controleurInterface.brancherDepuisNomsGUI(NOMS_GUI, serviceAnimationGUI);
+    brancherFermetureApplication({
+        etatApplication,
+        destination: chemins.navigation?.fermetureApplication ?? "#"
+    });
     brancherApparence(controleurApparence);
     brancherContours(controleurContours);
     controleurCamera.brancherDepuisNomsGUI(NOMS_GUI.camera);
     controleurLumiere.brancherDepuisNomsGUI();
     serviceControlesSpeciauxGUI.installerSuiviSliderTemperature(etatApplication);
     controleurAccess.brancherDepuisNomsGUI(NOMS_GUI.access);
-    brancherModele3D(controleurModele3D);
-    brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC);
+    controleurAvis.brancherDepuisNomsGUI(NOMS_GUI.avis);
+    etatApplication.scenes.sceneGUI?.onDisposeObservable?.add?.(() => controleurAvis.detruire());
+    installerGestionBoutonsFlottants({
+        etatApplication,
+        scene: etatApplication.scenes.scene3D,
+        serviceLoupe3D
+    });
+    await brancherModele3D(controleurModele3D);
 
-    controleurProfil.chargerProfilAuDemarrage();
+    const profilRestaure = controleurProfil.chargerProfilAuDemarrage();
+    initialiserAccessibiliteApresProfil({
+        profilRestaure,
+        toggleAccessUC,
+        controleurAccess
+    });
     controleurProfil.installerSauvegardeAutomatique();
 
     // Aide de test en développement : permet de forcer la sauvegarde depuis la console
@@ -714,10 +1221,63 @@ async function main() {
             charger: () => JSON.parse(localStorage.getItem("saotra_reglages_utilisateur") || "null"),
             effacer: () => localStorage.removeItem("saotra_reglages_utilisateur")
         };
+
+        window.saotraModeles = {
+            dossier: chemins.modeles.dossier,
+            liste: () => etatApplication.modele3d.modelesDisponibles.map((modele) => ({
+                id: modele.id,
+                nom: modele.nom,
+                chemin: modele.chemin
+            })),
+            actualiser: async () => {
+                await listerModelesUC.actualiserDepuisDossier({ forcer: true });
+                const conteneurListe = obtenir(etatApplication.gui.controles, NOMS_GUI.modeles.conteneurListe);
+                if (conteneurListe) {
+                    await controleurModele3D.afficherListeModeles(conteneurListe);
+                }
+                serviceTexteResponsiveGUI.planifierAjustement();
+                return window.saotraModeles.liste();
+            }
+        };
+
+        window.saotraContours = {
+            presetSombre: () => controleurContours.appliquerPresetContours("sombre"),
+            presetClair: () => controleurContours.appliquerPresetContours("clair"),
+            basculerPresetSombre: () => controleurContours.basculerPresetContours("sombre"),
+            basculerPresetClair: () => controleurContours.basculerPresetContours("clair"),
+            desactiverHighlight: () => controleurContours.desactiverPresetContours(),
+            reinitialiserHighlight: () => controleurContours.reinitialiserReglagesContoursHighlight(),
+            proposerPresetAccessibilite: () => controleurContours.proposerPresetSelonAccessibilite(),
+            appliquerPresetAccessibilite: () => controleurContours.proposerPresetSelonAccessibilite({ appliquer: true }),
+            etatHighlight: () => ({
+                normalesActif: Boolean(etatApplication.contours?.miseLumiereNormalesActif),
+                couleursActif: Boolean(etatApplication.contours?.miseLumiereCouleursActif),
+                parametres: { ...(etatApplication.contours?.parametresMiseLumiere ?? {}) }
+            })
+        };
+
+        window.saotraLoupe = {
+            activer: () => serviceLoupe3D.activer(),
+            desactiver: () => serviceLoupe3D.desactiver(),
+            basculer: () => serviceLoupe3D.basculer(),
+            reglerZoom: (valeur) => serviceLoupe3D.reglerZoom(valeur),
+            reglerDiametre: (valeur) => serviceLoupe3D.reglerDiametre(valeur),
+            reglerNettete: (valeur) => serviceLoupe3D.reglerNettete(valeur),
+            reglerInversionY: (actif) => serviceLoupe3D.reglerInversionY(actif),
+            etat: () => serviceLoupe3D.etat()
+        };
+
+        window.saotraTexteResponsive = {
+            ajuster: () => serviceTexteResponsiveGUI.ajuster(),
+            planifier: () => serviceTexteResponsiveGUI.planifierAjustement(),
+            debug: (actif = true) => serviceTexteResponsiveGUI.debug(actif)
+        };
     }
 
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
+    controleurContours.mettreAJourBoutonsPresets?.();
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
+    serviceTexteResponsiveGUI.planifierAjustement();
 
 
     // On crée une première sauvegarde légère dès que l’interface est prête.
@@ -742,6 +1302,7 @@ async function main() {
     // dépendent du modèle ou de la caméra réelle.
     controleurProfil.appliquerEffetsVisuels({ appliquerCamera: false });
     controleurProfil.mettreAJourInterfaceDepuisEtat();
+    serviceTexteResponsiveGUI.planifierAjustement();
     controleurProfil.sauvegarderMaintenant();
 }
 
@@ -917,15 +1478,13 @@ function brancherContours(controleur) {
         texteValeur: obtenir(c, n.epaisseurValeurTxt)
     });
 
-    controleur.brancherMiseLumiereNormales(obtenirPremier(c, n.miseLumiereNormalesBtns));
-
-    if (typeof controleur.brancherParametresMiseLumiere === "function") {
-        controleur.brancherParametresMiseLumiere({
-            sliderFrequence: obtenir(c, n.highlightFrequenceSlider),
-            sliderLuminance: obtenir(c, n.highlightLuminositeSlider),
-            sliderLargeur: obtenir(c, n.highlightLargeurSlider)
-        });
-    }
+    // L'ancienne interface Highlight (boutons Normale/Couleur + sliders)
+    // n'existe plus dans le GUI. On garde seulement les presets Contours.
+    controleur.brancherPresetsDepuisNomsGUI?.({
+        sombreBtns: n.presetSombreBtns,
+        clairBtns: n.presetClairBtns,
+        reinitialiserBtns: n.reinitialiserHighlightContoursBtns
+    });
 
     n.couleurs.forEach((nom) => {
         const bouton = obtenir(c, nom);
@@ -941,18 +1500,50 @@ function brancherContours(controleur) {
     });
 }
 
-function brancherModele3D(controleur) {
+async function brancherModele3D(controleur) {
     const c = etatApplication.gui.controles;
     const conteneurListe = obtenir(c, NOMS_GUI.modeles.conteneurListe);
+    const scrollViewer = obtenir(c, NOMS_GUI.modeles.scrollViewer);
+
+    preparerScrollModeles(scrollViewer, conteneurListe);
 
     if (conteneurListe) {
-        controleur.afficherListeModeles(conteneurListe);
+        await controleur.afficherListeModeles(conteneurListe);
     }
 
+    const boutonPanneauModeles = obtenir(c, NOMS_GUI.panneaux.modeles.bouton);
+
+    if (boutonPanneauModeles && conteneurListe) {
+        boutonPanneauModeles.onPointerClickObservable.add(async () => {
+            await controleur.afficherListeModeles(conteneurListe, { forcerDetection: true });
+        });
+    }
+
+    const modeles = controleur.listerModelesUC.executer();
+
     controleur.brancherBoutonsModelesExistants([
-        { bouton: obtenir(c, NOMS_GUI.modeles.objet1Btn), idModele: "objet1" },
-        { bouton: obtenir(c, NOMS_GUI.modeles.objet2Btn), idModele: "objet2" }
-    ]);
+        { bouton: obtenir(c, NOMS_GUI.modeles.objet1Btn), idModele: modeles[0]?.id },
+        { bouton: obtenir(c, NOMS_GUI.modeles.objet2Btn), idModele: modeles[1]?.id }
+    ].filter((liaison) => liaison.bouton && liaison.idModele));
+}
+
+function preparerScrollModeles(scrollViewer, conteneurListe) {
+    if (scrollViewer) {
+        scrollViewer.forceVerticalBar = true;
+        scrollViewer.barSize = Math.max(Number(scrollViewer.barSize ?? 18), 22);
+        scrollViewer.thumbLength = Math.max(Number(scrollViewer.thumbLength ?? 0.15), 0.18);
+        scrollViewer.barColor = scrollViewer.barColor || "#000000FF";
+        scrollViewer.barBackground = scrollViewer.barBackground || "#D0D0D0FF";
+        scrollViewer.isPointerBlocker = true;
+        scrollViewer._markAsDirty?.();
+    }
+
+    if (conteneurListe) {
+        conteneurListe.isVertical = true;
+        conteneurListe.adaptHeightToChildren = true;
+        conteneurListe.width = "100%";
+        conteneurListe._markAsDirty?.();
+    }
 }
 
 function preparerTexteDynamique(textBlock, texteParDefaut = "") {
@@ -972,107 +1563,25 @@ function preparerTexteDynamique(textBlock, texteParDefaut = "") {
 
 
 
-function brancherTestSaillance(serviceSaillanceVueBabylon, choisirVueSaillanceUC = null) {
-    const c = etatApplication.gui.controles;
-    const bouton = c.SaillanceBtn
-        ?? etatApplication.gui.advancedTexture?.getControlByName?.("SaillanceBtn");
+function initialiserAccessibiliteApresProfil({ profilRestaure, toggleAccessUC, controleurAccess }) {
+    const accessibiliteProfil = profilRestaure?.accessibilite;
+    const choixProfilExiste = typeof accessibiliteProfil?.actif === "boolean";
+    const doitActiver = choixProfilExiste ? accessibiliteProfil.actif : true;
 
+    etatApplication.accessibilite = {
+        ...(etatApplication.accessibilite ?? {}),
+        actif: false,
+        preferencesNavigateur: null,
+        sauvegardeAvantActivation: null
+    };
 
-    if (!bouton || !serviceSaillanceVueBabylon) {
-        console.warn("[Saillance] Bouton ou service introuvable.");
-        return;
+    if (doitActiver) {
+        toggleAccessUC.activer({ sauvegarderProfil: false });
+    } else {
+        toggleAccessUC.desactiver({ sauvegarderProfil: false });
     }
 
-    bouton.onPointerClickObservable.clear();
-    bouton.onPointerClickObservable.add(async () => {
-
-
-        try {
-            choisirVueSaillanceUC?.executer?.();
-
-            const scene = etatApplication.scenes.scene3D;
-            const camera = etatApplication.camera.cameraBabylon;
-            const meshes = obtenirMeshesModelePourEntropie(scene);
-
-            const resultat = await serviceSaillanceVueBabylon.placerCameraSurVueSaillanceMaximale({
-                scene,
-                camera,
-                meshes,
-                conserverRayonCourant: false
-            });
-
-            console.log("[Vue optimale par saillance GMM]", resultat);
-        } catch (erreur) {
-            console.error("[Saillance] Erreur pendant le calcul de vue :", erreur);
-        }
-    });
-}
-
-function brancherTestEntropie(serviceEntropieVueBabylon) {
-    const c = etatApplication.gui.controles;
-    const bouton = c.EntropieBtn ?? c.EntropieTestBtn ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieBtn") ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieTestBtn");
-    const texteResultat = c.EntropieTxt ?? c.EntropieResultTxt ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieTxt") ?? etatApplication.gui.advancedTexture?.getControlByName?.("EntropieResultTxt");
-
-    if (!bouton || !serviceEntropieVueBabylon) {
-        console.warn("[Entropie] Bouton ou service introuvable.");
-        return;
-    }
-
-    if (texteResultat) {
-        preparerTexteDynamique(texteResultat, "Vue optimale : --");
-    }
-
-    bouton.onPointerClickObservable.clear();
-    bouton.onPointerClickObservable.add(async () => {
-        if (texteResultat) {
-            texteResultat.text = "Recherche...";
-            texteResultat._markAsDirty?.();
-            etatApplication.gui.advancedTexture?.markAsDirty?.();
-        }
-
-        const scene = etatApplication.scenes.scene3D;
-        const camera = etatApplication.camera.cameraBabylon;
-        const meshes = obtenirMeshesModelePourEntropie(scene);
-
-        const resultat = await serviceEntropieVueBabylon.placerCameraSurVueEntropieMaximale({
-            scene,
-            camera,
-            meshes,
-            nombreVues: 48,
-            conserverRayonCourant: true,
-            texteResultat
-        });
-
-        if (!resultat) {
-            if (texteResultat) {
-                texteResultat.text = "Vue optimale : erreur";
-                texteResultat._markAsDirty?.();
-            }
-            return;
-        }
-
-        if (texteResultat) {
-            texteResultat.text = `Vue optimale : ${Math.round(resultat.entropieNormalisee * 100)}%`;
-            texteResultat._markAsDirty?.();
-            etatApplication.gui.advancedTexture?.markAsDirty?.();
-        }
-
-        console.log("[Vue optimale par entropie]", {
-            resultat,
-            apparence: etatApplication.apparence?.parametres,
-            lumieresScene: scene?.lights?.map((lumiere) => ({
-                name: lumiere.name,
-                type: lumiere.getClassName?.(),
-                intensity: lumiere.intensity,
-                isEnabled: lumiere.isEnabled?.(),
-                direction: lumiere.direction
-                    ? { x: lumiere.direction.x, y: lumiere.direction.y, z: lumiere.direction.z }
-                    : null
-            })),
-            texture: etatApplication.apparence?.parametres?.textureActive,
-            fondScene: scene?.clearColor
-        });
-    });
+    controleurAccess.synchroniserEtatVisuel?.();
 }
 
 function obtenirMeshesModelePourEntropie(scene) {

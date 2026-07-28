@@ -1,0 +1,279 @@
+/* Fenêtre HTML du formulaire de satisfaction IRENE. */
+
+.irene-formulaire-avis[hidden] {
+    display: none !important;
+}
+
+.irene-formulaire-avis {
+    --irene-avis-police: Arial, sans-serif;
+    --irene-avis-poids: 400;
+
+    /* Tailles adaptatives */
+    --irene-avis-taille-titre: clamp(1.4rem, 2.2vw, 2.2rem);
+    --irene-avis-taille-bouton: clamp(1rem, 1.45vw, 1.5rem);
+    --irene-avis-taille-message: clamp(1rem, 1.5vw, 1.6rem);
+
+    --irene-avis-fond: #ffffff;
+    --irene-avis-texte: #000000;
+    --irene-avis-bordure: #000000;
+    --irene-avis-bouton-fond: #000000;
+    --irene-avis-bouton-texte: #ffffff;
+    --irene-avis-focus: #4d90fe;
+
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100vw;
+    height: 100vh;
+    padding: 2vh 2vw;
+    box-sizing: border-box;
+
+    background: rgba(0, 0, 0, 0.78);
+
+    font-family: var(--irene-avis-police);
+    font-weight: var(--irene-avis-poids);
+}
+
+/* Fenêtre principale : presque toute la surface de l’écran */
+.irene-formulaire-avis__fenetre {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 96vw;
+    height: 94vh;
+
+    overflow: hidden;
+    box-sizing: border-box;
+
+    background: var(--irene-avis-fond);
+    color: var(--irene-avis-texte);
+
+    border: clamp(0.2rem, 0.35vw, 0.4rem)
+    solid var(--irene-avis-bordure);
+
+    border-radius: clamp(0.6rem, 1.2vw, 1.3rem);
+
+    box-shadow:
+            0 1.5vh 4vw rgba(0, 0, 0, 0.55);
+}
+
+/* En-tête */
+.irene-formulaire-avis__entete {
+    flex: 0 0 auto;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 2vw;
+
+    width: 100%;
+    min-height: clamp(4.5rem, 9vh, 7rem);
+
+    padding:
+            clamp(0.6rem, 1.2vh, 1rem)
+            clamp(1rem, 2vw, 2.2rem);
+
+    box-sizing: border-box;
+
+    background: var(--irene-avis-fond);
+
+    border-bottom:
+            clamp(0.15rem, 0.25vw, 0.3rem)
+            solid var(--irene-avis-bordure);
+}
+
+/* Titre */
+.irene-formulaire-avis__titre {
+    min-width: 0;
+    max-width: 70%;
+
+    margin: 0;
+
+    overflow-wrap: anywhere;
+
+    color: var(--irene-avis-texte);
+
+    font-family: inherit;
+    font-size: var(--irene-avis-taille-titre);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Bouton Fermer */
+.irene-formulaire-avis__fermer {
+    flex: 0 0 auto;
+
+    min-width: clamp(7rem, 14vw, 13rem);
+    min-height: clamp(3rem, 6vh, 4.5rem);
+
+    padding:
+            clamp(0.45rem, 0.8vh, 0.8rem)
+            clamp(0.8rem, 1.7vw, 1.8rem);
+
+    border:
+            clamp(0.15rem, 0.25vw, 0.3rem)
+            solid var(--irene-avis-bordure);
+
+    border-radius: clamp(0.4rem, 0.7vw, 0.8rem);
+
+    background: var(--irene-avis-bouton-fond);
+    color: var(--irene-avis-bouton-texte);
+
+    font-family: inherit;
+    font-size: var(--irene-avis-taille-bouton);
+    font-weight: 700;
+    line-height: 1.1;
+
+    cursor: pointer;
+}
+
+.irene-formulaire-avis__fermer:hover,
+.irene-formulaire-avis__fermer:focus-visible {
+    filter: brightness(1.08);
+
+    outline:
+            clamp(0.15rem, 0.3vw, 0.3rem)
+            solid var(--irene-avis-focus);
+
+    outline-offset: clamp(0.1rem, 0.2vw, 0.2rem);
+}
+
+/* Le contenu prend automatiquement toute la place restante */
+.irene-formulaire-avis__contenu {
+    position: relative;
+
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+
+    overflow: hidden;
+
+    background: #ffffff;
+}
+
+/* Google Form */
+.irene-formulaire-avis__iframe {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    border: 0;
+    background: #ffffff;
+}
+
+/* Message affiché lorsque l’URL n’est pas configurée */
+.irene-formulaire-avis__message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+
+    padding:
+            clamp(1.2rem, 4vh, 3.5rem)
+            clamp(1rem, 5vw, 5rem);
+
+    box-sizing: border-box;
+
+    color: #000000;
+    background: #ffffff;
+
+    font-family: var(--irene-avis-police);
+    font-size: var(--irene-avis-taille-message);
+    font-weight: var(--irene-avis-poids);
+    line-height: 1.5;
+    text-align: center;
+}
+
+.irene-formulaire-avis__iframe[hidden],
+.irene-formulaire-avis__message[hidden] {
+    display: none !important;
+}
+
+/* Tablettes et petits écrans */
+@media (max-width: 900px) {
+    .irene-formulaire-avis {
+        padding: 1vh 1vw;
+    }
+
+    .irene-formulaire-avis__fenetre {
+        width: 98vw;
+        height: 97vh;
+    }
+
+    .irene-formulaire-avis__titre {
+        max-width: 65%;
+    }
+
+    .irene-formulaire-avis__fermer {
+        min-width: clamp(6.5rem, 22vw, 10rem);
+    }
+}
+
+/* Téléphones */
+@media (max-width: 650px) {
+    .irene-formulaire-avis {
+        padding: 0.5vh 1vw;
+    }
+
+    .irene-formulaire-avis__fenetre {
+        width: 98vw;
+        height: 98vh;
+
+        border-width: 0.2rem;
+        border-radius: 0.6rem;
+    }
+
+    .irene-formulaire-avis__entete {
+        gap: 2vw;
+        min-height: 9vh;
+        padding: 1vh 3vw;
+    }
+
+    .irene-formulaire-avis__titre {
+        max-width: 60%;
+        font-size: clamp(1.15rem, 5vw, 1.5rem);
+    }
+
+    .irene-formulaire-avis__fermer {
+        min-width: 30vw;
+        min-height: 6vh;
+
+        padding: 0.7vh 2vw;
+
+        font-size: clamp(0.95rem, 4vw, 1.2rem);
+    }
+}
+
+/* Écran très bas */
+@media (max-height: 600px) {
+    .irene-formulaire-avis {
+        padding: 1vh 1vw;
+    }
+
+    .irene-formulaire-avis__fenetre {
+        width: 98vw;
+        height: 98vh;
+    }
+
+    .irene-formulaire-avis__entete {
+        min-height: 12vh;
+        padding-block: 1vh;
+    }
+
+    .irene-formulaire-avis__fermer {
+        min-height: 9vh;
+    }
+}

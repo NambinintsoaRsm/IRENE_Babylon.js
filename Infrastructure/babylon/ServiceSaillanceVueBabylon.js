@@ -46,28 +46,6 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         };
     }
 
-    calculerRayonRecherche({ camera, rayonModele, conserverRayonCourant, configuration }) {
-        const cadrage = configuration?.cadrageAutomatique
-            ?? constantesSaillance.cadrageAutomatique
-            ?? null;
-
-        if (!cadrage?.actif) {
-            return super.calculerRayonRecherche({
-                camera,
-                rayonModele,
-                conserverRayonCourant,
-                configuration
-            });
-        }
-
-        return this.calculerRayonPourOccupationImage({
-            camera,
-            rayonModele,
-            configuration,
-            cadrage
-        });
-    }
-
     calculerRayonPourOccupationImage({ camera, rayonModele, configuration = {}, cadrage = {} }) {
         const occupation = this.limiterValeur(
             Number(cadrage.occupationImageMin ?? 0.8),
@@ -131,28 +109,17 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
     }
 
     calculerRayonRecherche({ camera, rayonModele, conserverRayonCourant, configuration }) {
-        const cadrage = configuration?.cadrageAutomatique;
+        const cadrage = configuration?.cadrageAutomatique
+            ?? constantesSaillance.parcoursSpherique?.cadrageAutomatique
+            ?? null;
 
         if (cadrage?.actif !== false) {
-            const occupation = this.limiterEntre0Et1(Number(cadrage?.occupationImageMin ?? 0.8)) || 0.8;
-            const margeSecurite = Math.max(0.5, Number(cadrage?.margeSecurite ?? 1));
-            const fovVertical = Number(camera?.fov) || Math.PI / 4;
-            const distanceCadrage = rayonModele / (occupation * Math.tan(fovVertical / 2));
-
-            let rayon = Math.max(
-                distanceCadrage * margeSecurite,
-                Number(configuration?.distanceMinimale ?? 1.5)
-            );
-
-            if (Number.isFinite(camera?.lowerRadiusLimit) && camera.lowerRadiusLimit > 0) {
-                rayon = Math.max(rayon, camera.lowerRadiusLimit);
-            }
-
-            if (Number.isFinite(camera?.upperRadiusLimit) && camera.upperRadiusLimit > 0) {
-                rayon = Math.min(rayon, camera.upperRadiusLimit);
-            }
-
-            return rayon;
+            return this.calculerRayonPourOccupationImage({
+                camera,
+                rayonModele,
+                configuration,
+                cadrage
+            });
         }
 
         return super.calculerRayonRecherche({
@@ -234,15 +201,13 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
     }
 
     calculerCarteSaillanceAchanta(pixels, width, height, configurationAnalyse) {
-        const marge = Number(configurationAnalyse.margeZoneCentrale ?? 0);
-        const margeX = Math.floor(width * marge);
-        const margeY = Math.floor(height * marge);
-        const xSourceMin = Math.max(0, margeX);
-        const ySourceMin = Math.max(0, margeY);
-        const largeurSource = Math.max(2, width - 2 * margeX);
-        const hauteurSource = Math.max(2, height - 2 * margeY);
+        const zoneAnalyse = this.determinerZoneAnalyseObjet(pixels, width, height, configurationAnalyse);
+        const xSourceMin = zoneAnalyse.xMin;
+        const ySourceMin = zoneAnalyse.yMin;
+        const largeurSource = zoneAnalyse.largeur;
+        const hauteurSource = zoneAnalyse.hauteur;
 
-        const tailleMax = Math.max(16, Math.round(Number(configurationAnalyse.tailleCarteMax ?? 72)));
+        const tailleMax = Math.max(16, Math.round(Number(configurationAnalyse.tailleCarteMax ?? 96)));
         const facteur = Math.min(tailleMax / largeurSource, tailleMax / hauteurSource, 1);
         const largeurCarte = Math.max(2, Math.round(largeurSource * facteur));
         const hauteurCarte = Math.max(2, Math.round(hauteurSource * facteur));
@@ -289,8 +254,136 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         return {
             valeurs,
             largeur: largeurCarte,
-            hauteur: hauteurCarte
+            hauteur: hauteurCarte,
+            zoneAnalyse
         };
+    }
+
+    determinerZoneAnalyseObjet(pixels, width, height, configurationAnalyse = {}) {
+        const marge = Number(configurationAnalyse.margeZoneCentrale ?? 0);
+        const margeX = Math.floor(width * marge);
+        const margeY = Math.floor(height * marge);
+        const zoneComplete = {
+            xMin: Math.max(0, margeX),
+            yMin: Math.max(0, margeY),
+            largeur: Math.max(2, width - 2 * margeX),
+            hauteur: Math.max(2, height - 2 * margeY),
+            recadree: false
+        };
+
+        const recadrage = configurationAnalyse.recadrageObjet ?? {};
+        if (recadrage.actif === false) {
+            return zoneComplete;
+        }
+
+        const fond = this.estimerCouleurFondImage(pixels, width, height);
+        if (!fond) {
+            return zoneComplete;
+        }
+
+        const seuil = Math.max(1, Number(recadrage.seuilDifferenceFond ?? 12));
+        const alphaMin = Math.max(0, Number(recadrage.alphaMin ?? 8));
+        const resolutionMax = Math.max(48, Number(recadrage.resolutionDetectionMax ?? 360));
+        const pas = Math.max(1, Math.floor(Math.max(zoneComplete.largeur, zoneComplete.hauteur) / resolutionMax));
+
+        let minX = width;
+        let minY = height;
+        let maxX = -1;
+        let maxY = -1;
+        let nombreObjet = 0;
+
+        for (let y = zoneComplete.yMin; y < zoneComplete.yMin + zoneComplete.hauteur; y += pas) {
+            for (let x = zoneComplete.xMin; x < zoneComplete.xMin + zoneComplete.largeur; x += pas) {
+                const pixel = this.lirePixelRgba(pixels, width, height, x, y);
+                if (!this.estPixelObjet(pixel, fond, seuil, alphaMin)) {
+                    continue;
+                }
+
+                nombreObjet += 1;
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+            }
+        }
+
+        if (nombreObjet < 8 || maxX <= minX || maxY <= minY) {
+            return zoneComplete;
+        }
+
+        // On élargit légèrement la boîte détectée pour compenser l'échantillonnage.
+        minX = Math.max(zoneComplete.xMin, minX - pas * 2);
+        minY = Math.max(zoneComplete.yMin, minY - pas * 2);
+        maxX = Math.min(zoneComplete.xMin + zoneComplete.largeur - 1, maxX + pas * 2);
+        maxY = Math.min(zoneComplete.yMin + zoneComplete.hauteur - 1, maxY + pas * 2);
+
+        const largeurObjet = Math.max(2, maxX - minX + 1);
+        const hauteurObjet = Math.max(2, maxY - minY + 1);
+        const occupation = this.limiterValeur(Number(recadrage.occupationImageMin ?? 0.8), 0.2, 0.95);
+        const largeurCible = Math.min(zoneComplete.largeur, Math.ceil(largeurObjet / occupation));
+        const hauteurCible = Math.min(zoneComplete.hauteur, Math.ceil(hauteurObjet / occupation));
+        const centreX = (minX + maxX) / 2;
+        const centreY = (minY + maxY) / 2;
+        const xMin = this.limiterEntier(
+            Math.round(centreX - largeurCible / 2),
+            zoneComplete.xMin,
+            zoneComplete.xMin + zoneComplete.largeur - largeurCible
+        );
+        const yMin = this.limiterEntier(
+            Math.round(centreY - hauteurCible / 2),
+            zoneComplete.yMin,
+            zoneComplete.yMin + zoneComplete.hauteur - hauteurCible
+        );
+
+        return {
+            xMin,
+            yMin,
+            largeur: Math.max(2, largeurCible),
+            hauteur: Math.max(2, hauteurCible),
+            recadree: true,
+            occupationDemandee: occupation,
+            objet: { minX, minY, maxX, maxY, largeur: largeurObjet, hauteur: hauteurObjet }
+        };
+    }
+
+    estimerCouleurFondImage(pixels, width, height) {
+        const points = [
+            [0, 0],
+            [width - 1, 0],
+            [0, height - 1],
+            [width - 1, height - 1],
+            [Math.floor(width / 2), 0],
+            [Math.floor(width / 2), height - 1],
+            [0, Math.floor(height / 2)],
+            [width - 1, Math.floor(height / 2)]
+        ];
+
+        const couleurs = points.map(([x, y]) => this.lirePixelRgba(pixels, width, height, x, y));
+
+        return {
+            r: this.moyenne(couleurs.map((p) => p.r)),
+            g: this.moyenne(couleurs.map((p) => p.g)),
+            b: this.moyenne(couleurs.map((p) => p.b)),
+            a: this.moyenne(couleurs.map((p) => p.a))
+        };
+    }
+
+    estPixelObjet(pixel, fond, seuilDifferenceFond, alphaMin) {
+        if (!pixel) return false;
+        if (pixel.a <= alphaMin) return false;
+
+        const dr = pixel.r - fond.r;
+        const dg = pixel.g - fond.g;
+        const db = pixel.b - fond.b;
+        const distance = Math.sqrt(dr * dr + dg * dg + db * db);
+
+        return distance > seuilDifferenceFond;
+    }
+
+    limiterEntier(valeur, min, max) {
+        const borneMin = Math.round(min);
+        const borneMax = Math.round(Math.max(min, max));
+        return Math.max(borneMin, Math.min(borneMax, Math.round(valeur)));
     }
 
     extrairePixelsSaillants({ carte, seuil, configurationAnalyse }) {
@@ -313,7 +406,12 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         }
 
         return pixelsSaillants
-            .sort((a, b) => b.poids - a.poids)
+            .sort((a, b) => {
+                const ecart = b.poids - a.poids;
+                if (Math.abs(ecart) > 1e-12) return ecart;
+                if (a.y !== b.y) return a.y - b.y;
+                return a.x - b.x;
+            })
             .slice(0, maxPixels);
     }
 
@@ -422,6 +520,15 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
     }
 
     lirePixelRgb(pixels, width, height, x, y) {
+        const pixel = this.lirePixelRgba(pixels, width, height, x, y);
+        return {
+            r: pixel.r,
+            g: pixel.g,
+            b: pixel.b
+        };
+    }
+
+    lirePixelRgba(pixels, width, height, x, y) {
         const ix = Math.max(0, Math.min(width - 1, Math.floor(x)));
         const iy = Math.max(0, Math.min(height - 1, Math.floor(y)));
         const index = (iy * width + ix) * 4;
@@ -429,7 +536,8 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         return {
             r: this.normaliserCanalPixel(pixels[index]),
             g: this.normaliserCanalPixel(pixels[index + 1]),
-            b: this.normaliserCanalPixel(pixels[index + 2])
+            b: this.normaliserCanalPixel(pixels[index + 2]),
+            a: this.normaliserCanalPixel(pixels[index + 3] ?? 255)
         };
     }
 

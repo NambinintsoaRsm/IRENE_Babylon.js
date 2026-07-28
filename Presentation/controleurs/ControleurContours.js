@@ -17,14 +17,14 @@ export class ControleurContours {
         changerEpaisseurContourUC,
         changerCouleurContourUC,
         choisirCouleurContourAdaptativeUC = null,
-        basculerMiseLumiereNormalesUC = null,
-        basculerMiseLumiereCouleursUC = null,
         desactiverContoursUC,
         reinitialiserContoursUC,
         postTraitContProfNorm,
         postTraitContoursCouleur,
         postTraitMiseLumiereNormales = null,
-        postTraitMiseLumiereCouleurs = null
+        postTraitMiseLumiereCouleurs = null,
+        postTraitApparence = null,
+        serviceSceneBabylon = null
     }) {
         this.etatApplication = etatApplication;
         this.activerSilhouetteUC = activerSilhouetteUC;
@@ -33,16 +33,17 @@ export class ControleurContours {
         this.changerEpaisseurContourUC = changerEpaisseurContourUC;
         this.changerCouleurContourUC = changerCouleurContourUC;
         this.choisirCouleurContourAdaptativeUC = choisirCouleurContourAdaptativeUC;
-        this.basculerMiseLumiereNormalesUC = basculerMiseLumiereNormalesUC;
-        this.basculerMiseLumiereCouleursUC = basculerMiseLumiereCouleursUC;
         this.desactiverContoursUC = desactiverContoursUC;
         this.reinitialiserContoursUC = reinitialiserContoursUC;
         this.postTraitContProfNorm = postTraitContProfNorm;
         this.postTraitContoursCouleur = postTraitContoursCouleur;
         this.postTraitMiseLumiereNormales = postTraitMiseLumiereNormales;
         this.postTraitMiseLumiereCouleurs = postTraitMiseLumiereCouleurs;
+        this.postTraitApparence = postTraitApparence;
+        this.serviceSceneBabylon = serviceSceneBabylon;
         this.boutonsType = new Map();
-        this.boutonsMiseLumiere = new Map();
+        this.boutonsPresets = new Map();
+        this.sauvegardeAvantPresetHighlight = null;
         this.sliderEpaisseur = null;
         this.texteEpaisseur = null;
         this.promesseCouleurAdaptative = null;
@@ -60,51 +61,11 @@ export class ControleurContours {
         this.brancherBoutonTypeContour({ bouton, typeContour: TypeContour.COULEUR });
     }
 
-    brancherMiseLumiereNormales(bouton) {
-        this.brancherBoutonMiseLumiere({
-            bouton,
-            cle: "normales",
-            basculerUC: this.basculerMiseLumiereNormalesUC,
-            postTraitement: this.postTraitMiseLumiereNormales,
-            lireActif: () => Boolean(this.etatApplication.contours.miseLumiereNormalesActif)
-        });
-    }
-
-    brancherMiseLumiereCouleurs(bouton) {
-        this.brancherBoutonMiseLumiere({
-            bouton,
-            cle: "couleurs",
-            basculerUC: this.basculerMiseLumiereCouleursUC,
-            postTraitement: this.postTraitMiseLumiereCouleurs,
-            lireActif: () => Boolean(this.etatApplication.contours.miseLumiereCouleursActif)
-        });
-    }
-
-    brancherBoutonMiseLumiere({ bouton, cle, basculerUC, postTraitement, lireActif }) {
-        if (!bouton || !basculerUC || !postTraitement) return;
-
-        bouton.metadata = bouton.metadata || {};
-        bouton.metadata.backgroundOriginal = bouton.metadata.backgroundOriginal ?? bouton.background;
-        bouton.metadata.thicknessOriginal = bouton.metadata.thicknessOriginal ?? bouton.thickness;
-        bouton.metadata.colorOriginal = bouton.metadata.colorOriginal ?? bouton.color;
-
-        this.boutonsMiseLumiere.set(cle, { bouton, lireActif });
-
-        bouton.onPointerClickObservable.clear();
-        bouton.onPointerClickObservable.add(() => {
-            const actif = basculerUC.executer();
-
-            if (actif) {
-                postTraitement.appliquer(this.etatApplication);
-            } else {
-                postTraitement.supprimer(this.etatApplication);
-            }
-
-            this.mettreAJourBoutonsMiseLumiere();
-        });
-
-        this.mettreAJourBoutonsMiseLumiere();
-    }
+    /**
+     * L'ancienne interface Highlight avec boutons/sliders a été retirée du GUI.
+     * Les presets utilisent encore la mise en lumière des normales en interne,
+     * mais il n'y a plus de branchement direct sur des contrôles dédiés.
+     */
 
     brancherBoutonTypeContour({ bouton, typeContour }) {
         if (!bouton) return;
@@ -153,15 +114,25 @@ export class ControleurContours {
         this.sliderEpaisseur = slider;
         this.texteEpaisseur = texteValeur;
 
-        const valeurInitiale = Math.min(
-            3,
-            Math.max(1, Math.round(this.etatApplication.contours.parametres.epaisseur ?? 1))
-        );
+        const parametres = this.etatApplication.contours.parametres;
+        const valeurInitiale = this.obtenirEpaisseurAfficheeDepuisEtat(parametres);
 
-        slider.minimum = 1;
-        slider.maximum = 3;
-        slider.step = 1;
+        const configurationEpaisseur = constantesContours.epaisseurSlider ?? {};
+        const epaisseurMin = configurationEpaisseur.min ?? 1;
+        const epaisseurMax = configurationEpaisseur.max ?? 2;
+        const epaisseurStep = configurationEpaisseur.step ?? 1;
+
+        slider.minimum = epaisseurMin;
+        slider.maximum = epaisseurMax;
+        slider.step = epaisseurStep;
         slider.value = valeurInitiale;
+
+        // Si aucun contour n'est actif au démarrage, on garde l'accord décidé :
+        // l'affichage et l'état interne reviennent à 1, même si une ancienne
+        // sauvegarde contient encore 2 ou 3.
+        if (!this.desContoursSontActifs(parametres)) {
+            parametres?.changerEpaisseur?.(valeurInitiale);
+        }
 
         if (texteValeur) {
             texteValeur.metadata = texteValeur.metadata || {};
@@ -171,7 +142,7 @@ export class ControleurContours {
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
-            const epaisseur = Math.min(3, Math.max(1, Math.round(valeur)));
+            const epaisseur = Math.min(epaisseurMax, Math.max(epaisseurMin, Math.round(valeur)));
 
             if (texteValeur) {
                 texteValeur.text = String(epaisseur);
@@ -208,12 +179,6 @@ export class ControleurContours {
         bouton.metadata.backgroundOriginal = bouton.metadata.backgroundOriginal ?? bouton.background;
         bouton.metadata.thicknessOriginal = bouton.metadata.thicknessOriginal ?? bouton.thickness;
         bouton.metadata.colorOriginal = bouton.metadata.colorOriginal ?? bouton.color;
-        bouton.metadata.cocheCouleurAdaptative = this.obtenirTexteCocheCouleurAdaptative(bouton);
-
-        if (bouton.metadata.cocheCouleurAdaptative) {
-            bouton.metadata.cocheCouleurAdaptative.metadata = bouton.metadata.cocheCouleurAdaptative.metadata || {};
-            bouton.metadata.cocheCouleurAdaptative.metadata.texteDynamique = true;
-        }
 
         bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(async () => {
@@ -329,111 +294,97 @@ export class ControleurContours {
         });
     }
 
-    brancherParametresMiseLumiere({
-        sliderFrequence = null,
-        sliderLuminance = null,
-        sliderLargeur = null
-    } = {}) {
-        const parametres = this.garantirParametresMiseLumiere();
-        const configuration = constantesContours.miseLumiereGradients.animation;
-
-        this.brancherSliderNumerique({
-            slider: sliderFrequence,
-            min: configuration.intervalleSecondes.min,
-            max: configuration.intervalleSecondes.max,
-            step: configuration.intervalleSecondes.step,
-            valeurInitiale: parametres.intervalleClignotement,
-            normaliser: (valeur) => this.bornerNombre(
-                valeur,
-                configuration.intervalleSecondes.min,
-                configuration.intervalleSecondes.max,
-                configuration.intervalleSecondes.defaut
-            ),
-            appliquer: (valeur) => {
-                parametres.intervalleClignotement = valeur;
-            }
-        });
-
-        this.brancherSliderNumerique({
-            slider: sliderLuminance,
-            min: configuration.luminancePourcentage.min,
-            max: configuration.luminancePourcentage.max,
-            step: configuration.luminancePourcentage.step,
-            valeurInitiale: parametres.luminanceSliderValeur ?? configuration.luminancePourcentage.defaut,
-            normaliser: (valeur) => Math.round(this.bornerNombre(
-                valeur,
-                configuration.luminancePourcentage.min,
-                configuration.luminancePourcentage.max,
-                configuration.luminancePourcentage.defaut
-            )),
-            appliquer: (valeur) => {
-                parametres.luminanceSliderValeur = valeur;
-                parametres.luminanceDelta = this.convertirSliderLuminanceEnDelta(
-                    valeur,
-                    configuration.luminancePourcentage
-                );
-            }
-        });
-
-        this.brancherSliderNumerique({
-            slider: sliderLargeur,
-            min: configuration.largeur.min,
-            max: configuration.largeur.max,
-            step: configuration.largeur.step,
-            valeurInitiale: parametres.largeur,
-            normaliser: (valeur) => Math.round(this.bornerNombre(
-                valeur,
-                configuration.largeur.min,
-                configuration.largeur.max,
-                configuration.largeur.defaut
-            )),
-            appliquer: (valeur) => {
-                parametres.largeur = valeur;
-            }
-        });
-    }
-
-    brancherSliderNumerique({ slider, min, max, step, valeurInitiale, normaliser, appliquer }) {
-        if (!slider) return;
-
-        slider.minimum = min;
-        slider.maximum = max;
-        slider.step = step;
-        slider.value = normaliser(valeurInitiale);
-
-        slider.onValueChangedObservable.clear();
-        slider.onValueChangedObservable.add((valeur) => {
-            appliquer(normaliser(Number(valeur)));
-        });
-    }
-
     garantirParametresMiseLumiere() {
         const animation = constantesContours.miseLumiereGradients.animation;
 
         this.etatApplication.contours.parametresMiseLumiere = this.etatApplication.contours.parametresMiseLumiere || {
+            frequenceClignotement: animation.frequence?.defaut ?? 3,
             intervalleClignotement: animation.intervalleSecondes.defaut,
             luminanceSliderValeur: animation.luminancePourcentage.defaut,
             luminanceDelta: animation.luminancePourcentage.deltaDefaut,
-            largeur: animation.largeur.defaut
+            sensLuminance: animation.sensLuminance?.defaut ?? 1,
+            largeur: animation.largeur.defaut,
+            presetActif: null
         };
 
-        if (!Number.isFinite(Number(this.etatApplication.contours.parametresMiseLumiere.luminanceDelta))) {
-            this.etatApplication.contours.parametresMiseLumiere.luminanceDelta = animation.luminancePourcentage.deltaDefaut;
+        const parametres = this.etatApplication.contours.parametresMiseLumiere;
+
+        if (!Number.isFinite(Number(parametres.frequenceClignotement))) {
+            parametres.frequenceClignotement = this.convertirIntervalleEnFrequence(
+                parametres.intervalleClignotement,
+                animation
+            );
         }
 
-        if (!Number.isFinite(Number(this.etatApplication.contours.parametresMiseLumiere.luminanceSliderValeur))) {
-            this.etatApplication.contours.parametresMiseLumiere.luminanceSliderValeur = animation.luminancePourcentage.defaut;
+        parametres.intervalleClignotement = this.convertirFrequenceEnIntervalle(
+            parametres.frequenceClignotement,
+            animation
+        );
+
+        if (!Number.isFinite(Number(parametres.luminanceDelta))) {
+            parametres.luminanceDelta = animation.luminancePourcentage.deltaDefaut;
         }
 
-        return this.etatApplication.contours.parametresMiseLumiere;
+        if (!Number.isFinite(Number(parametres.luminanceSliderValeur))) {
+            parametres.luminanceSliderValeur = animation.luminancePourcentage.defaut;
+        }
+
+        if (!Number.isFinite(Number(parametres.sensLuminance))) {
+            parametres.sensLuminance = animation.sensLuminance?.defaut ?? 1;
+        }
+
+        if (Number(parametres.luminanceDelta) < 0) {
+            parametres.sensLuminance = -1;
+        }
+
+        return parametres;
     }
 
-    convertirSliderLuminanceEnDelta(valeurSlider, configurationLuminance) {
+    obtenirFrequenceMiseLumiereDepuisParametres(parametres, configuration) {
+        const frequence = Number(parametres?.frequenceClignotement);
+
+        if (Number.isFinite(frequence)) {
+            return frequence;
+        }
+
+        return this.convertirIntervalleEnFrequence(
+            parametres?.intervalleClignotement,
+            configuration
+        );
+    }
+
+    convertirFrequenceEnIntervalle(frequence, configuration) {
+        const configFrequence = configuration.frequence ?? configuration.intervalleSecondes;
+        const configIntervalle = configuration.intervalleSecondes ?? configFrequence;
+
+        const min = Number(configIntervalle.min ?? configFrequence.min ?? 1);
+        const max = Number(configIntervalle.max ?? configFrequence.max ?? 4);
+        const defaut = Number(configIntervalle.defaut ?? configFrequence.defaut ?? 3);
+
+        // Ici, la valeur affichée par le slider correspond directement
+        // à la durée du clignotement en secondes.
+        // Donc 3 dans le preset = 3 secondes envoyées au shader.
+        return this.bornerNombre(frequence, min, max, defaut);
+    }
+
+    convertirIntervalleEnFrequence(intervalle, configuration) {
+        const configFrequence = configuration.frequence ?? configuration.intervalleSecondes;
+        const configIntervalle = configuration.intervalleSecondes ?? configFrequence;
+
+        const min = Number(configFrequence.min ?? configIntervalle.min ?? 1);
+        const max = Number(configFrequence.max ?? configIntervalle.max ?? 4);
+        const defaut = Number(configFrequence.defaut ?? configIntervalle.defaut ?? 3);
+
+        return this.bornerNombre(intervalle, min, max, defaut);
+    }
+
+    convertirSliderLuminanceEnDelta(valeurSlider, configurationLuminance, sensLuminance = 1) {
         const minSlider = Number(configurationLuminance?.min ?? 0);
         const maxSlider = Number(configurationLuminance?.max ?? 100);
         const minDelta = Number(configurationLuminance?.deltaMin ?? 0.04);
         const maxDelta = Number(configurationLuminance?.deltaMax ?? 0.16);
         const defautDelta = Number(configurationLuminance?.deltaDefaut ?? 0.10);
+        const sens = Number(sensLuminance) < 0 ? -1 : 1;
 
         const valeur = this.bornerNombre(
             valeurSlider,
@@ -443,11 +394,11 @@ export class ControleurContours {
         );
 
         if (maxSlider <= minSlider || !Number.isFinite(minDelta) || !Number.isFinite(maxDelta)) {
-            return defautDelta;
+            return defautDelta * sens;
         }
 
         const ratio = (valeur - minSlider) / (maxSlider - minSlider);
-        return minDelta + ratio * (maxDelta - minDelta);
+        return (minDelta + ratio * (maxDelta - minDelta)) * sens;
     }
 
     bornerNombre(valeur, min, max, defaut) {
@@ -466,9 +417,436 @@ export class ControleurContours {
             this.mettreAJourSliderEpaisseur(parametres.epaisseur ?? 1);
             this.appliquerContours();
             this.mettreAJourBoutonsTypes();
+            this.reinitialiserParametresMiseLumiere();
+            this.supprimerMiseLumiereActive();
+            this.mettreAJourBoutonsPresets();
             this.mettreAJourBoutonsCouleurs(null);
             this.mettreAJourBoutonCouleurAdaptative(null);
         });    }
+
+
+
+    brancherPresetsDepuisNomsGUI({
+        sombreBtns = [],
+        clairBtns = [],
+        reinitialiserBtns = []
+    } = {}) {
+        const controles = this.etatApplication.gui?.controles ?? {};
+
+        this.brancherBoutonsPreset("sombre", this.obtenirControles(controles, sombreBtns));
+        this.brancherBoutonsPreset("clair", this.obtenirControles(controles, clairBtns));
+
+        this.obtenirControles(controles, reinitialiserBtns).forEach((bouton) => {
+            bouton.onPointerClickObservable?.clear?.();
+            bouton.onPointerClickObservable?.add?.(() => this.reinitialiserReglagesContoursHighlight());
+        });
+
+        this.mettreAJourBoutonsPresets();
+    }
+
+    brancherBoutonsPreset(nomPreset, boutons = []) {
+        boutons.forEach((bouton) => {
+            if (!bouton) return;
+
+            bouton.metadata = bouton.metadata || {};
+            bouton.metadata.estBoutonPresetHighlight = true;
+            bouton.metadata.presetContours = nomPreset;
+            bouton.metadata.backgroundOriginal = bouton.metadata.backgroundOriginal ?? bouton.background;
+            bouton.metadata.thicknessOriginal = bouton.metadata.thicknessOriginal ?? bouton.thickness;
+            bouton.metadata.colorOriginal = bouton.metadata.colorOriginal ?? bouton.color;
+
+            this.boutonsPresets.set(bouton.name || `${nomPreset}-${this.boutonsPresets.size}`, {
+                bouton,
+                preset: nomPreset
+            });
+
+            bouton.onPointerClickObservable?.clear?.();
+            bouton.onPointerClickObservable?.add?.(() => this.basculerPresetContours(nomPreset));
+        });
+    }
+
+    obtenirControles(controles, noms = []) {
+        const liste = Array.isArray(noms) ? noms : [noms];
+        const controlesTrouves = [];
+        const dejaAjoutes = new Set();
+
+        for (const nom of liste) {
+            const controle = nom ? controles[nom] : null;
+
+            if (!controle || dejaAjoutes.has(controle)) {
+                continue;
+            }
+
+            controlesTrouves.push(controle);
+            dejaAjoutes.add(controle);
+        }
+
+        return controlesTrouves;
+    }
+
+    obtenirPremierControle(controles, noms = []) {
+        return this.obtenirControles(controles, noms)[0] ?? null;
+    }
+
+    basculerPresetContours(nomPreset) {
+        const dejaActif = this.estPresetContoursActif(nomPreset);
+
+        if (dejaActif) {
+            return this.desactiverPresetContours({ reinitialiserScene: false });
+        }
+
+        return this.appliquerPresetContours(nomPreset);
+    }
+
+    estPresetContoursActif(nomPreset) {
+        const parametresMiseLumiere = this.etatApplication.contours?.parametresMiseLumiere;
+        const miseLumiereActive = Boolean(this.etatApplication.contours?.miseLumiereNormalesActif)
+            || Boolean(this.etatApplication.contours?.miseLumiereCouleursActif);
+
+        return miseLumiereActive && parametresMiseLumiere?.presetActif === nomPreset;
+    }
+
+    desactiverPresetContours({ reinitialiserScene = false } = {}) {
+        const restaurationEffectuee = this.restaurerSauvegardeAvantPresetHighlight();
+        const parametresMiseLumiere = this.garantirParametresMiseLumiere();
+        parametresMiseLumiere.presetActif = null;
+
+        if (!restaurationEffectuee) {
+            this.supprimerMiseLumiereActive();
+
+            if (reinitialiserScene) {
+                this.appliquerApparencePreset({
+                    fondScene: 0,
+                    luminositeScene: 0
+                });
+            }
+        }
+
+        this.mettreAJourInterfaceApparencePreset();
+        this.mettreAJourBoutonsPresets();
+        this.etatApplication.gui?.advancedTexture?.markAsDirty?.();
+
+        return {
+            preset: null,
+            miseLumiereActive: Boolean(this.etatApplication.contours?.miseLumiereNormalesActif)
+                || Boolean(this.etatApplication.contours?.miseLumiereCouleursActif),
+            miseLumiere: { ...parametresMiseLumiere },
+            apparence: this.etatApplication.apparence?.parametres ?? null
+        };
+    }
+
+    appliquerPresetContours(nomPreset) {
+        const preset = constantesContours.presetsContours?.[nomPreset];
+
+        if (!preset) {
+            console.warn(`[Contours] Preset inconnu : ${nomPreset}`);
+            return null;
+        }
+
+        const parametresContours = this.etatApplication.contours?.parametres;
+        const parametresMiseLumiere = this.garantirParametresMiseLumiere();
+
+        // On mémorise la configuration utilisateur uniquement quand on part
+        // d'un état sans preset. Si on passe directement de sombre à clair
+        // ou de clair à sombre, on garde la même sauvegarde de base.
+        if (!parametresMiseLumiere.presetActif
+            && !this.etatApplication.contours?.sauvegardeAvantPresetHighlight) {
+            this.memoriserSauvegardeAvantPresetHighlight();
+        }
+
+        const animation = constantesContours.miseLumiereGradients.animation;
+        const configLum = animation.luminancePourcentage;
+        const configLargeur = animation.largeur;
+
+        // Les presets highlight ne doivent pas activer le contour Relief/normal
+        // par défaut. Si l'utilisateur l'avait déjà activé, on garde son choix ;
+        // sinon on applique uniquement le highlight.
+        if (preset.contourReliefActif === true && parametresContours && !this.estContourActif(parametresContours, TypeContour.RELIEF)) {
+            this.activerReliefUC?.executer?.();
+        }
+
+        if (preset.highlightNormalesActif) {
+            this.etatApplication.contours.miseLumiereNormalesActif = true;
+            this.etatApplication.contours.miseLumiereCouleursActif = false;
+            this.postTraitMiseLumiereCouleurs?.supprimer?.(this.etatApplication);
+        }
+
+        const frequence = Number.isFinite(Number(preset.frequence))
+            ? Number(preset.frequence)
+            : animation.frequence?.defaut ?? 3;
+
+        const largeur = preset.largeur === "max"
+            ? Number(configLargeur.max ?? 10)
+            : this.bornerNombre(preset.largeur, configLargeur.min ?? 1, configLargeur.max ?? 10, configLargeur.defaut ?? 6);
+
+        const luminanceSliderValeur = preset.luminance === "max"
+            ? Number(configLum.max ?? 8)
+            : this.bornerNombre(preset.luminance, configLum.min ?? 1, configLum.max ?? 8, configLum.defaut ?? 1);
+
+        const sensLuminance = Number(preset.sensLuminance) < 0 ? -1 : 1;
+
+        parametresMiseLumiere.frequenceClignotement = frequence;
+        parametresMiseLumiere.intervalleClignotement = this.convertirFrequenceEnIntervalle(frequence, animation);
+        parametresMiseLumiere.luminanceSliderValeur = luminanceSliderValeur;
+        parametresMiseLumiere.sensLuminance = sensLuminance;
+        parametresMiseLumiere.luminanceDelta = this.convertirSliderLuminanceEnDelta(
+            luminanceSliderValeur,
+            configLum,
+            sensLuminance
+        );
+        parametresMiseLumiere.largeur = largeur;
+        parametresMiseLumiere.presetActif = preset.nom ?? nomPreset;
+
+        this.appliquerApparencePreset({
+            fondScene: preset.fondScene,
+            luminositeScene: preset.luminositeScene
+        });
+
+        this.appliquerContours();
+
+        if (this.etatApplication.contours.miseLumiereNormalesActif) {
+            this.postTraitMiseLumiereNormales?.appliquer?.(this.etatApplication);
+        }
+
+        this.mettreAJourSliderEpaisseur(this.obtenirEpaisseurAfficheeDepuisEtat(parametresContours));
+        this.mettreAJourInterfaceApparencePreset();
+        this.mettreAJourBoutonsTypes();
+        this.mettreAJourBoutonsPresets();
+        this.mettreAJourBoutonCouleurAdaptative();
+        this.etatApplication.gui?.advancedTexture?.markAsDirty?.();
+
+        return {
+            preset: preset.nom ?? nomPreset,
+            miseLumiere: { ...parametresMiseLumiere },
+            apparence: this.etatApplication.apparence?.parametres ?? null
+        };
+    }
+
+    appliquerApparencePreset({ fondScene, luminositeScene }) {
+        const apparence = this.etatApplication.apparence?.parametres;
+
+        if (!apparence?.copierAvec) {
+            return;
+        }
+
+        const nouveauxParametres = apparence.copierAvec({
+            fondScene: Number.isFinite(Number(fondScene)) ? Number(fondScene) : apparence.fondScene,
+            luminosite: Number.isFinite(Number(luminositeScene)) ? Number(luminositeScene) : apparence.luminosite
+        });
+
+        this.etatApplication.apparence.parametres = nouveauxParametres;
+
+        this.serviceSceneBabylon?.appliquerFondSceneDepuisPourcentage?.(
+            this.etatApplication.scenes?.scene3D,
+            nouveauxParametres.fondScene ?? 0
+        );
+
+        this.postTraitApparence?.appliquer?.(this.etatApplication);
+    }
+
+    reinitialiserReglagesContoursHighlight({ reinitialiserScene = true } = {}) {
+        if (this.etatApplication.contours?.sauvegardeAvantPresetHighlight) {
+            return this.desactiverPresetContours({ reinitialiserScene: false });
+        }
+
+        const parametres = this.reinitialiserContoursUC?.executer?.() ?? this.etatApplication.contours?.parametres;
+
+        this.reinitialiserParametresMiseLumiere();
+        this.supprimerMiseLumiereActive();
+
+        if (reinitialiserScene) {
+            this.appliquerApparencePreset({
+                fondScene: 0,
+                luminositeScene: 0
+            });
+        }
+
+        this.appliquerContours();
+        this.mettreAJourSliderEpaisseurSiContoursDesactives();
+        this.mettreAJourSliderEpaisseur(this.obtenirEpaisseurAfficheeDepuisEtat(this.etatApplication.contours?.parametres ?? parametres));
+        this.mettreAJourInterfaceApparencePreset();
+        this.mettreAJourBoutonsTypes();
+        this.mettreAJourBoutonsPresets();
+        this.mettreAJourBoutonsCouleurs(null);
+        this.mettreAJourBoutonCouleurAdaptative();
+        this.etatApplication.gui?.advancedTexture?.markAsDirty?.();
+
+        return {
+            contours: this.etatApplication.contours?.parametres ?? null,
+            miseLumiere: this.etatApplication.contours?.parametresMiseLumiere ?? null,
+            apparence: this.etatApplication.apparence?.parametres ?? null
+        };
+    }
+
+    memoriserSauvegardeAvantPresetHighlight() {
+        if (!this.etatApplication.contours) return null;
+
+        const scene = this.etatApplication.scenes?.scene3D;
+        const apparence = this.etatApplication.apparence?.parametres;
+        const parametresMiseLumiere = this.garantirParametresMiseLumiere();
+
+        const sauvegarde = {
+            apparence: apparence ? { ...apparence } : null,
+            miseLumiereNormalesActif: Boolean(this.etatApplication.contours.miseLumiereNormalesActif),
+            miseLumiereCouleursActif: Boolean(this.etatApplication.contours.miseLumiereCouleursActif),
+            parametresMiseLumiere: { ...parametresMiseLumiere },
+            fondScene: scene?.clearColor
+                ? {
+                    r: scene.clearColor.r,
+                    g: scene.clearColor.g,
+                    b: scene.clearColor.b,
+                    a: scene.clearColor.a
+                }
+                : null
+        };
+
+        this.etatApplication.contours.sauvegardeAvantPresetHighlight = sauvegarde;
+        this.sauvegardeAvantPresetHighlight = sauvegarde;
+        return sauvegarde;
+    }
+
+    restaurerSauvegardeAvantPresetHighlight() {
+        const sauvegarde = this.etatApplication.contours?.sauvegardeAvantPresetHighlight
+            ?? this.sauvegardeAvantPresetHighlight;
+
+        if (!sauvegarde) {
+            return false;
+        }
+
+        const contours = this.etatApplication.contours;
+        const parametresMiseLumiere = this.garantirParametresMiseLumiere();
+
+        Object.assign(parametresMiseLumiere, sauvegarde.parametresMiseLumiere ?? {});
+        parametresMiseLumiere.presetActif = null;
+
+        contours.miseLumiereNormalesActif = Boolean(sauvegarde.miseLumiereNormalesActif);
+        contours.miseLumiereCouleursActif = Boolean(sauvegarde.miseLumiereCouleursActif);
+
+        if (sauvegarde.apparence && this.etatApplication.apparence?.parametres?.copierAvec) {
+            this.etatApplication.apparence.parametres = this.etatApplication.apparence.parametres.copierAvec(sauvegarde.apparence);
+        }
+
+        const scene = this.etatApplication.scenes?.scene3D;
+        if (scene && sauvegarde.fondScene && globalThis.BABYLON?.Color4) {
+            scene.clearColor = new BABYLON.Color4(
+                sauvegarde.fondScene.r,
+                sauvegarde.fondScene.g,
+                sauvegarde.fondScene.b,
+                sauvegarde.fondScene.a ?? 1
+            );
+        }
+
+        this.postTraitApparence?.appliquer?.(this.etatApplication);
+
+        if (contours.miseLumiereNormalesActif) {
+            this.postTraitMiseLumiereNormales?.appliquer?.(this.etatApplication);
+        } else {
+            this.postTraitMiseLumiereNormales?.supprimer?.(this.etatApplication);
+        }
+
+        if (contours.miseLumiereCouleursActif) {
+            this.postTraitMiseLumiereCouleurs?.appliquer?.(this.etatApplication);
+        } else {
+            this.postTraitMiseLumiereCouleurs?.supprimer?.(this.etatApplication);
+        }
+
+        contours.sauvegardeAvantPresetHighlight = null;
+        this.sauvegardeAvantPresetHighlight = null;
+        return true;
+    }
+
+    reinitialiserParametresMiseLumiere() {
+        const animation = constantesContours.miseLumiereGradients.animation;
+        const parametres = this.garantirParametresMiseLumiere();
+
+        parametres.frequenceClignotement = animation.frequence?.defaut ?? 3;
+        parametres.intervalleClignotement = this.convertirFrequenceEnIntervalle(
+            parametres.frequenceClignotement,
+            animation
+        );
+        parametres.luminanceSliderValeur = animation.luminancePourcentage.defaut;
+        parametres.sensLuminance = animation.sensLuminance?.defaut ?? 1;
+        parametres.luminanceDelta = this.convertirSliderLuminanceEnDelta(
+            parametres.luminanceSliderValeur,
+            animation.luminancePourcentage,
+            parametres.sensLuminance
+        );
+        parametres.largeur = animation.largeur.defaut;
+        parametres.presetActif = null;
+
+        return parametres;
+    }
+
+    supprimerMiseLumiereActive() {
+        if (!this.etatApplication.contours) return;
+
+        this.etatApplication.contours.miseLumiereNormalesActif = false;
+        this.etatApplication.contours.miseLumiereCouleursActif = false;
+        this.postTraitMiseLumiereNormales?.supprimer?.(this.etatApplication);
+        this.postTraitMiseLumiereCouleurs?.supprimer?.(this.etatApplication);
+    }
+
+    mettreAJourInterfaceApparencePreset() {
+        const c = this.etatApplication.gui?.controles ?? {};
+        const apparence = this.etatApplication.apparence?.parametres;
+
+        if (!apparence) return;
+
+        this.reglerSliderGui(c.LuminositeSlider, apparence.luminosite);
+        this.reglerSliderGui(c.ThmSlider, apparence.fondScene ?? 0);
+        this.reglerTextePourcentageGui(c.RegLumValTxt, apparence.luminosite, true);
+
+        const resultatFond = this.serviceSceneBabylon?.appliquerFondSceneDepuisPourcentage?.(
+            this.etatApplication.scenes?.scene3D,
+            apparence.fondScene ?? 0
+        );
+
+        if (c.RegThmValTxt && resultatFond?.libelle) {
+            c.RegThmValTxt.metadata = c.RegThmValTxt.metadata || {};
+            c.RegThmValTxt.metadata.texteDynamique = true;
+            c.RegThmValTxt.text = resultatFond.libelle;
+            c.RegThmValTxt._markAsDirty?.();
+        }
+    }
+
+    reglerSliderGui(slider, valeur) {
+        if (!slider || !Number.isFinite(Number(valeur))) return;
+        slider.value = Number(valeur);
+        slider._markAsDirty?.();
+    }
+
+    reglerTextePourcentageGui(textBlock, valeur, afficherSigne = false) {
+        if (!textBlock || !Number.isFinite(Number(valeur))) return;
+        const pourcentage = Math.round(Number(valeur) * 100);
+        textBlock.metadata = textBlock.metadata || {};
+        textBlock.metadata.texteDynamique = true;
+        textBlock.text = afficherSigne && pourcentage > 0 ? `+${pourcentage}%` : `${pourcentage}%`;
+        textBlock._markAsDirty?.();
+    }
+
+    proposerPresetSelonAccessibilite({ appliquer = false } = {}) {
+        const themeInterface = this.etatApplication.interface?.parametres?.theme;
+        const preset = themeInterface === "noir" || themeInterface === "gris-fonce"
+            ? "sombre"
+            : "clair";
+
+        if (appliquer) {
+            return this.appliquerPresetContours(preset);
+        }
+
+        return preset;
+    }
+
+    mettreAJourBoutonsPresets() {
+        if (!this.boutonsPresets || this.boutonsPresets.size === 0) {
+            return;
+        }
+
+        this.boutonsPresets.forEach(({ bouton, preset }) => {
+            const actif = this.estPresetContoursActif(preset);
+            this.mettreAJourCocheBouton(bouton, actif);
+        });
+    }
 
     mettreAJourBoutonsTypes() {
         const parametres = this.etatApplication.contours.parametres;
@@ -561,95 +939,17 @@ export class ControleurContours {
         });
     }
 
-    mettreAJourBoutonsMiseLumiere() {
-        if (!this.boutonsMiseLumiere) return;
-
-        this.boutonsMiseLumiere.forEach(({ bouton, lireActif }) => {
-            if (!bouton) return;
-
-            const actif = typeof lireActif === "function"
-                ? Boolean(lireActif())
-                : false;
-
-            this.appliquerStyleBoutonOption({ bouton, actif });
-        });
-    }
-
-    mettreAJourBoutonCouleurAdaptative() {
+    mettreAJourBoutonCouleurAdaptative(couleur = null) {
         const parametres = this.etatApplication.contours?.parametres;
         const autoActif = Boolean(parametres?.couleurAutomatiqueActive);
 
         Object.values(this.etatApplication.gui.controles).forEach((controle) => {
             if (!controle?.metadata?.estBoutonCouleurAdaptative) return;
 
-            controle.background = controle.metadata.backgroundOriginal;
-            controle.color = controle.metadata.colorOriginal;
-            controle.thickness = controle.metadata.thicknessOriginal;
-
-            const coche = controle.metadata.cocheCouleurAdaptative
-                ?? this.obtenirTexteCocheCouleurAdaptative(controle);
-
-            controle.metadata.cocheCouleurAdaptative = coche;
-            this.mettreAJourCocheCouleurAdaptative(coche, autoActif);
+            // Même mécanisme visuel que le bouton Gras : une coche dans le
+            // TextBlock interne, sans remplacer le fond par la couleur calculée.
+            this.mettreAJourCocheBoutonAutomatique(controle, autoActif);
         });
-    }
-
-    obtenirTexteCocheCouleurAdaptative(bouton) {
-        const controles = this.etatApplication.gui?.controles ?? {};
-
-        return controles.ContoAutoBtnTxt
-            ?? controles.ContAutoBtnTxt
-            ?? controles.ContCouleurAutoBtnTxt
-            ?? bouton?.textBlock
-            ?? this.trouverPremierTextBlock(bouton);
-    }
-
-    trouverPremierTextBlock(controle) {
-        if (!controle) {
-            return null;
-        }
-
-        if (controle instanceof BABYLON.GUI.TextBlock) {
-            return controle;
-        }
-
-        if (Array.isArray(controle.children)) {
-            for (const enfant of controle.children) {
-                const trouve = this.trouverPremierTextBlock(enfant);
-
-                if (trouve) {
-                    return trouve;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    mettreAJourCocheCouleurAdaptative(textBlock, actif) {
-        if (!textBlock) {
-            return;
-        }
-
-        textBlock.metadata = textBlock.metadata || {};
-        textBlock.metadata.texteDynamique = true;
-        textBlock.text = actif ? "✓" : "";
-        textBlock.color = this.etatApplication.interface?.parametres?.theme === "noir"
-            || this.etatApplication.interface?.parametres?.theme === "gris-fonce"
-            ? "#FFFFFFFF"
-            : "#000000FF";
-        textBlock.fontWeight = "700";
-        textBlock.fontSize = "30px";
-        textBlock.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        textBlock.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        textBlock._markAsDirty?.();
-    }
-
-    mettreAJourInterfaceDepuisEtat() {
-        this.mettreAJourBoutonsTypes();
-        this.mettreAJourBoutonsMiseLumiere();
-        this.mettreAJourBoutonCouleurAdaptative();
-        this.mettreAJourSliderEpaisseur(this.etatApplication.contours?.parametres?.epaisseur ?? 1);
     }
 
     couleurTexteLisible(couleur) {
@@ -694,23 +994,163 @@ export class ControleurContours {
     mettreAJourSliderEpaisseurSiContoursDesactives() {
         const parametres = this.etatApplication.contours.parametres;
 
-        if (parametres?.actif) {
+        if (this.desContoursSontActifs(parametres)) {
             return;
         }
 
-        this.mettreAJourSliderEpaisseur(parametres?.epaisseur ?? 1);
+        const valeurDefaut = constantesContours.epaisseurSlider?.defaut ?? constantesContours.epaisseurDefaut ?? 1;
+        parametres?.changerEpaisseur?.(valeurDefaut);
+        this.mettreAJourSliderEpaisseur(valeurDefaut);
     }
 
     mettreAJourSliderEpaisseur(epaisseur) {
-        const valeur = Math.round(epaisseur);
+        const valeur = Math.min(
+            constantesContours.epaisseurSlider?.max ?? 3,
+            Math.max(
+                constantesContours.epaisseurSlider?.min ?? 1,
+                Math.round(Number(epaisseur) || constantesContours.epaisseurSlider?.defaut || 1)
+            )
+        );
 
         if (this.sliderEpaisseur) {
             this.sliderEpaisseur.value = valeur;
+            this.sliderEpaisseur._markAsDirty?.();
         }
 
         if (this.texteEpaisseur) {
             this.texteEpaisseur.text = String(valeur);
+            this.texteEpaisseur._markAsDirty?.();
         }
+    }
+
+    mettreAJourInterfaceDepuisEtat() {
+        const parametres = this.etatApplication.contours?.parametres;
+
+        if (!parametres) {
+            return;
+        }
+
+        this.mettreAJourSliderEpaisseur(this.obtenirEpaisseurAfficheeDepuisEtat(parametres));
+        this.mettreAJourBoutonsTypes();
+        this.mettreAJourBoutonCouleurAdaptative();
+    }
+
+    obtenirEpaisseurAfficheeDepuisEtat(parametres) {
+        const configuration = constantesContours.epaisseurSlider ?? {};
+        const defaut = configuration.defaut ?? constantesContours.epaisseurDefaut ?? 1;
+
+        if (!this.desContoursSontActifs(parametres)) {
+            return defaut;
+        }
+
+        return Math.min(
+            configuration.max ?? 3,
+            Math.max(
+                configuration.min ?? 1,
+                Math.round(Number(parametres?.epaisseur) || defaut)
+            )
+        );
+    }
+
+    desContoursSontActifs(parametres) {
+        return Boolean(parametres?.actif)
+            && (
+                (Array.isArray(parametres?.typesActifs) && parametres.typesActifs.length > 0)
+                || Boolean(parametres?.typeActif)
+            );
+    }
+
+    obtenirTextBlockBouton(bouton, nomPrioritaire = null) {
+        if (!bouton) return null;
+
+        if (nomPrioritaire && this.etatApplication.gui?.controles?.[nomPrioritaire]) {
+            return this.etatApplication.gui.controles[nomPrioritaire];
+        }
+
+        if (bouton.textBlock) {
+            return bouton.textBlock;
+        }
+
+        if (Array.isArray(bouton.children)) {
+            return bouton.children.find((enfant) => enfant instanceof BABYLON.GUI.TextBlock) ?? null;
+        }
+
+        return null;
+    }
+
+    mettreAJourCocheBoutonAutomatique(bouton, actif) {
+        this.mettreAJourCocheBouton(bouton, actif, "ContoAutoBtnTxt");
+    }
+
+    mettreAJourCocheBouton(bouton, actif, nomTextBlock = null) {
+        if (!bouton) return;
+
+        const fond = actif
+            ? this.couleurFondCheckboxActive()
+            : this.couleurFondCheckboxInactive();
+        const couleurTexte = this.couleurTexteLisible(fond);
+        const theme = this.obtenirThemeActif();
+
+        bouton.metadata = {
+            ...(bouton.metadata ?? {}),
+            checkboxActif: Boolean(actif),
+            estOptionActive: Boolean(actif)
+        };
+        bouton.background = fond;
+        bouton.color = actif
+            ? fond
+            : (theme?.boutonBordure || bouton.metadata?.colorOriginal || "#000000FF");
+        bouton.thickness = actif
+            ? Math.max(Number(bouton.metadata?.thicknessOriginal ?? bouton.thickness ?? 1), 2)
+            : Math.max(Number(bouton.metadata?.thicknessOriginal ?? bouton.thickness ?? 1), 1);
+        bouton._markAsDirty?.();
+
+        const coche = this.obtenirTextBlockBouton(bouton, nomTextBlock);
+        if (!coche) return;
+
+        coche.metadata = {
+            ...(coche.metadata ?? {}),
+            texteDynamique: true,
+            nePasAutoFit: true,
+            fontSizeOriginal: "30px"
+        };
+
+        coche.text = actif ? "✓" : "";
+        coche.color = couleurTexte;
+        coche.fontWeight = "700";
+        coche.fontSize = "30px";
+        coche.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        coche.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        coche._markAsDirty?.();
+    }
+
+    couleurFondCheckboxInactive() {
+        const themeActif = String(this.etatApplication.interface?.parametres?.theme ?? "").toLowerCase();
+        const theme = this.obtenirThemeActif();
+
+        if (themeActif === "noir") {
+            return "#000000FF";
+        }
+
+        if (themeActif === "gris-fonce" || themeActif.includes("fonce")) {
+            return "#1A1A1AFF";
+        }
+
+        return theme?.boutonFond || "#FFFFFFFF";
+    }
+
+    couleurFondCheckboxActive() {
+        const themeActif = String(this.etatApplication.interface?.parametres?.theme ?? "").toLowerCase();
+
+        if (themeActif === "noir" || themeActif === "gris-fonce" || themeActif.includes("fonce")) {
+            return "#FFFFFFFF";
+        }
+
+        return "#111111FF";
+    }
+
+    couleurCocheSelonTheme() {
+        return this.couleurTexteLisible(this.couleurFondCheckboxActive());
     }
 
     appliquerContours() {

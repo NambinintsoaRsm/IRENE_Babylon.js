@@ -46,6 +46,7 @@ export class ControleurInterface {
 
     brancherDepuisNomsGUI(nomsGUI, serviceAnimationGUI = null) {
         const controles = this.etatApplication.gui.controles;
+        this.nomsGUI = nomsGUI;
 
         this.initialiserValeursParDefaut();
         this.brancherPolice(controles, nomsGUI.police);
@@ -63,6 +64,100 @@ export class ControleurInterface {
         });
     }
 
+    obtenirToutesOptionsPolice() {
+        return [
+            { nomCourt: "OpenDys", police: "OpenDyslexic" },
+            { nomCourt: "Liberation", police: "Liberation" },
+            { nomCourt: "Luciole", police: "Luciole" },
+            { nomCourt: "Tiresias", police: "Tiresias" },
+            { nomCourt: "Arial", police: "Arial" }
+        ];
+    }
+
+    trouverOptionPolice(police) {
+        const normalisee = String(police ?? "").toLowerCase();
+        return this.obtenirToutesOptionsPolice().find((option) => {
+            return option.police.toLowerCase() === normalisee
+                || option.nomCourt.toLowerCase() === normalisee;
+        }) ?? { nomCourt: "OpenDys", police: "OpenDyslexic" };
+    }
+
+    obtenirBoutonsOptionsPolice(controles = this.etatApplication.gui?.controles ?? {}) {
+        return [
+            this.obtenir(controles, "FntFmBtn0"),
+            this.obtenir(controles, "FntFmBtn1"),
+            this.obtenir(controles, "FntFmBtn2"),
+            this.obtenir(controles, "FntFmBtn3")
+        ].filter(Boolean);
+    }
+
+    synchroniserDropdownPoliceDepuisEtat() {
+        const controles = this.etatApplication.gui?.controles ?? {};
+        const nomsPolice = this.nomsGUI?.police;
+        const texteSelection = this.obtenir(controles, nomsPolice?.texteSelection);
+        const liste = this.obtenir(controles, nomsPolice?.liste);
+        const policeCourante = this.etatApplication.interface?.parametres?.police ?? "OpenDyslexic";
+        const selection = this.trouverOptionPolice(policeCourante);
+        const boutonsOptions = this.obtenirBoutonsOptionsPolice(controles);
+        const optionsListe = this.obtenirOptionsPolicePourListe(selection, boutonsOptions.length);
+
+        this.selectionPoliceActuelle = {
+            nomCourt: selection.nomCourt,
+            police: selection.police
+        };
+
+        if (texteSelection) {
+            this.mettreAJourLibellePoliceSelectionnee(texteSelection, selection.nomCourt);
+        }
+
+        boutonsOptions.forEach((bouton, index) => {
+            const option = optionsListe[index];
+
+            if (!option) {
+                bouton.isVisible = false;
+                return;
+            }
+
+            bouton.isVisible = true;
+            bouton.metadata = bouton.metadata || {};
+            bouton.metadata.optionPolice = {
+                nomCourt: option.nomCourt,
+                police: option.police
+            };
+
+            this.mettreTexteBouton(bouton, option.nomCourt);
+        });
+
+        this.reinitialiserScrollListePolice(liste);
+        this.etatApplication?.services?.texteResponsive?.planifierAjustement?.(60);
+    }
+
+    obtenirOptionsPolicePourListe(selection, limite = 4) {
+        const toutes = this.obtenirToutesOptionsPolice();
+        const selectionPolice = selection?.police ?? "OpenDyslexic";
+        const options = toutes.filter((option) => option.police !== selectionPolice);
+
+        // Sécurité : OpenDyslexic doit toujours revenir dans la liste dès qu'une
+        // autre police est sélectionnée, même après rechargement d'une sauvegarde.
+        if (selectionPolice !== "OpenDyslexic" && !options.some((option) => option.police === "OpenDyslexic")) {
+            options.unshift({ nomCourt: "OpenDys", police: "OpenDyslexic" });
+        }
+
+        return options.slice(0, limite);
+    }
+
+    reinitialiserScrollListePolice(liste) {
+        if (!liste) return;
+
+        try {
+            if (liste.verticalBar) liste.verticalBar.value = 0;
+            if (liste.horizontalBar) liste.horizontalBar.value = 0;
+            if (typeof liste.resetWindow === "function") liste.resetWindow();
+        } catch (_) {
+            // Le scroll n'est pas critique : on évite de bloquer le menu Police.
+        }
+    }
+
     brancherPolice(controles, nomsPolice) {
         if (!nomsPolice) {
             return;
@@ -74,12 +169,16 @@ export class ControleurInterface {
             || this.obtenir(controles, "PlcDropBtnDropTxt");
         const liste = this.obtenir(controles, nomsPolice.liste);
 
-        const options = [
-            { bouton: this.obtenir(controles, "FntFmBtn0"), nomCourt: "Liberation", police: "Liberation" },
-            { bouton: this.obtenir(controles, "FntFmBtn1"), nomCourt: "Luciole", police: "Luciole" },
-            { bouton: this.obtenir(controles, "FntFmBtn2"), nomCourt: "Tiresias", police: "Tiresias" },
-            { bouton: this.obtenir(controles, "FntFmBtn3"), nomCourt: "Arial", police: "Arial" }
-        ].filter((option) => option.bouton);
+        const options = this.obtenirBoutonsOptionsPolice(controles).map((bouton, index) => {
+            const option = this.obtenirToutesOptionsPolice()
+                .filter((item) => item.police !== "OpenDyslexic")[index];
+
+            return {
+                bouton,
+                nomCourt: option?.nomCourt,
+                police: option?.police
+            };
+        }).filter((option) => option.bouton && option.police);
 
         // OpenDyslexic est la valeur sélectionnée par défaut.
         // On ne crée pas un bouton supplémentaire : quand l'utilisateur choisit
@@ -100,9 +199,10 @@ export class ControleurInterface {
         });
 
         if (texteSelection) {
-            texteSelection.metadata = texteSelection.metadata || {};
-            texteSelection.metadata.texteDynamique = true;
-            texteSelection.text = this.selectionPoliceActuelle.nomCourt;
+            this.mettreAJourLibellePoliceSelectionnee(
+                texteSelection,
+                this.selectionPoliceActuelle.nomCourt
+            );
         }
 
         if (liste) {
@@ -136,6 +236,8 @@ export class ControleurInterface {
                 });
             });
         });
+
+        this.synchroniserDropdownPoliceDepuisEtat();
 
         this.brancherSliderTaillePoliceDepuisNoms(controles, nomsPolice);
         this.brancherBoutonGrasDepuisNoms(controles, nomsPolice);
@@ -182,7 +284,10 @@ export class ControleurInterface {
         this.mettreTexteBouton(boutonOption, ancienneSelection.nomCourt);
 
         if (texteSelection) {
-            texteSelection.text = optionCliquee.nomCourt;
+            this.mettreAJourLibellePoliceSelectionnee(
+                texteSelection,
+                optionCliquee.nomCourt
+            );
         }
 
         this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
@@ -227,8 +332,29 @@ export class ControleurInterface {
 
         textBlock.metadata = textBlock.metadata || {};
         textBlock.metadata.texteDynamique = true;
+        textBlock.metadata.texteOriginal = texte;
+        textBlock.metadata.responsiveTexteOriginal = texte;
+        delete textBlock.metadata.responsiveFontSizeBasePx;
         textBlock.text = texte;
         textBlock._markAsDirty();
+    }
+
+    mettreAJourLibellePoliceSelectionnee(textBlock, texte) {
+        if (!textBlock) return;
+
+        const libelle = String(texte ?? "OpenDys");
+        textBlock.metadata = textBlock.metadata || {};
+        textBlock.metadata.texteDynamique = true;
+
+        // Le service d'auto-fit relit texteOriginal/responsiveTexteOriginal.
+        // Les deux valeurs doivent donc suivre la sélection courante, sinon
+        // l'ajustement responsive réaffiche l'ancien libellé « OpenDys ».
+        textBlock.metadata.texteOriginal = libelle;
+        textBlock.metadata.responsiveTexteOriginal = libelle;
+        delete textBlock.metadata.responsiveFontSizeBasePx;
+
+        textBlock.text = libelle;
+        textBlock._markAsDirty?.();
     }
 
     brancherSliderTaillePoliceDepuisNoms(controles, nomsPolice) {
@@ -254,10 +380,22 @@ export class ControleurInterface {
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
+            const variationPrecedente = Number(
+                this.etatApplication.interface?.parametres?.taillePolice ?? 0
+            );
             const variation = Math.round(valeur);
 
             this.changerTaillePoliceUC.executer(variation);
             this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
+
+            // Lors d'un agrandissement, le layout Babylon change après la mise à
+            // jour de la taille. On relance explicitement l'auto-fit sur plusieurs
+            // frames afin de conserver la plus grande taille qui tient réellement.
+            if (variation > variationPrecedente) {
+                this.serviceTexteGUI.reappliquerAutoFitApresChangement?.(
+                    this.etatApplication
+                );
+            }
 
             if (texteValeur) {
                 texteValeur.text = variation > 0 ? `+${variation}%` : `${variation}%`;
@@ -340,7 +478,7 @@ export class ControleurInterface {
             };
 
             if (texteSelection) {
-                texteSelection.text = "OpenDys";
+                this.mettreAJourLibellePoliceSelectionnee(texteSelection, "OpenDys");
             }
 
             if (slider) {

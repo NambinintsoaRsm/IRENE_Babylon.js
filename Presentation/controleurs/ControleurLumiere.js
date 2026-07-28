@@ -157,12 +157,11 @@ export class ControleurLumiere {
         liste.height = "0px";
 
         this.optionCourante = { type: "principale", libelle: "Principale" };
+        this.mettreAJourVisibiliteAideEspace(false);
         this.optionsBoutons = options.filter((option) => option.bouton);
 
         if (texteSelection) {
-            texteSelection.metadata = texteSelection.metadata || {};
-            texteSelection.metadata.texteDynamique = true;
-            texteSelection.text = this.optionCourante.libelle;
+            this.mettreAJourTexteDynamique(texteSelection, this.optionCourante.libelle);
         }
 
         if (iconeDropdown) {
@@ -188,6 +187,10 @@ export class ControleurLumiere {
             liste.isVisible = ouvrir;
             liste.height = ouvrir ? liste.metadata.hauteurOuverte : "0px";
             if (iconeDropdown) iconeDropdown.text = ouvrir ? "▼" : "▶";
+
+            // Le texte d'aide ne doit jamais recouvrir la liste déroulante.
+            // Il réapparaît à la fermeture uniquement si la lumière tournante est active.
+            this.mettreAJourVisibiliteAideEspace(ouvrir);
         });
 
         this.optionsBoutons.forEach((option) => {
@@ -208,8 +211,7 @@ export class ControleurLumiere {
                 );
 
                 if (texteSelection) {
-                    texteSelection.text = nouvelleOption.libelle;
-                    texteSelection._markAsDirty?.();
+                    this.mettreAJourTexteDynamique(texteSelection, nouvelleOption.libelle);
                 }
 
                 this.mettreAJourLibellePauseLumiere(false);
@@ -219,6 +221,19 @@ export class ControleurLumiere {
                 liste.isVisible = false;
                 liste.height = "0px";
                 if (iconeDropdown) iconeDropdown.text = "▶";
+
+                this.mettreAJourVisibiliteAideEspace(false);
+
+                // Certains changements de police / auto-fit sont planifiés à la
+                // frame suivante. On confirme donc une seconde fois le libellé et
+                // l'aide après le recalcul du layout.
+                requestAnimationFrame(() => {
+                    if (this.optionCourante?.type !== nouvelleOption.type) return;
+                    if (texteSelection) {
+                        this.mettreAJourTexteDynamique(texteSelection, nouvelleOption.libelle);
+                    }
+                    this.mettreAJourVisibiliteAideEspace(false);
+                });
             });
         });
     }
@@ -243,10 +258,7 @@ export class ControleurLumiere {
 
         const texteSelection = this.obtenir("LumDropBtnTxt");
         if (texteSelection) {
-            texteSelection.metadata = texteSelection.metadata || {};
-            texteSelection.metadata.texteDynamique = true;
-            texteSelection.text = optionActuelle.libelle;
-            texteSelection._markAsDirty?.();
+            this.mettreAJourTexteDynamique(texteSelection, optionActuelle.libelle);
         }
 
         this.optionsBoutons.forEach((optionBouton, index) => {
@@ -262,6 +274,8 @@ export class ControleurLumiere {
             };
             this.mettreAJourTexteBoutonOption(optionBouton.bouton, nouvelleOption.libelle);
         });
+
+        this.mettreAJourVisibiliteAideEspace(false);
     }
 
     creerOptionDepuisType(type) {
@@ -277,10 +291,50 @@ export class ControleurLumiere {
 
         if (!texte) return;
 
-        texte.metadata = texte.metadata || {};
-        texte.metadata.texteDynamique = true;
-        texte.text = libelle;
-        texte._markAsDirty?.();
+        this.mettreAJourTexteDynamique(texte, libelle);
+    }
+
+    mettreAJourTexteDynamique(textBlock, valeur) {
+        if (!textBlock) return;
+
+        const texte = String(valeur ?? "");
+        textBlock.metadata = textBlock.metadata || {};
+        textBlock.metadata.texteDynamique = true;
+
+        // L'auto-fit responsive mémorise aussi une valeur d'origine. Sans cette
+        // synchronisation, il peut réinjecter le texte du JSON (par exemple
+        // « Par défaut ») après que le contrôleur a choisi « Tournante ».
+        textBlock.metadata.texteOriginal = texte;
+        textBlock.metadata.responsiveTexteOriginal = texte;
+        textBlock.metadata.dernierTexteAutoFit = "";
+        textBlock.text = texte;
+        textBlock._markAsDirty?.();
+        this.etatApplication.gui.advancedTexture?.markAsDirty?.();
+    }
+
+    mettreAJourVisibiliteAideEspace(listeOuverte = null) {
+        const aide = this.obtenir("EspaceRect");
+        if (!aide) return;
+
+        const liste = this.obtenir("LumTypScroll");
+        const estListeOuverte = typeof listeOuverte === "boolean"
+            ? listeOuverte
+            : Boolean(liste?.isVisible);
+        const afficher = this.optionCourante?.type === "tournante" && !estListeOuverte;
+
+        aide.isVisible = afficher;
+        aide.notRenderable = !afficher;
+        aide.isEnabled = afficher;
+        aide.isHitTestVisible = false;
+        aide.isPointerBlocker = false;
+        aide._markAsDirty?.();
+        this.etatApplication.gui.advancedTexture?.markAsDirty?.();
+
+        if (afficher) {
+            // Le contrôle était masqué lors du layout initial : on recalcule
+            // son auto-fit uniquement au moment où le message devient visible.
+            this.etatApplication.services?.texteResponsive?.planifierAjustement?.(0);
+        }
     }
 
     brancherPauseLumiereTournanteParEspace() {
@@ -345,10 +399,10 @@ export class ControleurLumiere {
 
         if (this.optionCourante?.type !== "tournante") return;
 
-        texteSelection.metadata = texteSelection.metadata || {};
-        texteSelection.metadata.texteDynamique = true;
-        texteSelection.text = estEnPause ? "Tournante (pause)" : "Tournante";
-        texteSelection._markAsDirty?.();
+        this.mettreAJourTexteDynamique(
+            texteSelection,
+            estEnPause ? "Tournante (pause)" : "Tournante"
+        );
     }
 
     brancherReinitialisation(bouton) {
@@ -391,13 +445,14 @@ export class ControleurLumiere {
             temperature.value = 50;
             this.appliquerFondTemperatureSliderApresRendu(temperature);
         }
-        if (texteSelection) texteSelection.text = "Principale";
+        if (texteSelection) this.mettreAJourTexteDynamique(texteSelection, "Principale");
         if (liste) {
             liste.isVisible = false;
             liste.height = "0px";
         }
         if (icone) icone.text = "▶";
 
+        this.mettreAJourVisibiliteAideEspace(false);
     }
 
 

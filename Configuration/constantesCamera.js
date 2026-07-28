@@ -10,7 +10,7 @@ export const constantesCamera = Object.freeze({
 
     facteurCadrage: 3.0,
 
-    multiplicateurDistanceMin: 0.5,
+    multiplicateurDistanceMin: 0.4,
     distanceMinAbsolue: 0.1,
 
     multiplicateurDistanceMax: 15,

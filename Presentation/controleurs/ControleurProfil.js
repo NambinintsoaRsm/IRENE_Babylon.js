@@ -18,6 +18,7 @@ export class ControleurProfil {
                     serviceLumiereBabylon = null,
                     controleurLumiere = null,
                     controleurContours = null,
+                    controleurInterface = null,
                     serviceMateriauxBabylon = null,
                     serviceControlesSpeciauxGUI = null,
                     postTraitApparence = null,
@@ -41,6 +42,7 @@ export class ControleurProfil {
         this.serviceLumiereBabylon = serviceLumiereBabylon;
         this.controleurLumiere = controleurLumiere;
         this.controleurContours = controleurContours;
+        this.controleurInterface = controleurInterface;
         this.serviceMateriauxBabylon = serviceMateriauxBabylon;
         this.serviceControlesSpeciauxGUI = serviceControlesSpeciauxGUI;
 
@@ -221,6 +223,7 @@ export class ControleurProfil {
             this.reglerSlider(c.BdTaiBoutonSli, interfaceUtilisateur.tailleBorduresBoutons);
             this.reglerSlider(c.BdTaiMenuSli, interfaceUtilisateur.tailleBorduresMenu);
             this.reglerTexte(c.PlcDropBtnTxt, this.libellePolice(interfaceUtilisateur.police));
+            this.controleurInterface?.synchroniserDropdownPoliceDepuisEtat?.();
         }
 
         if (apparence) {

@@ -1,11 +1,10 @@
+import { FONCTIONS_GRADIENT_COULEUR_PERCEPTUEL_GLSL } from "./FonctionsGradientCouleurPerceptuel.js";
+
 /**
- * Shaders expérimentaux de mise en lumière locale des zones de fort gradient.
+ * Shaders de mise en lumière locale des zones de fort gradient.
  *
- * Cette version ne dessine pas de contour.
- * Elle construit un masque local autour des gradients retenus, puis modifie
- * seulement la composante de luminosité HSL de la couleur originale.
- * L'animation de clignotement est pilotée par le temps et par un intervalle
- * réglable depuis l'interface.
+ * Cette version garde une détection légère des crêtes puis élargit le masque
+ * de luminance sans ajouter de filtrage anti-sparkles coûteux.
  */
 
 export const NOM_SHADER_MISE_LUMIERE_NORMALES = "miseLumiereNormalesPixelShader";
@@ -85,47 +84,32 @@ const FONCTIONS_HIGHLIGHT_COMMUNES = `
         }
 
         vec3 modifierLuminositeLocaleHsl(
-    vec3 couleur,
-    float masque,
-    float deltaLuminosite,
-    float facteurClignotement,
-    float facteurIntensite,
-    float minLightness,
-    float maxLightness
-) {
-    float influence = clamp(pow(clamp(masque, 0.0, 1.0), 0.70) * facteurClignotement, 0.0, 1.0);
+            vec3 couleur,
+            float masque,
+            float deltaLuminosite,
+            float facteurClignotement,
+            float facteurIntensite,
+            float minLightness,
+            float maxLightness
+        ) {
+            float influence = clamp(pow(clamp(masque, 0.0, 1.0), 0.72) * facteurClignotement, 0.0, 1.0);
 
-    // Si le pixel n'appartient pas à la zone de highlight,
-    // on retourne exactement la couleur originale.
-    if (influence <= 0.001) {
-        return couleur;
-    }
+            if (influence <= 0.001) {
+                return couleur;
+            }
 
-    vec3 hsl = rgbToHsl(couleur);
+            vec3 hsl = rgbToHsl(couleur);
+            float variation = deltaLuminosite * facteurIntensite;
+            float lightnessOriginale = hsl.z;
+            float lightnessModifiee = clamp(lightnessOriginale + variation, minLightness, maxLightness);
 
-    float variation = deltaLuminosite * facteurIntensite;
+            hsl.z = mix(lightnessOriginale, lightnessModifiee, influence);
 
-    float lightnessOriginale = hsl.z;
-    float lightnessModifiee = clamp(
-        lightnessOriginale + variation,
-        minLightness,
-        maxLightness
-    );
-
-    // On mélange entre la couleur originale et la couleur modifiée
-    // seulement selon l'influence du masque.
-    hsl.z = mix(lightnessOriginale, lightnessModifiee, influence);
-
-    return hslToRgb(hsl);
-}
+            return hslToRgb(hsl);
+        }
 `;
 
-export function creerShaderMiseLumiereNormalesSiNecessaire() {
-    if (shaderNormalesCree) {
-        return NOM_SHADER_MISE_LUMIERE_NORMALES;
-    }
-
-    BABYLON.Effect.ShadersStore[NOM_SHADER_MISE_LUMIERE_NORMALES] = `
+const SHADER_NORMALES = `
         precision highp float;
 
         varying vec2 vUV;
@@ -136,6 +120,7 @@ export function creerShaderMiseLumiereNormalesSiNecessaire() {
         uniform vec2 screenSize;
         uniform float edgeWidth;
         uniform float normalThreshold;
+        uniform float normalChainLength;
         uniform float intensity;
         uniform float minNeighborSupport;
         uniform float time;
@@ -148,7 +133,7 @@ export function creerShaderMiseLumiereNormalesSiNecessaire() {
         ${FONCTIONS_HIGHLIGHT_COMMUNES}
 
         vec3 getNormal(vec2 uv) {
-            vec3 n = texture2D(normalSampler, clamp(uv, 0.0, 1.0)).rgb;
+            vec3 n = texture2D(normalSampler, clamp(uv, vec2(0.001), vec2(0.999))).rgb;
             n = n * 2.0 - 1.0;
             return normalize(n);
         }
@@ -170,10 +155,20 @@ export function creerShaderMiseLumiereNormalesSiNecessaire() {
 
         float strongNormalAt(vec2 uv, vec2 texel) {
             float g = normalGradientAt(uv, texel);
-            return smoothstep(normalThreshold * 0.75, normalThreshold * 1.25, g);
+            return smoothstep(normalThreshold * 0.75, normalThreshold * 1.30, g);
         }
 
-        float continuousNormalAt(vec2 uv, vec2 texel) {
+        float strongNormalDilatationAt(vec2 uv, vec2 texel) {
+            // La dilatation ne doit pas grossir les micro-traits instables.
+            // On garde la détection normale pour le centre, mais les pixels
+            // ajoutés autour du relief doivent être plus sûrs. Cela réduit
+            // les petites « paillettes » visibles pendant la rotation sans
+            // relancer un chaînage coûteux pour chaque voisin.
+            float g = normalGradientAt(uv, texel);
+            return smoothstep(normalThreshold * 1.08, normalThreshold * 1.68, g);
+        }
+
+        float chainedNormalAt(vec2 uv, vec2 texel) {
             float c  = strongNormalAt(uv, texel);
             float l  = strongNormalAt(uv + texel * vec2(-1.0,  0.0), texel);
             float r  = strongNormalAt(uv + texel * vec2( 1.0,  0.0), texel);
@@ -185,71 +180,66 @@ export function creerShaderMiseLumiereNormalesSiNecessaire() {
             float dr = strongNormalAt(uv + texel * vec2( 1.0, -1.0), texel);
 
             float support = l + r + u + d + ul + ur + dl + dr;
-            float pairContinuity = max(
+            float paire = max(
                 max(min(l, r), min(u, d)),
                 max(min(ul, dr), min(ur, dl))
             );
 
-            float supportOk = smoothstep(minNeighborSupport - 0.5, minNeighborSupport + 0.5, support);
-            float centerLine = c * max(supportOk, pairContinuity);
-            float gapBridge = pairContinuity * 0.45;
+            // La longueur de chaîne demandée est transformée en seuil local.
+            // On garde une logique de continuité, sans parcourir de longues chaînes
+            // dans le shader fragment.
+            float longueur = clamp(normalChainLength, 3.0, 8.0);
+            float seuilSupport = clamp(1.5 + (longueur - 3.0) * 0.30, 1.5, 3.2);
+            seuilSupport = max(seuilSupport, minNeighborSupport - 0.5);
 
-            return clamp(max(centerLine, gapBridge), 0.0, 1.0);
+            float supportOk = smoothstep(seuilSupport - 0.35, seuilSupport + 0.75, support);
+            float continuite = max(paire, supportOk);
+
+            return c * continuite;
         }
 
-        float voisinsNormales(vec2 texelBase, float distance) {
+        float voisinsForts(vec2 uv, vec2 texel, float distance) {
+            // Version légère : on ne fait pas de chaînage complet ici.
+            // En revanche, la dilatation utilise un seuil plus strict que
+            // le centre pour ne pas agrandir les micro-traits instables.
             float v = 0.0;
-            v = max(v, strongNormalAt(vUV + texelBase * vec2( distance,  0.0), texelBase));
-            v = max(v, strongNormalAt(vUV + texelBase * vec2(-distance,  0.0), texelBase));
-            v = max(v, strongNormalAt(vUV + texelBase * vec2( 0.0,  distance), texelBase));
-            v = max(v, strongNormalAt(vUV + texelBase * vec2( 0.0, -distance), texelBase));
-            v = max(v, strongNormalAt(vUV + texelBase * vec2( distance,  distance), texelBase) * 0.72);
-            v = max(v, strongNormalAt(vUV + texelBase * vec2(-distance,  distance), texelBase) * 0.72);
-            v = max(v, strongNormalAt(vUV + texelBase * vec2( distance, -distance), texelBase) * 0.72);
-            v = max(v, strongNormalAt(vUV + texelBase * vec2(-distance, -distance), texelBase) * 0.72);
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2( distance,  0.0), texel));
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2(-distance,  0.0), texel));
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2( 0.0,  distance), texel));
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2( 0.0, -distance), texel));
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2( distance,  distance), texel) * 0.70);
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2(-distance,  distance), texel) * 0.70);
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2( distance, -distance), texel) * 0.70);
+            v = max(v, strongNormalDilatationAt(uv + texel * vec2(-distance, -distance), texel) * 0.70);
             return v;
         }
 
         float crestMask(vec2 texelBase, float largeur) {
-            // Largeur 1 = crête locale seulement.
-            // Largeur 2 à 10 = dilatation progressive du masque autour du gradient.
             float largeurBornee = floor(clamp(largeur, 1.0, 10.0));
-            float masque = continuousNormalAt(vUV, texelBase);
+            float masque = chainedNormalAt(vUV, texelBase);
 
             if (largeurBornee >= 2.0) {
-                masque = max(masque, voisinsNormales(texelBase, 1.0) * 0.90);
-            }
-            if (largeurBornee >= 3.0) {
-                masque = max(masque, voisinsNormales(texelBase, 2.0) * 0.82);
+                masque = max(masque, voisinsForts(vUV, texelBase, 1.0) * 0.96);
             }
             if (largeurBornee >= 4.0) {
-                masque = max(masque, voisinsNormales(texelBase, 3.0) * 0.70);
-            }
-            if (largeurBornee >= 5.0) {
-                masque = max(masque, voisinsNormales(texelBase, 4.0) * 0.62);
+                masque = max(masque, voisinsForts(vUV, texelBase, 2.0) * 0.84);
             }
             if (largeurBornee >= 6.0) {
-                masque = max(masque, voisinsNormales(texelBase, 5.0) * 0.55);
-            }
-            if (largeurBornee >= 7.0) {
-                masque = max(masque, voisinsNormales(texelBase, 6.0) * 0.48);
+                masque = max(masque, voisinsForts(vUV, texelBase, 3.0) * 0.70);
             }
             if (largeurBornee >= 8.0) {
-                masque = max(masque, voisinsNormales(texelBase, 7.0) * 0.42);
-            }
-            if (largeurBornee >= 9.0) {
-                masque = max(masque, voisinsNormales(texelBase, 8.0) * 0.36);
+                masque = max(masque, voisinsForts(vUV, texelBase, 4.0) * 0.56);
             }
             if (largeurBornee >= 10.0) {
-                masque = max(masque, voisinsNormales(texelBase, 9.0) * 0.30);
+                masque = max(masque, voisinsForts(vUV, texelBase, 5.0) * 0.44);
             }
 
-            return smoothstep(0.20, 0.48, clamp(masque, 0.0, 1.0));
+            return smoothstep(0.12, 0.46, clamp(masque, 0.0, 1.0));
         }
 
         void main(void) {
             vec4 original = texture2D(textureSampler, vUV);
-            vec2 texelBase = vec2(1.0 / screenSize.x, 1.0 / screenSize.y);
+            vec2 texelBase = 1.0 / max(screenSize, vec2(1.0));
             float masque = crestMask(texelBase, edgeWidth);
             float clignotement = calculerClignotement(time, blinkInterval, blinkMinFactor);
 
@@ -258,8 +248,108 @@ export function creerShaderMiseLumiereNormalesSiNecessaire() {
                 original.a
             );
         }
-    `;
+`;
 
+const SHADER_COULEURS = `
+        precision highp float;
+
+        varying vec2 vUV;
+        uniform sampler2D textureSampler;
+
+        uniform vec2 screenSize;
+        uniform float edgeWidth;
+        uniform float colorLowThreshold;
+        uniform float colorHighThreshold;
+        uniform float colorThresholdSmoothLow;
+        uniform float colorThresholdSmoothHigh;
+        uniform float colorLightnessWeight;
+        uniform float colorChromaWeight;
+        uniform float colorChainRadius;
+        uniform float colorMinSupport;
+        uniform float colorMinSupportPerSide;
+        uniform float colorMaxGaps;
+        uniform float colorVeryStrongFactor;
+        uniform float colorVeryStrongSupportReduction;
+        uniform float colorVeryStrongSideReduction;
+        uniform float colorNoiseValidationEnabled;
+        uniform float colorNoiseValidationRadius;
+        uniform float colorNoiseValidationMinRatio;
+        uniform float colorContinuityEnabled;
+        uniform float colorContinuityBridgeThreshold;
+        uniform float colorContinuityMinSupport;
+        uniform float colorContinuityMinSupportPerSide;
+        uniform float colorContinuityMaxGaps;
+        uniform float colorSampleRadius;
+        uniform float colorHighlightSampleMultiplier;
+        uniform float colorMaskPower;
+        uniform float intensity;
+        uniform float time;
+        uniform float blinkInterval;
+        uniform float blinkMinFactor;
+        uniform float luminanceDelta;
+        uniform float minLightness;
+        uniform float maxLightness;
+
+        ${FONCTIONS_HIGHLIGHT_COMMUNES}
+
+        vec3 getColorPerceptual(vec2 uv) {
+            return texture2D(textureSampler, clamp(uv, vec2(0.001), vec2(0.999))).rgb;
+        }
+
+        ${FONCTIONS_GRADIENT_COULEUR_PERCEPTUEL_GLSL}
+
+        void main(void) {
+            vec4 original = texture2D(textureSampler, vUV);
+            vec2 texelBase = 1.0 / max(screenSize, vec2(1.0));
+            float progressionLargeur = clamp((edgeWidth - 1.0) / 9.0, 0.0, 1.0);
+            float rayonEchantillonnage = colorSampleRadius * mix(
+                1.0,
+                max(1.0, colorHighlightSampleMultiplier),
+                progressionLargeur
+            );
+
+            float masque = masqueChaineCouleurPerceptuelle(
+                vUV,
+                texelBase,
+                rayonEchantillonnage,
+                colorLowThreshold,
+                colorHighThreshold,
+                colorThresholdSmoothLow,
+                colorThresholdSmoothHigh,
+                colorLightnessWeight,
+                colorChromaWeight,
+                colorChainRadius,
+                colorMinSupport,
+                colorMinSupportPerSide,
+                colorMaxGaps,
+                colorVeryStrongFactor,
+                colorVeryStrongSupportReduction,
+                colorVeryStrongSideReduction,
+                colorNoiseValidationEnabled,
+                colorNoiseValidationRadius,
+                colorNoiseValidationMinRatio,
+                colorContinuityEnabled,
+                colorContinuityBridgeThreshold,
+                colorContinuityMinSupport,
+                colorContinuityMinSupportPerSide,
+                colorContinuityMaxGaps,
+                colorMaskPower
+            );
+            float clignotement = calculerClignotement(time, blinkInterval, blinkMinFactor);
+
+            gl_FragColor = vec4(
+                modifierLuminositeLocaleHsl(original.rgb, masque, luminanceDelta, clignotement, intensity, minLightness, maxLightness),
+                original.a
+            );
+        }
+`;
+
+export function creerShaderMiseLumiereNormalesSiNecessaire() {
+    if (shaderNormalesCree) {
+        return NOM_SHADER_MISE_LUMIERE_NORMALES;
+    }
+
+    BABYLON.Effect.ShadersStore[NOM_SHADER_MISE_LUMIERE_NORMALES] = SHADER_NORMALES;
     shaderNormalesCree = true;
 
     return NOM_SHADER_MISE_LUMIERE_NORMALES;
@@ -270,129 +360,7 @@ export function creerShaderMiseLumiereCouleursSiNecessaire() {
         return NOM_SHADER_MISE_LUMIERE_COULEURS;
     }
 
-    BABYLON.Effect.ShadersStore[NOM_SHADER_MISE_LUMIERE_COULEURS] = `
-        precision highp float;
-
-        varying vec2 vUV;
-
-        uniform sampler2D textureSampler;
-
-        uniform vec2 screenSize;
-        uniform float edgeWidth;
-        uniform float colorThreshold;
-        uniform float intensity;
-        uniform float minNeighborSupport;
-        uniform float time;
-        uniform float blinkInterval;
-        uniform float blinkMinFactor;
-        uniform float luminanceDelta;
-        uniform float minLightness;
-        uniform float maxLightness;
-
-        ${FONCTIONS_HIGHLIGHT_COMMUNES}
-
-        vec3 getColor(vec2 uv) {
-            return texture2D(textureSampler, clamp(uv, 0.0, 1.0)).rgb;
-        }
-
-        float colorGradientAt(vec2 uv, vec2 texel) {
-            vec3 cRight = getColor(uv + texel * vec2( 1.0,  0.0));
-            vec3 cLeft  = getColor(uv + texel * vec2(-1.0,  0.0));
-            vec3 cUp    = getColor(uv + texel * vec2( 0.0,  1.0));
-            vec3 cDown  = getColor(uv + texel * vec2( 0.0, -1.0));
-
-            vec3 gx = cRight - cLeft;
-            vec3 gy = cUp - cDown;
-
-            return sqrt(dot(gx, gx) + dot(gy, gy));
-        }
-
-        float strongColorAt(vec2 uv, vec2 texel) {
-            float g = colorGradientAt(uv, texel);
-            return smoothstep(colorThreshold * 0.75, colorThreshold * 1.25, g);
-        }
-
-        float continuousColorAt(vec2 uv, vec2 texel) {
-            float c  = strongColorAt(uv, texel);
-            float l  = strongColorAt(uv + texel * vec2(-1.0,  0.0), texel);
-            float r  = strongColorAt(uv + texel * vec2( 1.0,  0.0), texel);
-            float u  = strongColorAt(uv + texel * vec2( 0.0,  1.0), texel);
-            float d  = strongColorAt(uv + texel * vec2( 0.0, -1.0), texel);
-            float ul = strongColorAt(uv + texel * vec2(-1.0,  1.0), texel);
-            float ur = strongColorAt(uv + texel * vec2( 1.0,  1.0), texel);
-            float dl = strongColorAt(uv + texel * vec2(-1.0, -1.0), texel);
-            float dr = strongColorAt(uv + texel * vec2( 1.0, -1.0), texel);
-
-            float support = l + r + u + d + ul + ur + dl + dr;
-            float pairContinuity = max(
-                max(min(l, r), min(u, d)),
-                max(min(ul, dr), min(ur, dl))
-            );
-
-            float supportOk = smoothstep(minNeighborSupport - 0.5, minNeighborSupport + 0.5, support);
-            float centerLine = c * max(supportOk, pairContinuity);
-            float gapBridge = pairContinuity * 0.45;
-
-            return clamp(max(centerLine, gapBridge), 0.0, 1.0);
-        }
-
-        float voisinsCouleurs(vec2 texelBase, float distance) {
-            float v = 0.0;
-            v = max(v, strongColorAt(vUV + texelBase * vec2( distance,  0.0), texelBase));
-            v = max(v, strongColorAt(vUV + texelBase * vec2(-distance,  0.0), texelBase));
-            v = max(v, strongColorAt(vUV + texelBase * vec2( 0.0,  distance), texelBase));
-            v = max(v, strongColorAt(vUV + texelBase * vec2( 0.0, -distance), texelBase));
-            v = max(v, strongColorAt(vUV + texelBase * vec2( distance,  distance), texelBase) * 0.72);
-            v = max(v, strongColorAt(vUV + texelBase * vec2(-distance,  distance), texelBase) * 0.72);
-            v = max(v, strongColorAt(vUV + texelBase * vec2( distance, -distance), texelBase) * 0.72);
-            v = max(v, strongColorAt(vUV + texelBase * vec2(-distance, -distance), texelBase) * 0.72);
-            return v;
-        }
-
-        float crestMask(vec2 texelBase, float largeur) {
-            // Version allégée : on évite de calculer les voisins lointains
-            // quand la largeur demandée est faible.
-            float largeurBornee = floor(clamp(largeur, 1.0, 8.0));
-            float masque = continuousColorAt(vUV, texelBase);
-
-            if (largeurBornee >= 2.0) {
-                masque = max(masque, voisinsCouleurs(texelBase, 1.0) * 0.90);
-            }
-            if (largeurBornee >= 3.0) {
-                masque = max(masque, voisinsCouleurs(texelBase, 2.0) * 0.82);
-            }
-            if (largeurBornee >= 4.0) {
-                masque = max(masque, voisinsCouleurs(texelBase, 3.0) * 0.70);
-            }
-            if (largeurBornee >= 5.0) {
-                masque = max(masque, voisinsCouleurs(texelBase, 4.0) * 0.62);
-            }
-            if (largeurBornee >= 6.0) {
-                masque = max(masque, voisinsCouleurs(texelBase, 5.0) * 0.55);
-            }
-            if (largeurBornee >= 7.0) {
-                masque = max(masque, voisinsCouleurs(texelBase, 6.0) * 0.48);
-            }
-            if (largeurBornee >= 8.0) {
-                masque = max(masque, voisinsCouleurs(texelBase, 7.0) * 0.42);
-            }
-
-            return smoothstep(0.34, 0.60, clamp(masque, 0.0, 1.0));
-        }
-
-        void main(void) {
-            vec4 original = texture2D(textureSampler, vUV);
-            vec2 texelBase = vec2(1.0 / screenSize.x, 1.0 / screenSize.y);
-            float masque = crestMask(texelBase, edgeWidth);
-            float clignotement = calculerClignotement(time, blinkInterval, blinkMinFactor);
-
-            gl_FragColor = vec4(
-                modifierLuminositeLocaleHsl(original.rgb, masque, luminanceDelta, clignotement, intensity, minLightness, maxLightness),
-                original.a
-            );
-        }
-    `;
-
+    BABYLON.Effect.ShadersStore[NOM_SHADER_MISE_LUMIERE_COULEURS] = SHADER_COULEURS;
     shaderCouleursCree = true;
 
     return NOM_SHADER_MISE_LUMIERE_COULEURS;

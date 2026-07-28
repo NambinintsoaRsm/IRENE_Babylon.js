@@ -34,18 +34,39 @@ export class ChargeurModeleBabylon {
     }
 
     extraireDossierEtFichier(chemin) {
-        const dernierSlash = chemin.lastIndexOf("/");
+        const cheminEncode = this.encoderCheminUrl(chemin);
+        const dernierSlash = cheminEncode.lastIndexOf("/");
 
         if (dernierSlash === -1) {
             return {
                 dossier: "",
-                fichier: chemin
+                fichier: cheminEncode
             };
         }
 
         return {
-            dossier: chemin.substring(0, dernierSlash + 1),
-            fichier: chemin.substring(dernierSlash + 1)
+            dossier: cheminEncode.substring(0, dernierSlash + 1),
+            fichier: cheminEncode.substring(dernierSlash + 1)
         };
+    }
+
+    encoderCheminUrl(chemin) {
+        const texte = String(chemin ?? "").trim().normalize("NFC");
+        if (!texte) return texte;
+
+        return texte
+            .split("/")
+            .map((segment, index) => {
+                if (segment === "" || (index === 0 && /^[a-zA-Z][a-zA-Z0-9+.-]*:$/.test(segment))) {
+                    return segment;
+                }
+
+                try {
+                    return encodeURIComponent(decodeURIComponent(segment));
+                } catch (_erreur) {
+                    return encodeURIComponent(segment);
+                }
+            })
+            .join("/");
     }
 }

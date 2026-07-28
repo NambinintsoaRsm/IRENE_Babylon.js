@@ -36,7 +36,8 @@ export const profilParDefaut = new ProfilUtilisateur({
         typeActif: null,
         epaisseur: constantesContours.epaisseurDefaut,
         seuil: constantesContours.seuils,
-        couleur: constantesContours.couleurDefaut
+        couleur: constantesContours.couleurDefaut,
+        longueurChaineNormales: constantesContours.chaineNormales.defaut
     }),
 
     camera: new ParametresCamera({

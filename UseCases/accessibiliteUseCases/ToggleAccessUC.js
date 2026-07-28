@@ -1,5 +1,7 @@
 import { access } from "../../Configuration/accessibilite.js";
 import { constantesApparence } from "../../Configuration/constantesApparence.js";
+import { ParametresInterface } from "../../Domain/interface/ParametresInterface.js";
+import { ParametresApparence } from "../../Domain/apparence/ParametresApparence.js";
 
 export class ToggleAccessUC {
     constructor({
@@ -10,7 +12,8 @@ export class ToggleAccessUC {
         serviceSceneBabylon,
         serviceLumiereBabylon,
         postTraitApparence,
-        postTraitNettete
+        postTraitNettete,
+        sauvegarderProfilLocalUC = null
     }) {
         this.etatApplication = etatApplication;
         this.accessNav = accessNav;
@@ -20,28 +23,42 @@ export class ToggleAccessUC {
         this.serviceLumiereBabylon = serviceLumiereBabylon;
         this.postTraitApparence = postTraitApparence;
         this.postTraitNettete = postTraitNettete;
+        this.sauvegarderProfilLocalUC = sauvegarderProfilLocalUC;
     }
 
-    executer() {
-        return this.etatApplication.accessibilite?.actif
-            ? this.desactiver()
-            : this.activer();
+    executer(options = {}) {
+        const resultat = this.etatApplication.accessibilite?.actif
+            ? this.desactiver(options)
+            : this.activer(options);
+
+        if (options.sauvegarderProfil !== false) {
+            this.sauvegarderEtatAccessibilite();
+        }
+
+        return resultat;
     }
 
-    activer() {
+    activer({ sauvegarderProfil = false } = {}) {
         const preferences = this.accessNav.lire();
 
         this.etatApplication.accessibilite = this.etatApplication.accessibilite || {};
-        this.etatApplication.accessibilite.sauvegardeAvantActivation = this.creerSauvegarde();
+
+        if (!this.etatApplication.accessibilite.sauvegardeAvantActivation) {
+            this.etatApplication.accessibilite.sauvegardeAvantActivation = this.creerSauvegarde();
+        }
+
         this.etatApplication.accessibilite.preferencesNavigateur = preferences;
         this.etatApplication.accessibilite.actif = true;
 
         this.appliquerPreferences(preferences);
+        this.forcerRafraichissementTexte();
 
-        return { actif: true, preferences };
+        const resultat = { actif: true, preferences };
+
+        return resultat;
     }
 
-    desactiver() {
+    desactiver({ sauvegarderProfil = false } = {}) {
         const sauvegarde = this.etatApplication.accessibilite?.sauvegardeAvantActivation;
         const preferences = this.etatApplication.accessibilite?.preferencesNavigateur ?? null;
 
@@ -53,16 +70,24 @@ export class ToggleAccessUC {
         this.etatApplication.accessibilite.actif = false;
         this.etatApplication.accessibilite.preferencesNavigateur = null;
 
+        this.nettoyerTracesAccessibiliteTexte();
+        this.etatApplication?.services?.texteResponsive?.reinitialiserBasesAutoFit?.();
+
         if (sauvegarde) {
             this.restaurerSauvegarde(sauvegarde);
+        } else {
+            this.appliquerModeStandard();
         }
 
         this.etatApplication.accessibilite.sauvegardeAvantActivation = null;
+        this.forcerRafraichissementTexte();
 
-        return {
+        const resultat = {
             actif: false,
             preferences
         };
+
+        return resultat;
     }
 
     creerSauvegarde() {
@@ -70,8 +95,8 @@ export class ToggleAccessUC {
         const camera = this.etatApplication.camera.cameraBabylon;
 
         return {
-            interface: this.etatApplication.interface.parametres,
-            apparence: this.etatApplication.apparence.parametres,
+            interface: this.serialiserParametres(this.etatApplication.interface.parametres),
+            apparence: this.serialiserParametres(this.etatApplication.apparence.parametres),
             animation: {
                 dureeMenuLateral: this.etatApplication.animation.parametres.dureeMenuLateral,
                 dureePanneauDeroulant: this.etatApplication.animation.parametres.dureePanneauDeroulant
@@ -84,8 +109,21 @@ export class ToggleAccessUC {
             lumiere: this.serviceLumiereBabylon ? {
                 facteurVitesseRotation: this.serviceLumiereBabylon.facteurVitesseRotation ?? 1
             } : null,
-            fondScene: scene?.clearColor?.clone?.() ?? null
+            fondScene: scene?.clearColor
+                ? {
+                    r: scene.clearColor.r,
+                    g: scene.clearColor.g,
+                    b: scene.clearColor.b,
+                    a: scene.clearColor.a
+                }
+                : null
         };
+    }
+
+    serialiserParametres(parametres) {
+        return parametres && typeof parametres === "object"
+            ? { ...parametres }
+            : parametres;
     }
 
     appliquerPreferences(preferences) {
@@ -192,10 +230,18 @@ export class ToggleAccessUC {
         const camera = this.etatApplication.camera.cameraBabylon;
         const scene = this.etatApplication.scenes.scene3D;
 
-        this.etatApplication.interface.parametres = sauvegarde.interface;
-        this.etatApplication.apparence.parametres = sauvegarde.apparence;
-        this.etatApplication.animation.parametres.dureeMenuLateral = sauvegarde.animation.dureeMenuLateral;
-        this.etatApplication.animation.parametres.dureePanneauDeroulant = sauvegarde.animation.dureePanneauDeroulant;
+        this.etatApplication.interface.parametres = sauvegarde.interface instanceof ParametresInterface
+            ? sauvegarde.interface
+            : new ParametresInterface(sauvegarde.interface ?? {});
+
+        this.etatApplication.apparence.parametres = sauvegarde.apparence instanceof ParametresApparence
+            ? sauvegarde.apparence
+            : new ParametresApparence(sauvegarde.apparence ?? {});
+
+        if (sauvegarde.animation) {
+            this.etatApplication.animation.parametres.dureeMenuLateral = sauvegarde.animation.dureeMenuLateral;
+            this.etatApplication.animation.parametres.dureePanneauDeroulant = sauvegarde.animation.dureePanneauDeroulant;
+        }
 
         if (camera && sauvegarde.camera) {
             camera.wheelPrecision = sauvegarde.camera.wheelPrecision;
@@ -208,14 +254,121 @@ export class ToggleAccessUC {
         }
 
         if (scene && sauvegarde.fondScene) {
-            scene.clearColor = sauvegarde.fondScene;
+            scene.clearColor = new BABYLON.Color4(
+                sauvegarde.fondScene.r,
+                sauvegarde.fondScene.g,
+                sauvegarde.fondScene.b,
+                sauvegarde.fondScene.a ?? 1
+            );
         }
 
+        this.appliquerModeStandard();
+    }
+
+    appliquerModeStandard() {
+        this.nettoyerTracesAccessibiliteTexte();
+        this.etatApplication?.services?.texteResponsive?.reinitialiserBasesAutoFit?.();
         this.serviceStyleInterfaceGUI.appliquerTheme(this.etatApplication);
         this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
         this.postTraitApparence.appliquer(this.etatApplication);
         this.postTraitNettete.appliquer(this.etatApplication);
         this.synchroniserGUIDepuisEtat();
+        this.relancerAutoFitTexte();
+    }
+
+    nettoyerTracesAccessibiliteTexte() {
+        const advancedTexture = this.etatApplication?.gui?.advancedTexture;
+
+        if (!advancedTexture?.getDescendants) {
+            return;
+        }
+
+        advancedTexture.getDescendants().forEach((controle) => {
+            if (!(controle instanceof BABYLON.GUI.TextBlock)) {
+                return;
+            }
+
+            const metadata = controle.metadata ?? {};
+            const tailleNormale = metadata.fontSizeAvantAccessibilite
+                ?? metadata.fontSizeOriginal;
+
+            if (tailleNormale !== undefined && metadata.tailleAccessibiliteNavigateurPx !== undefined) {
+                controle.fontSize = tailleNormale;
+            }
+
+            delete metadata.tailleAccessibiliteNavigateurPx;
+            delete metadata.fontSizeAvantAccessibilite;
+            delete metadata.responsiveFontSizeBasePx;
+            delete metadata.accessibiliteFontSizePx;
+            delete metadata.facteurAccessibiliteTaille;
+            delete metadata.roleAccessibilite;
+            delete metadata.tailleMinAutoFitPx;
+            delete metadata.facteurMinAutoFit;
+            delete metadata.lignesMaxAutoFit;
+
+            controle.metadata = metadata;
+            controle._markAsDirty?.();
+        });
+
+        advancedTexture.markAsDirty?.();
+    }
+
+    relancerAutoFitTexte() {
+        const service = this.etatApplication?.services?.texteResponsive;
+
+        service?.planifierAjustement?.(20);
+        setTimeout(() => service?.planifierAjustement?.(80), 40);
+        setTimeout(() => service?.planifierAjustement?.(160), 120);
+    }
+
+    forcerRafraichissementTexte() {
+        const serviceTexte = this.serviceTexteGUI;
+        const serviceResponsive = this.etatApplication?.services?.texteResponsive;
+        const serviceListeModeles = this.etatApplication?.services?.listeModelesGUI;
+        const actif = this.etatApplication?.accessibilite?.actif === true;
+        const preferences = this.etatApplication?.accessibilite?.preferencesNavigateur ?? this.accessNav?.lire?.() ?? null;
+        const taillePx = actif ? this.calculerTailleTexteNavigateurPx(preferences) : null;
+
+        const appliquer = () => {
+            if (!actif) {
+                serviceResponsive?.reinitialiserBasesAutoFit?.();
+            }
+
+            serviceListeModeles?.actualiserStylesBoutonsModeles?.(this.etatApplication);
+            serviceTexte?.appliquerParametresTexte?.(this.etatApplication);
+
+            if (actif && Number.isFinite(taillePx) && taillePx > 0) {
+                // On force la taille accessibilité après l'auto-style des boutons,
+                // sinon certains libellés, notamment les modèles, ne changent
+                // qu'après un rechargement complet de la page.
+                serviceTexte?.appliquerTailleNavigateurPx?.(this.etatApplication, taillePx);
+            }
+
+            this.etatApplication.gui?.advancedTexture?.markAsDirty?.();
+        };
+
+        appliquer();
+        serviceResponsive?.ajuster?.();
+        this.relancerAutoFitTexte();
+
+        const appliquerPuisAjuster = () => {
+            appliquer();
+            serviceResponsive?.ajuster?.();
+            this.relancerAutoFitTexte();
+        };
+
+        requestAnimationFrame(appliquerPuisAjuster);
+        setTimeout(appliquerPuisAjuster, 60);
+        setTimeout(appliquerPuisAjuster, 160);
+        setTimeout(appliquerPuisAjuster, 320);
+    }
+
+    sauvegarderEtatAccessibilite() {
+        try {
+            this.sauvegarderProfilLocalUC?.executer?.();
+        } catch (erreur) {
+            console.warn("[Accessibilité] Impossible de sauvegarder l'état d'accessibilité.", erreur);
+        }
     }
 
     synchroniserGUIDepuisEtat() {
@@ -234,8 +387,20 @@ export class ToggleAccessUC {
         if (c.BdTaiBoutonSli) c.BdTaiBoutonSli.value = interf.tailleBorduresBoutons;
         if (c.BdTaiBouValTxt) c.BdTaiBouValTxt.text = String(Math.round(interf.tailleBorduresBoutons));
 
-        if (c.BdSzMenuSlider) c.BdSzMenuSlider.value = interf.taillePolice;
-        if (c.PoliTailleValTxt) c.PoliTailleValTxt.text = interf.taillePolice > 0 ? `+${Math.round(interf.taillePolice)}%` : `${Math.round(interf.taillePolice)}%`;
+        if (c.BdSzMenuSlider) {
+            c.BdSzMenuSlider.minimum = -10;
+            c.BdSzMenuSlider.maximum = this.etatApplication.accessibilite?.actif === true
+                ? 5
+                : 3;
+            c.BdSzMenuSlider.step = 1;
+            c.BdSzMenuSlider.value = interf.taillePolice;
+        }
+
+        if (c.PoliTailleValTxt) {
+            c.PoliTailleValTxt.text = interf.taillePolice > 0
+                ? `+${Math.round(interf.taillePolice)}%`
+                : `${Math.round(interf.taillePolice)}%`;
+        }
 
         if (c.ThmSlider && fondScene) {
             const valeurFond = Math.round((1 - fondScene.r) * 100);

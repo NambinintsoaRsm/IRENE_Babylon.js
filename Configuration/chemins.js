@@ -1,4 +1,10 @@
 export const chemins = Object.freeze({
+    // Destination utilisée par le bouton « Fermer » de la fenêtre de confirmation.
+    // Remplacer simplement "#" par l'URL de la page à ouvrir.
+    navigation: Object.freeze({
+        fermetureApplication: "#"
+    }),
+
     gui: Object.freeze({
         fichier: "assets/gui/guiTexture.json"
     }),

@@ -1,12 +1,14 @@
 import { TypeContour } from "../Domain/contours/TypeContour.js";
+import { parametresContourCouleur } from "./parametresContourCouleur.js";
 
 export const constantesContours = Object.freeze({
-    epaisseurDefaut: 1,
+    // Défaut légèrement plus visible au premier affichage.
+    epaisseurDefaut: 2,
     couleurDefaut: "#000000",
 
     epaisseurSlider: Object.freeze({
         min: 1,
-        max: 3,
+        max: 2,
         defaut: 1,
         step: 1
     }),
@@ -14,11 +16,11 @@ export const constantesContours = Object.freeze({
     /**
      * Réglages visuels par type de contour.
      *
-     * Le slider utilisateur reste commun et va de 1 à 3.
+     * Le slider utilisateur reste commun et va de 1 à 2.
      * Ensuite, chaque type convertit cette valeur en épaisseur réellement appliquée :
-     * - Silhouette : 1 à 3, avec un léger renfort quand le slider vaut 1.
-     * - Relief : 1 à 2, mais progressif sur les positions 1 / 2 / 3 du slider.
-     * - Couleur : 1 à 2, mais progressif sur les positions 1 / 2 / 3 du slider.
+     * - Silhouette : conserve son amplitude visuelle propre.
+     * - Relief : conserve son amplitude visuelle propre.
+     * - Couleur : 1 à 2 ; le shader calcule un seul masque pour alléger le rendu.
      */
     epaisseursParType: Object.freeze({
         [TypeContour.SILHOUETTE]: Object.freeze({
@@ -28,49 +30,163 @@ export const constantesContours = Object.freeze({
         }),
 
         [TypeContour.RELIEF]: Object.freeze({
-            min: 1,
-            max: 2
+            // Relief un peu plus large au minimum : le chaînage nettoie le bruit,
+            // donc on peut élargir légèrement le trait utile sans ajouter de points parasites.
+            min: 1.30,
+            max: 2.35
         }),
 
         [TypeContour.COULEUR]: Object.freeze({
+            // Le contour couleur utilise deux positions du slider.
+            // L'épaisseur réelle est pilotée dans parametresContourCouleur.js.
             min: 1,
             max: 2
         })
     }),
 
+
+    chaineNormales: Object.freeze({
+        // Avec le vrai Canny, cette valeur ne représente plus une grande
+        // longueur arbitraire : elle pilote surtout la portée de l’hystérésis.
+        // Des valeurs trop hautes reconnectent trop de bruit sur les scans 3D.
+        min: 3,
+        max: 8,
+        defaut: 5,
+        step: 1
+    }),
+
+    /**
+     * Réglages du vrai Canny appliqué au contour Relief.
+     *
+     * Pipeline scène principale :
+     * 1. gradient des normales ;
+     * 2. suppression des non-maxima ;
+     * 3. double seuil ;
+     * 4. hystérésis itérative ;
+     * 5. composition + épaisseur.
+     *
+     * La loupe n’utilise pas encore ce pipeline.
+     */
+    reliefCanny: Object.freeze({
+        actif: true,
+
+        // Seuils assouplis : le préfiltrage + la validation de longueur
+        // nettoient le bruit, donc on peut récupérer davantage de reliefs internes.
+        seuilFaible: 0.35,
+        seuilFort: 0.58,
+
+        prefiltrageNormales: Object.freeze({
+            actif: true,
+
+            // Croix 5 échantillons : centre + gauche/droite/haut/bas.
+            // Rayon 1 = léger et peu coûteux.
+            rayon: 1.0,
+
+            // Le centre reste dominant pour ne pas gommer les vraies cassures.
+            poidsCentre: 2.0,
+
+            // Plus haut = on protège davantage les arêtes franches.
+            // Plus bas = on lisse plus fort les normales bruitées.
+            seuilConservationAretes: 0.72
+        }),
+
+        gradientMultiEchelle: Object.freeze({
+            actif: true,
+
+            // Deuxième lecture plus large : aide à retrouver les bosses/creux
+            // qui ne sont pas assez forts à l'échelle 1 pixel.
+            rayonMoyen: 2.0,
+
+            // La moyenne échelle renforce le relief, sans remplacer totalement
+            // le gradient local. Monter vers 1.0 récupère plus de reliefs.
+            poidsMoyen: 0.65
+        }),
+
+        iterationsHysteresis: 4,
+        toleranceNonMaximum: 0.88,
+        voisinsDiagonaux: false,
+
+        fermeture: Object.freeze({
+            actif: true,
+            rayon: 1,
+            diagonales: false,
+            exigerDeuxVoisinsOpposes: true
+        }),
+
+        nettoyageLongueur: Object.freeze({
+            actif: true,
+            // Un peu moins strict pour éviter que les reliefs internes soient
+            // supprimés comme des fragments alors qu'ils aident à lire le volume.
+            longueurMin: 5,
+            rayonMax: 8,
+            trousMax: 2,
+            exigerDeuxCotes: false,
+            testerDiagonales: true,
+            seuilMasque: 0.5
+        }),
+
+        nettoyageVoisinage: Object.freeze({
+            actif: true,
+            voisinsMin: 2,
+            diagonales: true
+        })
+    }),
+    // Tous les réglages du contour couleur sont regroupés dans :
+    // Configuration/parametresContourCouleur.js
+    contourCouleurPerceptuel: parametresContourCouleur,
+
     seuils: Object.freeze({
         [TypeContour.SILHOUETTE]: 0.00009,
-        [TypeContour.RELIEF]: 0.12,
-        [TypeContour.COULEUR]: 0.30
+        // Le relief basé sur les normales est volontairement filtré plus fort :
+        // on évite les points isolés qui bruitent l'information.
+        [TypeContour.RELIEF]: 0.35,
+        // Compatibilité avec les anciens appels ; le nouveau shader utilise
+        // contourCouleurPerceptuel.seuils.faible et .fort.
+        [TypeContour.COULEUR]: 0.045
     }),
 
 
     /**
      * Test de mise en lumière locale des gradients.
      *
-     * Les boutons ContLumNormBtn / ContLumCoulBtn n'affichent pas un trait coloré :
-     * ils renforcent uniquement la luminosité locale des zones de fort gradient.
+     * Mise en lumière locale utilisée par les presets Contours.
+     * L'ancienne interface Highlight avec sliders n'est plus affichée :
+     * ces valeurs restent uniquement des paramètres internes de preset.
      */
     miseLumiereGradients: Object.freeze({
         normales: Object.freeze({
             // Seuil abaissé : le masque normal détecte davantage de reliefs,
             // ce qui rend le Highlight visible sur plus de modèles.
             seuilGradient: 0.4,
-            intensite:0.9,
-            voisinsMin: 2
+            intensite: 0.9,
+            // Filtrage anti-sparkles : le highlight doit suivre les reliefs
+            // continus, pas les points isolés.
+            voisinsMin: 2,
+
+            // Rendu natif pour éviter un masque trop mou quand la largeur augmente.
+            ratioRendu: 1.0
         }),
 
         couleurs: Object.freeze({
-            seuilGradient: 0.35,
-            intensite: 0.9,
-            voisinsMin: 2
+            // Les seuils et le chaînage sont lus dans contourCouleurPerceptuel.
+            intensite: 0.9
         }),
 
         animation: Object.freeze({
             intervalleSecondes: Object.freeze({
                 min: 1,
                 max: 4,
-                defaut: 2,
+                // Le slider Fréquence représente directement la durée du clignotement en secondes.
+                // Le preset doit donc donner 3 secondes, et non une fréquence convertie en 2 secondes.
+                defaut: 3,
+                step: 1
+            }),
+
+            frequence: Object.freeze({
+                // Valeur affichée par le slider : plus elle augmente, plus le clignotement est rapide.
+                min: 1,
+                max: 4,
+                defaut: 3,
                 step: 1
             }),
 
@@ -80,8 +196,9 @@ export const constantesContours = Object.freeze({
              * Cela évite les effets extrêmes noir/blanc.
              */
             luminancePourcentage: Object.freeze({
-                // Aligné avec le GUI : HighLumSlider va de 1 à 10.
+                // Paramètre interne de preset : le slider manuel n'est plus affiché.
                 min: 1,
+
                 max: 8,
                 defaut: 1,
                 step: 0.001,
@@ -100,10 +217,25 @@ export const constantesContours = Object.freeze({
              */
             largeur: Object.freeze({
                 min: 1,
-                // Aligné avec le nouveau GUI : HighLargSlider va de 1 à 10.
-                max: 4,
-                defaut: 2,
-                step: 0.5
+                // Paramètre interne de preset : le slider manuel n'est plus affiché.
+                // La valeur par défaut/preset reste positionnée comme sur
+                // la dernière version fonctionnelle validée.
+                max: 10,
+                defaut: 6,
+                step: 1
+            }),
+
+            /**
+             * Sens de la variation de luminance utilisée par le highlight.
+             *  1 = éclaircir localement les crêtes/ruptures de relief.
+             * -1 = assombrir localement les crêtes/ruptures de relief.
+             *
+             * Ce sens est surtout utilisé par les presets clair/sombre.
+             */
+            sensLuminance: Object.freeze({
+                eclaircir: 1,
+                assombrir: -1,
+                defaut: 1
             }),
 
             clignotement: Object.freeze({
@@ -116,6 +248,37 @@ export const constantesContours = Object.freeze({
                 minLightness: 0.08,
                 maxLightness: 0.995
             })
+        })
+    }),
+
+    /**
+     * Presets Contours intégrant le highlight.
+     * L'interface manuelle du highlight a été retirée ; ces presets restent
+     * le point d'entrée principal pour appliquer la mise en lumière.
+     */
+    presetsContours: Object.freeze({
+        sombre: Object.freeze({
+            nom: "sombre",
+            contourReliefActif: false,
+            highlightNormalesActif: true,
+            frequence: 3,
+            largeur: 6,
+            luminance: "max",
+            sensLuminance: 1,
+            fondScene: 100,
+            luminositeScene: -0.10
+        }),
+
+        clair: Object.freeze({
+            nom: "clair",
+            contourReliefActif: false,
+            highlightNormalesActif: true,
+            frequence: 3,
+            largeur: 6,
+            luminance: "max",
+            sensLuminance: -1,
+            fondScene: 0,
+            luminositeScene: 0.10
         })
     }),
 

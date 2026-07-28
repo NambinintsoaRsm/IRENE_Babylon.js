@@ -140,8 +140,13 @@ export class ServiceControlesSpeciauxGUI {
 
         slider.displayValueBar = false;
         slider.color = "#00000000";
-        slider.borderColor = "#00000000";
-        slider.thumbColor = "#f2f2f2";
+
+        // Babylon utilise borderColor pour dessiner le contour du curseur.
+        // Le rond reste clair, avec un contour sombre visible sur toute la
+        // longueur du dégradé chaud / neutre / froid.
+        slider.borderColor = "#202020FF";
+        slider.thumbColor = "#FFFFFFFF";
+
         slider.isVisible = true;
         slider.isEnabled = true;
     }

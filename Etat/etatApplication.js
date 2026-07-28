@@ -100,10 +100,13 @@ export const etatApplication = {
     contours: {
         parametres: profilParDefaut.contours,
         parametresMiseLumiere: {
+            frequenceClignotement: constantesContours.miseLumiereGradients.animation.frequence?.defaut ?? 3,
             intervalleClignotement: constantesContours.miseLumiereGradients.animation.intervalleSecondes.defaut,
             luminanceSliderValeur: constantesContours.miseLumiereGradients.animation.luminancePourcentage.defaut,
             luminanceDelta: constantesContours.miseLumiereGradients.animation.luminancePourcentage.deltaDefaut,
-            largeur: constantesContours.miseLumiereGradients.animation.largeur.defaut
+            sensLuminance: constantesContours.miseLumiereGradients.animation.sensLuminance?.defaut ?? 1,
+            largeur: constantesContours.miseLumiereGradients.animation.largeur.defaut,
+            presetActif: null
         },
 
         postTraitContProfNorm: null,

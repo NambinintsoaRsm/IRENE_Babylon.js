@@ -1,13 +1,12 @@
+import { FONCTIONS_GRADIENT_COULEUR_PERCEPTUEL_GLSL } from "./FonctionsGradientCouleurPerceptuel.js";
+
 /**
  * Déclare le shader utilisé pour afficher les contours liés aux différences de couleur.
  *
- * Ce shader ne doit jamais rendre l'écran transparent.
- * Quand aucun contour n'est détecté, il renvoie simplement la couleur d'origine.
- *
- * Correction progressive de l'épaisseur :
- * l'épaisseur dilate réellement le contour sur plusieurs rayons autour du pixel.
+ * Le calcul est réalisé dans l'espace perceptuel OKLab, sur huit orientations,
+ * puis filtré par un chaînage bilatéral. Pour alléger le rendu, le shader ne
+ * calcule qu'un seul masque : l'épaisseur choisit seulement le rayon utilisé.
  */
-
 export const NOM_SHADER_CONTOURS_COULEUR = "colorOnlyContourPixelShader";
 
 let shaderContoursCouleurCree = false;
@@ -25,83 +24,150 @@ export function creerShaderContoursCouleurSiNecessaire() {
         uniform sampler2D textureSampler;
         uniform vec2 screenSize;
         uniform float edgeWidth;
-        uniform float colorThreshold;
+        uniform float colorLowThreshold;
+        uniform float colorHighThreshold;
+        uniform float colorThresholdSmoothLow;
+        uniform float colorThresholdSmoothHigh;
+        uniform float colorLightnessWeight;
+        uniform float colorChromaWeight;
+        uniform float colorChainRadius;
+        uniform float colorMinSupport;
+        uniform float colorMinSupportPerSide;
+        uniform float colorMaxGaps;
+        uniform float colorVeryStrongFactor;
+        uniform float colorVeryStrongSupportReduction;
+        uniform float colorVeryStrongSideReduction;
+        uniform float colorNoiseValidationEnabled;
+        uniform float colorNoiseValidationRadius;
+        uniform float colorNoiseValidationMinRatio;
+        uniform float colorContinuityEnabled;
+        uniform float colorContinuityBridgeThreshold;
+        uniform float colorContinuityMinSupport;
+        uniform float colorContinuityMinSupportPerSide;
+        uniform float colorContinuityMaxGaps;
+        uniform float colorSampleRadiusMin;
+        uniform float colorSampleRadiusMax;
+        uniform float colorThicknessSliderMin;
+        uniform float colorThicknessSliderMax;
+        uniform float colorMaskPower;
+        uniform float colorAntiFlickerEnabled;
+        uniform float colorAntiFlickerSnapUv;
+        uniform float colorAntiFlickerCenterThreshold;
+        uniform float colorAntiFlickerNeighborThreshold;
+        uniform float colorAntiFlickerMinNeighbors;
+        uniform float colorAntiFlickerNeighborRadius;
+        uniform float colorAntiFlickerHardMask;
         uniform vec3 colorEdgeColor;
 
-        float luminance(vec3 color) {
-            return dot(color, vec3(0.299, 0.587, 0.114));
+        vec3 getColorPerceptual(vec2 uv) {
+            return texture2D(textureSampler, clamp(uv, vec2(0.001), vec2(0.999))).rgb;
         }
 
-        vec3 getColor(vec2 uv) {
-            return texture2D(textureSampler, clamp(uv, 0.0, 1.0)).rgb;
-        }
+        ${FONCTIONS_GRADIENT_COULEUR_PERCEPTUEL_GLSL}
 
-        float sobelColor(vec2 texel) {
-            float l00 = luminance(getColor(vUV + texel * vec2(-1.0, -1.0)));
-            float l10 = luminance(getColor(vUV + texel * vec2( 0.0, -1.0)));
-            float l20 = luminance(getColor(vUV + texel * vec2( 1.0, -1.0)));
-
-            float l01 = luminance(getColor(vUV + texel * vec2(-1.0,  0.0)));
-            float l21 = luminance(getColor(vUV + texel * vec2( 1.0,  0.0)));
-
-            float l02 = luminance(getColor(vUV + texel * vec2(-1.0,  1.0)));
-            float l12 = luminance(getColor(vUV + texel * vec2( 0.0,  1.0)));
-            float l22 = luminance(getColor(vUV + texel * vec2( 1.0,  1.0)));
-
-            float gx =
-                -1.0 * l00 + 1.0 * l20 +
-                -2.0 * l01 + 2.0 * l21 +
-                -1.0 * l02 + 1.0 * l22;
-
-            float gy =
-                -1.0 * l00 - 2.0 * l10 - 1.0 * l20 +
-                 1.0 * l02 + 2.0 * l12 + 1.0 * l22;
-
-            return sqrt(gx * gx + gy * gy);
-        }
-
-        float poidsRayon(float rayon, float largeur) {
-            if (rayon <= 1.0) {
-                return 1.0;
+        vec2 stabiliserUvAnalyseCouleur(vec2 uv) {
+            if (colorAntiFlickerEnabled > 0.5 && colorAntiFlickerSnapUv > 0.5) {
+                vec2 taille = max(screenSize, vec2(1.0));
+                return clamp((floor(uv * taille) + vec2(0.5)) / taille, vec2(0.001), vec2(0.999));
             }
 
-            return smoothstep(rayon - 1.0, rayon, largeur);
+            return clamp(uv, vec2(0.001), vec2(0.999));
         }
 
-        float contourCouleurProgressif(vec2 texelBase, float largeur) {
-            float largeurBornee = clamp(largeur, 1.0, 3.0);
-            float masque = 0.0;
+        float calculerMasqueCouleurPourUv(vec2 uv, float rayonEchantillonnage) {
+            return masqueChaineCouleurPerceptuelle(
+                uv,
+                1.0 / max(screenSize, vec2(1.0)),
+                rayonEchantillonnage,
+                colorLowThreshold,
+                colorHighThreshold,
+                colorThresholdSmoothLow,
+                colorThresholdSmoothHigh,
+                colorLightnessWeight,
+                colorChromaWeight,
+                colorChainRadius,
+                colorMinSupport,
+                colorMinSupportPerSide,
+                colorMaxGaps,
+                colorVeryStrongFactor,
+                colorVeryStrongSupportReduction,
+                colorVeryStrongSideReduction,
+                colorNoiseValidationEnabled,
+                colorNoiseValidationRadius,
+                colorNoiseValidationMinRatio,
+                colorContinuityEnabled,
+                colorContinuityBridgeThreshold,
+                colorContinuityMinSupport,
+                colorContinuityMinSupportPerSide,
+                colorContinuityMaxGaps,
+                colorMaskPower
+            );
+        }
 
-            float e1 = sobelColor(texelBase * 1.0);
-            float e2 = sobelColor(texelBase * 2.0);
-            float e3 = sobelColor(texelBase * 3.0);
+        float appliquerAntiClignotementCouleur(vec2 uv, float rayonEchantillonnage, float masqueCentre) {
+            if (colorAntiFlickerEnabled < 0.5) {
+                return masqueCentre;
+            }
 
-            masque = max(masque, step(colorThreshold, e1));
-            masque = max(masque, step(colorThreshold, e2) * poidsRayon(2.0, largeurBornee));
-            masque = max(masque, step(colorThreshold, e3) * poidsRayon(3.0, largeurBornee));
+            vec2 texel = vec2(1.0 / screenSize.x, 1.0 / screenSize.y);
+            float rayonVoisin = max(0.5, colorAntiFlickerNeighborRadius);
+            float seuilCentre = clamp(colorAntiFlickerCenterThreshold, 0.0, 1.0);
+            float seuilVoisin = clamp(colorAntiFlickerNeighborThreshold, 0.0, 1.0);
+            float voisinsMin = clamp(colorAntiFlickerMinNeighbors, 0.0, 4.0);
 
-            return clamp(masque, 0.0, 1.0);
+            float voisinage = 0.0;
+            voisinage += step(seuilVoisin, calculerMasqueCouleurPourUv(uv + texel * vec2( rayonVoisin, 0.0), rayonEchantillonnage));
+            voisinage += step(seuilVoisin, calculerMasqueCouleurPourUv(uv + texel * vec2(-rayonVoisin, 0.0), rayonEchantillonnage));
+            voisinage += step(seuilVoisin, calculerMasqueCouleurPourUv(uv + texel * vec2(0.0,  rayonVoisin), rayonEchantillonnage));
+            voisinage += step(seuilVoisin, calculerMasqueCouleurPourUv(uv + texel * vec2(0.0, -rayonVoisin), rayonEchantillonnage));
+
+            // Deux garde-fous complémentaires :
+            // - les traits vraiment forts restent acceptés ;
+            // - les pixels moyens doivent appartenir à un petit voisinage stable.
+            float centreTresFort = step(min(0.98, seuilCentre * 1.35), masqueCentre);
+            float voisinageStable = step(voisinsMin, voisinage);
+            float garde = max(centreTresFort, voisinageStable);
+
+            if (colorAntiFlickerHardMask > 0.5) {
+                return garde;
+            }
+
+            float centreStable = smoothstep(seuilCentre * 0.82, seuilCentre, masqueCentre);
+            return masqueCentre * max(garde, centreStable * voisinageStable);
         }
 
         void main(void) {
             vec4 couleurOriginale = texture2D(textureSampler, vUV);
 
-            if (colorThreshold > 9999.0) {
+            if (colorLowThreshold > 9999.0 || colorHighThreshold > 9999.0) {
                 gl_FragColor = couleurOriginale;
                 return;
             }
 
-            vec2 texelBase = vec2(1.0 / screenSize.x, 1.0 / screenSize.y);
-            float masqueContour = contourCouleurProgressif(texelBase, edgeWidth);
+            float sliderMin = colorThicknessSliderMin;
+            float sliderMax = max(sliderMin + 0.001, colorThicknessSliderMax);
+            float progressionEpaisseur = clamp(
+                (edgeWidth - sliderMin) / (sliderMax - sliderMin),
+                0.0,
+                1.0
+            );
 
-            if (masqueContour > 0.001) {
-                gl_FragColor = vec4(
-                    mix(couleurOriginale.rgb, colorEdgeColor, masqueContour),
-                    couleurOriginale.a
-                );
-            } else {
-                gl_FragColor = couleurOriginale;
-            }
+            // Un seul calcul de masque : plus léger que l'ancienne fusion
+            // masqueFin + masqueLarge. La taille 1 est déjà épaissie dans la
+            // configuration, et la taille 2 utilise seulement un rayon un peu supérieur.
+            float rayonEchantillonnage = mix(
+                colorSampleRadiusMin,
+                max(colorSampleRadiusMin, colorSampleRadiusMax),
+                progressionEpaisseur
+            );
+            vec2 uvAnalyse = stabiliserUvAnalyseCouleur(vUV);
+            float masqueContour = calculerMasqueCouleurPourUv(uvAnalyse, rayonEchantillonnage);
+            masqueContour = appliquerAntiClignotementCouleur(uvAnalyse, rayonEchantillonnage, masqueContour);
+
+            gl_FragColor = vec4(
+                mix(couleurOriginale.rgb, colorEdgeColor, clamp(masqueContour, 0.0, 1.0)),
+                couleurOriginale.a
+            );
         }
     `;
 

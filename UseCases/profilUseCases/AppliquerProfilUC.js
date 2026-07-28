@@ -54,18 +54,54 @@ export class AppliquerProfilUC {
         if (profil.accessibilite) {
             this.etatApplication.accessibilite = {
                 ...(this.etatApplication.accessibilite ?? {}),
-                ...profil.accessibilite
+                ...profil.accessibilite,
+                // On applique d'abord le profil normal. L'activation réelle de
+                // l'accessibilité se fait ensuite dans main.js pour éviter que
+                // ServiceTexteGUI agrandisse les textes avant que la sauvegarde
+                // normale soit mémorisée.
+                actif: false,
+                actifProfilSauvegarde: Boolean(profil.accessibilite.actif)
             };
         }
 
         this.etatApplication.profil.profilActuel = profil;
 
         if (this.etatApplication.modele3d && profil.modele3DId) {
-            this.etatApplication.modele3d.modeleSelectionne = this.etatApplication.modele3d.modelesDisponibles.find(
-                (modele) => modele.id === profil.modele3DId
-            ) ?? null;
+            const modelesDisponibles = this.etatApplication.modele3d.modelesDisponibles ?? [];
+            const idSauvegarde = this.normaliserIdentifiant(profil.modele3DId);
+            const modeleSauvegarde = modelesDisponibles.find((modele) => {
+                return modele.id === profil.modele3DId
+                    || this.normaliserIdentifiant(modele.id) === idSauvegarde
+                    || this.normaliserIdentifiant(modele.nom) === idSauvegarde;
+            });
+
+            if (modeleSauvegarde) {
+                this.etatApplication.modele3d.modeleSelectionne = modeleSauvegarde;
+            } else {
+                // Ne surtout pas remettre la sélection à null : cela cassait la
+                // détection automatique quand une ancienne sauvegarde pointait
+                // vers un modèle qui n'existe plus dans assets/modeles/.
+                this.etatApplication.modele3d.modeleSelectionne =
+                    this.etatApplication.modele3d.modeleSelectionne
+                    ?? this.etatApplication.modele3d.modeleActuel
+                    ?? modelesDisponibles[0]
+                    ?? null;
+
+                console.info("[Sauvegarde] Modèle sauvegardé introuvable dans la liste détectée. Sélection actuelle conservée.", {
+                    modele3DId: profil.modele3DId,
+                    modeleSelectionne: this.etatApplication.modele3d.modeleSelectionne?.id ?? null
+                });
+            }
         }
 
         return profil;
+    }
+
+    normaliserIdentifiant(valeur) {
+        return String(valeur ?? "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "");
     }
 }

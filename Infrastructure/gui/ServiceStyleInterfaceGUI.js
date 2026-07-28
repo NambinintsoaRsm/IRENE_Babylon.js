@@ -161,8 +161,10 @@ export class ServiceStyleInterfaceGUI {
             sliderTemperature.metadata.estSliderTemperature = true;
             sliderTemperature.displayValueBar = false;
             sliderTemperature.color = "#00000000";
-            sliderTemperature.borderColor = "#00000000";
-            sliderTemperature.thumbColor = "#f2f2f2";
+            // Le curseur reste blanc avec une bordure sombre pour être visible
+            // sur toute la plage chaude/froide, même après un changement de thème.
+            sliderTemperature.borderColor = "#202020FF";
+            sliderTemperature.thumbColor = "#FFFFFFFF";
         }
 
         const flecheMenuRect = controles.FlecheMenuRect;
@@ -243,12 +245,10 @@ export class ServiceStyleInterfaceGUI {
         return [
             // Panneau Contours.
             "ContDBtn", "ContNBtn", "ContCBtn",
-            "ContLumNormBtn", "ContNormLumBtn", "ContTestNormBtn", "ReliefLumBtn", "ReliefTestBtn",
-            "ContLumCoulBtn", "ContCoulLumBtn", "ContTestCoulBtn", "CouleurLumBtn", "CouleurTestBtn",
-
-            // Panneau Highlight. Les noms varient selon les versions du JSON/snippet.
-            "HighNormBtn", "HighNormalBtn", "HighNBtn", "HighReliefBtn", "HighBtnNormale",
-            "HighCoulBtn", "HighCouleurBtn", "HighColorBtn", "HighCBtn", "HighBtnCouleur",
+            "SombreBtn", "ClairBtn", "HighSombrBtn", "HighSombreBtn", "HighClairBtn",
+            "ContPresetSombreBtn", "ContPresetClairBtn",
+            "PresetSombreBtn", "PresetClairBtn",
+            "ContSombreBtn", "ContClairBtn",
 
             // Panneau Texture.
             "TxtuBtn0", "TxtuBtn1", "TxtuBtn2",
@@ -444,8 +444,11 @@ export class ServiceStyleInterfaceGUI {
             "ContoRect",
             "TextuRect",
             "LumRect",
-            "HighRect",
-            "ModelRect"
+            "ModelRect",
+            // AccesRect est un panneau racine, contrairement à AccesBtn qui est
+            // déjà enfant de MainMenuRect. Il doit donc suivre explicitement le
+            // passage du menu de gauche à droite.
+            "AccesRect"
         ].map((nom) => controles[nom]).filter(Boolean);
 
         // Important : les dropdowns internes restent dans leur parent JSON.

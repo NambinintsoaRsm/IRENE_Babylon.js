@@ -10,6 +10,10 @@
  * 6. score final H × D.
  */
 export const constantesSaillance = Object.freeze({
+    // Calque utilisé seulement pendant le chargement : le modèle est caché
+    // pour la caméra principale, mais rendu par la caméra hors écran d'analyse.
+    masqueModeleChargement: 0x10000000,
+
     parcoursSpherique: Object.freeze({
         // Même logique que l'entropie : vues réparties sur une sphère autour de l'objet.
         pasAlphaDegres: 30,
@@ -30,13 +34,25 @@ export const constantesSaillance = Object.freeze({
     }),
 
     analyseImage: Object.freeze({
-        // Zone analysée dans le rendu 3D. La GUI est dans une scène séparée, donc elle n'est pas lue.
-        // 0 conserve toute l'image ; 0.08 réduit un peu l'influence des bords/fond.
-        margeZoneCentrale: 0.08,
+        // Conforme au script Matlab : on analyse toute l'image rendue.
+        // La GUI est dans une scène séparée, donc elle n'est pas lue.
+        margeZoneCentrale: 0,
 
         // Taille maximale de la carte analysée. Plus grand = plus précis mais plus lourd.
-        // La méthode GMM fait beaucoup d'exp(), donc on travaille sur une carte réduite.
-        tailleCarteMax: 72,
+        // On augmente légèrement pour stabiliser les scores entre deux calculs identiques.
+        tailleCarteMax: 96,
+
+        // Avant le calcul Achanta/GMM, on recadre automatiquement la zone utile
+        // autour de l'objet rendu. Cela évite que de grandes zones de fond blanc/noir
+        // dominent le score. L'objet doit occuper environ 80 % de la zone analysée
+        // quand c'est possible.
+        recadrageObjet: Object.freeze({
+            actif: true,
+            occupationImageMin: 0.8,
+            seuilDifferenceFond: 12,
+            alphaMin: 8,
+            resolutionDetectionMax: 360
+        }),
 
         // Flou 3x3 comme dans ScoreImageGMM.m : fspecial('gaussian', 3, 3).
         flouGaussien: Object.freeze({
@@ -61,15 +77,18 @@ export const constantesSaillance = Object.freeze({
 
             // Sécurité navigateur : on garde les pixels les plus saillants si le masque est trop dense.
             // Augmenter cette valeur rend la GMM plus fidèle mais plus lente.
-            nombreMaxPixelsSaillants: 420,
+            // Valeur augmentée pour éviter que le classement varie trop quand beaucoup
+            // de pixels dépassent mean + std.
+            nombreMaxPixelsSaillants: 900,
 
             // Pour les petites sigmas, on limite le calcul à 3 sigmas. Pour les grandes, toute l'image est utilisée.
             rayonInfluenceSigma: 3
         }),
 
         score: Object.freeze({
-            // Le classement utilise H × D. Pour l'affichage, on expose aussi une version normalisée entre 0 et 1.
-            utiliserScoreNormalisePourComparaison: true
+            // Conforme au Matlab : le classement prend directement Score = H_G × D.
+            // La version normalisée reste calculée, mais seulement comme indicateur d'affichage/debug.
+            utiliserScoreNormalisePourComparaison: false
         })
     }),
 

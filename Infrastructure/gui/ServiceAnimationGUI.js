@@ -100,7 +100,13 @@ export class ServiceAnimationGUI {
             ?? constantesInterface.flechesMenu[PositionMenu.DROITE]
             ?? { ouvert: "▶", ferme: "◀" };
 
+        // La flèche indique l'action du prochain clic, et non simplement l'état courant.
+        // ouvert  => action suivante : replier le menu.
+        // fermé   => action suivante : ouvrir le menu.
         flecheText.text = menuOuvert ? fleches.ouvert : fleches.ferme;
+        flecheText.metadata = flecheText.metadata || {};
+        flecheText.metadata.indiqueActionDuProchainClic = true;
+        flecheText._markAsDirty?.();
     }
 
     retournerOngletPliageSelonPosition({ flecheRect, positionMenu }) {
@@ -116,19 +122,29 @@ export class ServiceAnimationGUI {
 
         const estAGauche = positionMenu === PositionMenu.GAUCHE || positionMenu === "gauche";
 
-        // Le rectangle d'onglet doit être miroir quand le menu passe à gauche,
-        // mais le texte/flèche à l'intérieur doit rester lisible et non inversé.
+        // On conserve la rotation de l'onglet pour garder la bonne forme graphique,
+        // mais on contre-rotationne le bouton et le texte afin que le symbole affiché
+        // corresponde réellement au sens de l'action attendue au clic.
         flecheRect.rotation = estAGauche
             ? flecheRect.metadata.rotationInitiale + Math.PI
             : flecheRect.metadata.rotationInitiale;
 
-        if (Array.isArray(flecheRect.children)) {
-            flecheRect.children.forEach((enfant) => {
-                if (enfant?.name === "FlecheMenuBtn") {
-                    enfant.rotation = estAGauche ? Math.PI : 0;
-                }
-            });
-        }
+        const rotationACompenser = Number.isFinite(flecheRect.rotation) ? -flecheRect.rotation : 0;
+
+        this.parcourirControle(flecheRect, (controle) => {
+            if (!controle || controle === flecheRect) return;
+
+            if (controle.name === "FlecheMenuBtn") {
+                controle.rotation = rotationACompenser;
+                controle._markAsDirty?.();
+                return;
+            }
+
+            if (controle.name === "FlecheMenuBtnTxt") {
+                controle.rotation = 0;
+                controle._markAsDirty?.();
+            }
+        });
     }
 
     initialiserAccordeons(dropdowns = []) {
@@ -186,7 +202,19 @@ export class ServiceAnimationGUI {
         const departHauteur = rect.metadata.hauteurActuelle || lireNombreDepuisValeurCss(rect.height, 0) || 0;
         const departAlpha = Number.isFinite(rect.alpha) ? rect.alpha : 0;
 
-        this.animerHauteurRect(rect, departHauteur, hauteur, duree);
+        // L'auto-fit ne doit pas mesurer les textes pendant que la hauteur du
+        // panneau est encore en cours d'animation. Avec OpenDyslexic, cela
+        // pouvait mémoriser une boîte trop petite lors de la première ouverture.
+        this.animerHauteurRect(rect, departHauteur, hauteur, duree, () => {
+            rect.height = `${hauteur}px`;
+            rect.metadata.hauteurActuelle = hauteur;
+            rect._markAsDirty?.();
+
+            this.relancerAutoFitApresDisposition({
+                delais: [0, 70, 180],
+                attendrePolice: true
+            });
+        });
         this.animerAlpha(rect, departAlpha, 1, duree);
         rect.metadata.hauteurActuelle = hauteur;
 
@@ -213,6 +241,9 @@ export class ServiceAnimationGUI {
         rect.metadata.hauteurActuelle = 0;
 
         if (fleche) fleche.text = constantesInterface.flechesDropdown.ferme;
+        // Aucun auto-fit pendant la fermeture : les mesures intermédiaires
+        // correspondent à une hauteur volontairement réduite et ne doivent pas
+        // devenir la nouvelle référence des textes.
     }
 
     ouvrirPanneauSecondaire(panneau, panneauxAfermer = []) {
@@ -227,6 +258,13 @@ export class ServiceAnimationGUI {
         panneau.isPointerBlocker = true;
         panneau.isHitTestVisible = true;
         panneau.alpha = 1;
+
+        // Les panneaux secondaires étaient auparavant ajustés trop tôt, avant
+        // que Babylon ait recalculé leurs dimensions après isVisible = true.
+        this.relancerAutoFitApresDisposition({
+            delais: [0, 70, 180],
+            attendrePolice: true
+        });
     }
 
     fermerPanneauSecondaire(panneau) {
@@ -342,6 +380,55 @@ export class ServiceAnimationGUI {
     fermerTouteInterfaceActive({ dropdowns = [], panneaux = [] } = {}) {
         this.fermerTousAccordeons(dropdowns);
         this.fermerTousPanneauxSecondaires(panneaux);
+    }
+
+    relancerAutoFitApresDisposition({ delais = [0, 80, 180], attendrePolice = false } = {}) {
+        const serviceResponsive = this.etatApplication?.services?.texteResponsive;
+        const advancedTexture = this.etatApplication?.gui?.advancedTexture;
+
+        if (!serviceResponsive || !advancedTexture) return;
+
+        const ajusterApresDeuxFrames = () => {
+            advancedTexture.markAsDirty?.();
+
+            const ajuster = () => {
+                advancedTexture.markAsDirty?.();
+                serviceResponsive.ajuster?.();
+            };
+
+            if (typeof requestAnimationFrame === "function") {
+                requestAnimationFrame(() => {
+                    advancedTexture.markAsDirty?.();
+                    requestAnimationFrame(ajuster);
+                });
+            } else {
+                setTimeout(ajuster, 0);
+            }
+        };
+
+        delais.forEach((delai) => {
+            const valeur = Number(delai);
+            if (!Number.isFinite(valeur) || valeur <= 0) {
+                ajusterApresDeuxFrames();
+            } else {
+                setTimeout(ajusterApresDeuxFrames, valeur);
+            }
+        });
+
+        if (attendrePolice && typeof document !== "undefined" && document.fonts) {
+            const police = this.etatApplication?.interface?.parametres?.police ?? "OpenDyslexic";
+            const promesses = [];
+
+            if (typeof document.fonts.load === "function") {
+                promesses.push(document.fonts.load(`32px "${police}"`));
+            }
+
+            if (document.fonts.ready) {
+                promesses.push(document.fonts.ready);
+            }
+
+            Promise.allSettled(promesses).then(() => ajusterApresDeuxFrames());
+        }
     }
 
     animerHauteurRect(rect, depart, arrivee, duree = 300, callbackFin = null) {

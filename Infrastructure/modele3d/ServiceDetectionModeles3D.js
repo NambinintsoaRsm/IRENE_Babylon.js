@@ -177,12 +177,15 @@ export class ServiceDetectionModeles3D {
         const chemin = entree.chemin ?? entree.path ?? null;
 
         if (chemin) {
-            const nomDossier = entree.nom ?? entree.name ?? this.nomDossierDepuisChemin(chemin);
+            const cheminNormalise = this.encoderCheminUrl(chemin);
+            const nomDossier = this.normaliserTexteUnicode(
+                entree.nom ?? entree.name ?? this.nomDossierDepuisChemin(cheminNormalise)
+            );
 
             return new Modele3D({
                 id: entree.id ?? this.creerIdDepuisNom(nomDossier),
                 nom: nomDossier,
-                chemin,
+                chemin: cheminNormalise,
                 type: "obj"
             });
         }
@@ -196,7 +199,7 @@ export class ServiceDetectionModeles3D {
 
         return new Modele3D({
             id: entree.id ?? this.creerIdDepuisNom(nomDossier),
-            nom: entree.nom ?? entree.name ?? nomDossier,
+            nom: this.normaliserTexteUnicode(entree.nom ?? entree.name ?? nomDossier),
             chemin: cheminModele,
             type: "obj"
         });
@@ -274,7 +277,9 @@ export class ServiceDetectionModeles3D {
     }
 
     nettoyerNomDossier(nom) {
-        return this.decoderSegmentUrl(String(nom ?? "").replace(/\/+$/g, "").trim());
+        return this.normaliserTexteUnicode(
+            this.decoderSegmentUrl(String(nom ?? "").replace(/\/+$/g, "").trim())
+        );
     }
 
     creerIdDepuisNom(nom) {
@@ -315,26 +320,74 @@ export class ServiceDetectionModeles3D {
     }
 
     encoderSegmentUrl(segment) {
-        return encodeURIComponent(String(segment ?? "")).replace(/%2F/gi, "/");
+        return encodeURIComponent(this.normaliserTexteUnicode(segment)).replace(/%2F/gi, "/");
+    }
+
+    encoderCheminUrl(chemin) {
+        const texte = String(chemin ?? "").trim();
+        if (!texte) return texte;
+
+        // On encode chaque segment séparément pour éviter les doubles encodages
+        // et pour rendre les accents utilisables sur Apache/Nginx/Debian.
+        return texte
+            .split("/")
+            .map((segment, index) => {
+                if (segment === "" || (index === 0 && /^[a-zA-Z][a-zA-Z0-9+.-]*:$/.test(segment))) {
+                    return segment;
+                }
+                return this.encoderSegmentUrl(this.decoderSegmentUrl(segment));
+            })
+            .join("/");
     }
 
     decoderSegmentUrl(segment) {
+        const valeur = String(segment ?? "");
         try {
-            return decodeURIComponent(String(segment ?? ""));
+            return this.normaliserTexteUnicode(decodeURIComponent(valeur));
         } catch (_erreur) {
-            return String(segment ?? "");
+            return this.normaliserTexteUnicode(valeur);
         }
+    }
+
+    normaliserTexteUnicode(texte) {
+        let valeur = String(texte ?? "");
+
+        // Répare les cas fréquents de mojibake : "cÃ©ramique" -> "céramique".
+        if (/[ÃÂ]/.test(valeur)) {
+            try {
+                const bytes = Uint8Array.from(Array.from(valeur), (caractere) => caractere.charCodeAt(0) & 0xff);
+                const repare = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+                if (repare && !repare.includes("�")) {
+                    valeur = repare;
+                }
+            } catch (_erreur) {
+                // On garde la valeur initiale si la réparation échoue.
+            }
+        }
+
+        return valeur.normalize("NFC");
     }
 
     async lireTexte(url) {
         try {
-            const reponse = await fetch(url, { cache: "no-store" });
+            const reponse = await fetch(this.encoderCheminUrl(url), { cache: "no-store" });
 
             if (!reponse.ok) {
                 return null;
             }
 
-            return await reponse.text();
+            const tampon = await reponse.arrayBuffer();
+            const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(tampon);
+
+            if (!utf8.includes("�")) {
+                return this.normaliserTexteUnicode(utf8);
+            }
+
+            try {
+                return this.normaliserTexteUnicode(new TextDecoder("iso-8859-1").decode(tampon));
+            } catch (_erreur) {
+                return this.normaliserTexteUnicode(utf8);
+            }
         } catch (_erreur) {
             return null;
         }
@@ -342,7 +395,7 @@ export class ServiceDetectionModeles3D {
 
     async lireJson(url) {
         try {
-            const reponse = await fetch(url, { cache: "no-store" });
+            const reponse = await fetch(this.encoderCheminUrl(url), { cache: "no-store" });
 
             if (!reponse.ok) {
                 return null;

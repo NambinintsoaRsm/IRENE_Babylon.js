@@ -24,7 +24,8 @@ export class ReinitialiserContoursUC {
             couleurAutomatiqueActive: source.couleurAutomatiqueActive ?? true,
             couleurManuelleChoisie: source.couleurManuelleChoisie ?? false,
             couleurAutomatiqueCalculee: source.couleurAutomatiqueCalculee ?? null,
-            signatureCouleurAutomatique: source.signatureCouleurAutomatique ?? null
+            signatureCouleurAutomatique: source.signatureCouleurAutomatique ?? null,
+            longueurChaineNormales: source.longueurChaineNormales
         });
 
         contours.parametres = parametresParDefaut;

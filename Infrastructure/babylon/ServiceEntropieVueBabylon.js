@@ -32,10 +32,19 @@ export class ServiceEntropieVueBabylon {
         exporterCsv = constantesEntropie.exportCsv.actif,
         nomFichierCsv = constantesEntropie.exportCsv.nomFichier,
         configuration = constantesEntropie,
-        masquerParcoursAnalyse = false
+        masquerParcoursAnalyse = false,
+        estAnalyseValide = null
     } = {}) {
         if (!scene || !camera) {
             throw new Error("Scène ou caméra introuvable pour choisir la vue par entropie.");
+        }
+
+        const analyseToujoursValide = () => {
+            return typeof estAnalyseValide !== "function" || estAnalyseValide() !== false;
+        };
+
+        if (!analyseToujoursValide()) {
+            return null;
         }
 
         const meshesValides = this.filtrerMeshesAnalysables(meshes);
@@ -58,6 +67,11 @@ export class ServiceEntropieVueBabylon {
         const etatCameraInitial = this.capturerEtatCamera(cameraAffichage);
         let etatRenduInitial = null;
 
+        if (!analyseToujoursValide()) {
+            this.restaurerCameraAnalyse(contexteCameraAnalyse);
+            return null;
+        }
+
         const infosModele = this.calculerInfosModele(meshesValides);
         const vues = this.genererVuesSpheriques(configuration.parcoursSpherique);
 
@@ -77,7 +91,17 @@ export class ServiceEntropieVueBabylon {
                 : null;
 
             for (let index = 0; index < vues.length; index++) {
+                if (!analyseToujoursValide()) {
+                    return null;
+                }
+
                 const vue = vues[index];
+
+                if (contexteCameraAnalyse.renderTarget) {
+                    contexteCameraAnalyse.renderTarget.renderList = meshesValides.filter((mesh) => {
+                        return mesh && !mesh.isDisposed?.() && mesh.isVisible !== false;
+                    });
+                }
 
                 cameraAnalyse.alpha = vue.alpha;
                 cameraAnalyse.beta = vue.beta;
@@ -91,7 +115,15 @@ export class ServiceEntropieVueBabylon {
 
                 await this.rendreEtAttendre(scene, contexteCameraAnalyse);
 
+                if (!analyseToujoursValide()) {
+                    return null;
+                }
+
                 const score = await this.calculerScoreImage(scene, configuration.analyseImage, contexteCameraAnalyse);
+
+                if (!analyseToujoursValide()) {
+                    return null;
+                }
 
                 const resultatVue = {
                     index: index + 1,
@@ -107,7 +139,7 @@ export class ServiceEntropieVueBabylon {
 
                 vuesAnalysees.push(resultatVue);
 
-                if (!meilleureVue || resultatVue.scoreGlobal > meilleureVue.scoreGlobal) {
+                if (this.estMeilleureVue(resultatVue, meilleureVue)) {
                     meilleureVue = resultatVue;
                 }
             }
@@ -123,10 +155,18 @@ export class ServiceEntropieVueBabylon {
                 return null;
             }
 
+            if (!analyseToujoursValide()) {
+                return null;
+            }
+
             // À partir d'ici, on revient sur la vraie caméra visible.
             // Le parcours d'analyse a pu être effectué avec une caméra clone,
             // ce qui évite d'afficher toutes les vues intermédiaires à l'écran.
             this.restaurerCameraAnalyse(contexteCameraAnalyse);
+
+            if (!analyseToujoursValide()) {
+                return null;
+            }
 
             cameraAffichage.alpha = meilleureVue.alpha;
             cameraAffichage.beta = meilleureVue.beta;
@@ -134,6 +174,10 @@ export class ServiceEntropieVueBabylon {
             cameraAffichage.setTarget(meilleureVue.cible);
 
             await this.rendreEtAttendre(scene);
+
+            if (!analyseToujoursValide()) {
+                return null;
+            }
 
             const csv = this.creerCsvVuesEntropie({
                 vuesAnalysees,
@@ -163,6 +207,22 @@ export class ServiceEntropieVueBabylon {
 
             this.restaurerCameraAnalyse(contexteCameraAnalyse);
         }
+    }
+
+    estMeilleureVue(candidate, current) {
+        if (!current) return true;
+
+        const scoreCandidate = Number(candidate?.scoreGlobal ?? 0);
+        const scoreCurrent = Number(current?.scoreGlobal ?? 0);
+        const epsilon = 1e-7;
+
+        if (scoreCandidate > scoreCurrent + epsilon) return true;
+        if (scoreCandidate < scoreCurrent - epsilon) return false;
+
+        // Si deux scores sont quasiment identiques, on garde la première vue rencontrée.
+        // Cela évite les changements d'angle visibles dus à de très petites variations
+        // de readPixels entre deux rendus.
+        return false;
     }
 
     preparerCameraAnalyse({ scene, camera, meshes = [], masquerParcoursAnalyse = false, configuration = {} } = {}) {
@@ -195,6 +255,14 @@ export class ServiceEntropieVueBabylon {
         cameraClone.maxZ = camera.maxZ;
         cameraClone.fov = camera.fov;
         cameraClone.fovMode = camera.fovMode;
+
+        // Pendant un changement de modèle, les meshes peuvent être placés sur
+        // un calque réservé afin de rester invisibles pour la caméra principale.
+        // La caméra hors écran doit quand même voir ce calque pour calculer la
+        // saillance avant l'affichage final.
+        const masqueModeleChargement = Number(configuration?.masqueModeleChargement ?? 0x10000000);
+        const layerMaskAffichage = Number.isFinite(camera.layerMask) ? camera.layerMask : 0x0FFFFFFF;
+        cameraClone.layerMask = layerMaskAffichage | masqueModeleChargement;
 
         const engine = scene.getEngine?.();
         const tailleMax = Number(configuration?.analyseImage?.resolutionRenduHorsEcran ?? 512);
@@ -446,7 +514,14 @@ export class ServiceEntropieVueBabylon {
 
     rendreEtAttendre(scene, contexteCameraAnalyse = null) {
         if (contexteCameraAnalyse?.renderTarget) {
-            contexteCameraAnalyse.renderTarget.render(false);
+            try {
+                contexteCameraAnalyse.cameraAnalyse?.getViewMatrix?.(true);
+                contexteCameraAnalyse.cameraAnalyse?.getProjectionMatrix?.(true);
+                contexteCameraAnalyse.renderTarget.render(true);
+            } catch (erreur) {
+                console.warn("[Analyse vue] Rendu hors écran interrompu.", erreur);
+            }
+
             return Promise.resolve();
         }
 

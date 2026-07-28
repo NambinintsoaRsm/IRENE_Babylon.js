@@ -1,4 +1,5 @@
 import { estTypeContourValide } from "./TypeContour.js";
+import { constantesContours } from "../../Configuration/constantesContours.js";
 
 export class ParametresContours {
     constructor({
@@ -11,7 +12,8 @@ export class ParametresContours {
         couleurAutomatiqueActive = true,
         couleurManuelleChoisie = false,
         couleurAutomatiqueCalculee = null,
-        signatureCouleurAutomatique = null
+        signatureCouleurAutomatique = null,
+        longueurChaineNormales = constantesContours.chaineNormales.defaut
     } = {}) {
         const listeTypes = Array.isArray(typesActifs)
             ? typesActifs
@@ -27,6 +29,7 @@ export class ParametresContours {
         this.couleurManuelleChoisie = Boolean(couleurManuelleChoisie);
         this.couleurAutomatiqueCalculee = couleurAutomatiqueCalculee;
         this.signatureCouleurAutomatique = signatureCouleurAutomatique;
+        this.longueurChaineNormales = this.bornerLongueurChaineNormales(longueurChaineNormales);
 
         this.valider();
     }
@@ -73,6 +76,25 @@ export class ParametresContours {
         if (this.signatureCouleurAutomatique !== null && typeof this.signatureCouleurAutomatique !== "string") {
             throw new Error("La signature de couleur automatique est invalide.");
         }
+
+        if (!Number.isFinite(this.longueurChaineNormales)) {
+            throw new Error("La longueur de chaîne des normales est invalide.");
+        }
+    }
+
+    bornerLongueurChaineNormales(valeur) {
+        const config = constantesContours.chaineNormales;
+        const nombre = Number(valeur);
+
+        if (!Number.isFinite(nombre)) {
+            return config.defaut;
+        }
+
+        return Math.round(Math.min(config.max, Math.max(config.min, nombre)));
+    }
+
+    changerLongueurChaineNormales(longueur) {
+        this.longueurChaineNormales = this.bornerLongueurChaineNormales(longueur);
     }
 
     activer(typeContour) {
