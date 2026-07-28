@@ -3,12 +3,12 @@ export class Modele3D {
                     id,
                     nom,
                     chemin,
-                    type = "obj"
+                    type = "glb"
                 } = {}) {
         this.id = id;
         this.nom = nom;
         this.chemin = chemin;
-        this.type = type;
+        this.type = String(type ?? "").toLowerCase();
 
         this.valider();
     }
@@ -26,8 +26,14 @@ export class Modele3D {
             throw new Error("Le chemin du modèle 3D est invalide.");
         }
 
-        if (this.type !== "obj") {
-            throw new Error("Le type du modèle 3D doit être 'obj'.");
+        if (this.type !== "glb") {
+            throw new Error("Le type du modèle 3D doit être 'glb'.");
+        }
+
+        const cheminSansParametres = this.chemin.split(/[?#]/, 1)[0].toLowerCase();
+
+        if (!cheminSansParametres.endsWith(".glb")) {
+            throw new Error("Seuls les fichiers GLB sont autorisés dans cette branche.");
         }
     }
 }

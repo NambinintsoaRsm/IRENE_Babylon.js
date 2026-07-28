@@ -1,14 +1,12 @@
 import { Modele3D } from "../../Domain/modele3d/Modele3D.js";
 
 /**
- * Détecte les modèles OBJ disponibles dans assets/modeles/.
+ * Détecte exclusivement les modèles GLB disponibles dans assets/modeles/.
  *
  * Principe attendu :
  * assets/modeles/
  *   NomDuModele/
- *     fichier.obj
- *     fichier.mtl
- *     textures...
+ *     fichier.glb
  *
  * Le nom affiché dans l'interface est le nom du dossier.
  *
@@ -22,7 +20,7 @@ export class ServiceDetectionModeles3D {
     constructor({
                     dossierModeles = "assets/modeles/",
                     fichiersManifest = ["modeles.json", "manifest.json"],
-                    extensions = ["obj"],
+                    extensions = ["glb"],
                     profondeurRecherche = 2
                 } = {}) {
         this.dossierModeles = this.normaliserDossier(dossierModeles);
@@ -42,19 +40,18 @@ export class ServiceDetectionModeles3D {
         const modeles = [];
 
         for (const dossier of dossiers) {
-            const fichiersObj = await this.detecterObjDepuisDossier(dossier, this.profondeurRecherche);
-            const fichierObj = fichiersObj[0];
+            const fichiersGlb = await this.detecterFichiersModeleDepuisDossier(dossier, this.profondeurRecherche);
+            const fichierGlb = fichiersGlb[0];
 
-            if (!fichierObj) {
-                // Ce cas est normal pour des dossiers techniques comme glb/ ou textures/.
-                // On évite donc de bloquer la détection des autres modèles.
-                console.info(`[Modèles 3D] Dossier ignoré, aucun OBJ détecté : ${dossier.nom}.`);
+            if (!fichierGlb) {
+                // Le dossier ne contient aucun fichier autorisé pour cette branche.
+                console.info(`[Modèles 3D] Dossier ignoré, aucun GLB détecté : ${dossier.nom}.`);
                 continue;
             }
 
             modeles.push(this.creerModeleDepuisDossier({
                 dossier,
-                fichier: fichierObj
+                fichier: fichierGlb
             }));
         }
 
@@ -112,7 +109,7 @@ export class ServiceDetectionModeles3D {
             });
     }
 
-    async detecterObjDepuisDossier(dossier, profondeurRestante = 0, dossiersVisites = new Set()) {
+    async detecterFichiersModeleDepuisDossier(dossier, profondeurRestante = 0, dossiersVisites = new Set()) {
         const cheminDossier = this.normaliserDossier(dossier.chemin);
 
         if (dossiersVisites.has(cheminDossier)) {
@@ -147,7 +144,7 @@ export class ServiceDetectionModeles3D {
             .filter((lien) => !this.estLienTechnique(lien.nom));
 
         for (const sousDossier of sousDossiers) {
-            const fichiers = await this.detecterObjDepuisDossier({
+            const fichiers = await this.detecterFichiersModeleDepuisDossier({
                 nom: sousDossier.nom,
                 chemin: sousDossier.urlRelative
             }, profondeurRestante - 1, dossiersVisites);
@@ -163,7 +160,7 @@ export class ServiceDetectionModeles3D {
             id: this.creerIdDepuisNom(dossier.nom),
             nom: dossier.nom,
             chemin: fichier.chemin,
-            type: "obj"
+            type: "glb"
         });
     }
 
@@ -178,6 +175,12 @@ export class ServiceDetectionModeles3D {
 
         if (chemin) {
             const cheminNormalise = this.encoderCheminUrl(chemin);
+
+            if (!this.estFichierModele(cheminNormalise)) {
+                console.warn(`[Modèles 3D] Entrée ignorée : seuls les fichiers GLB sont autorisés (${chemin}).`);
+                return null;
+            }
+
             const nomDossier = this.normaliserTexteUnicode(
                 entree.nom ?? entree.name ?? this.nomDossierDepuisChemin(cheminNormalise)
             );
@@ -186,7 +189,7 @@ export class ServiceDetectionModeles3D {
                 id: entree.id ?? this.creerIdDepuisNom(nomDossier),
                 nom: nomDossier,
                 chemin: cheminNormalise,
-                type: "obj"
+                type: "glb"
             });
         }
 
@@ -197,11 +200,16 @@ export class ServiceDetectionModeles3D {
         const nomDossier = this.nettoyerNomDossier(dossier);
         const cheminModele = `${this.dossierModeles}${this.encoderSegmentUrl(nomDossier)}/${this.encoderSegmentUrl(fichier)}`;
 
+        if (!this.estFichierModele(cheminModele)) {
+            console.warn(`[Modèles 3D] Entrée ignorée : seuls les fichiers GLB sont autorisés (${fichier}).`);
+            return null;
+        }
+
         return new Modele3D({
             id: entree.id ?? this.creerIdDepuisNom(nomDossier),
             nom: this.normaliserTexteUnicode(entree.nom ?? entree.name ?? nomDossier),
             chemin: cheminModele,
-            type: "obj"
+            type: "glb"
         });
     }
 

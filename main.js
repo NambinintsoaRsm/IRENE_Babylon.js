@@ -921,7 +921,8 @@ async function main() {
         listeModelesGUI: serviceListeModelesGUI
     };
     const serviceDetectionModeles3D = new ServiceDetectionModeles3D({
-        dossierModeles: chemins.modeles.dossier
+        dossierModeles: chemins.modeles.dossier,
+        extensions: ["glb"]
     });
 
     const servicePolicesNavigateur = new ServicePolicesNavigateur();
