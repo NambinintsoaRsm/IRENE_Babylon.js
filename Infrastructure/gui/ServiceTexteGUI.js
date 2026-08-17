@@ -128,7 +128,25 @@ export class ServiceTexteGUI {
     }
 
     appliquerSurTextBlock(textBlock, parametres) {
-        if (!textBlock || this.estTexteExcluTaille(textBlock)) return;
+        if (!textBlock) return;
+
+        // L'icône de fermeture conserve une taille proportionnelle au bouton,
+        // mais sa famille de police doit suivre la police choisie dans l'interface.
+        // On synchronise donc uniquement la famille et le gras avant d'exclure
+        // cette icône des changements globaux de taille/accessibilité.
+        if (String(textBlock.name ?? "") === "FermBtnTxt") {
+            textBlock.fontFamily = parametres.police || "OpenDyslexic";
+            textBlock.fontWeight = "700";
+            // Le caractère ASCII X existe dans toutes les polices proposées.
+            // Contrairement au symbole Unicode ✕, il ne déclenche donc pas
+            // une police de secours qui masquerait le changement de famille.
+            textBlock.text = "X";
+            textBlock.outlineWidth = Math.max(Number(textBlock.outlineWidth) || 0, 2);
+            textBlock.outlineColor = textBlock.color;
+            textBlock._markAsDirty?.();
+        }
+
+        if (this.estTexteExcluTaille(textBlock)) return;
 
         textBlock.metadata = textBlock.metadata || {};
 

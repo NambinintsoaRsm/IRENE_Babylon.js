@@ -1,22 +1,33 @@
+import { questionnaireSatisfactionANNA } from "./questionnaireSatisfaction.js";
+
 /**
- * Configuration de la fenêtre du formulaire de satisfaction.
+ * Configuration de la fenêtre du questionnaire de satisfaction ANNA.
  *
- * Pour intégrer le Google Form, remplacer uniquement urlIntegration par
- * l'URL d'intégration se terminant généralement par :
- * /viewform?embedded=true
+ * Le contenu des questions se trouve dans questionnaireSatisfaction.js afin
+ * de pouvoir le modifier sans intervenir dans le code d'affichage.
  */
 export const configurationFormulaireAvis = Object.freeze({
     actif: true,
 
-    // Laisser "#" tant que le formulaire n'est pas encore configuré.
-    urlIntegration: "https://forms.gle/keg8VvbqQZFy1WEB6",
-
-    titreFenetre: "Donnez votre avis",
-    titreIframe: "Formulaire de satisfaction IRENE",
+    titreFenetre: "Enquête de satisfaction – ANNA",
     texteBoutonFermer: "Fermer",
-    messageNonConfigure: "Le formulaire de satisfaction n'est pas encore configuré.",
+    messageModuleIndisponible:
+        "Le questionnaire ne peut pas être affiché pour le moment. Vérifiez que SurveyJS a bien été chargé.",
+
+    questionnaire: questionnaireSatisfactionANNA,
+
+    // Ressources officielles SurveyJS. Elles sont chargées seulement à
+    // l'ouverture du questionnaire afin de ne pas modifier index.html.
+    ressourcesSurveyJS: Object.freeze({
+        css: "https://unpkg.com/survey-core/survey-core.min.css",
+        core: "https://unpkg.com/survey-core/survey.core.min.js",
+        ui: "https://unpkg.com/survey-js-ui/survey-js-ui.min.js"
+    }),
+
+    contactEmail: "dominique.groux@u-picardie.fr",
+    sujetEmail: "Réponses anonymes – Questionnaire ANNA",
+    prefixeNomFichier: "reponses_questionnaire_ANNA",
 
     fermerAvecEchap: true,
-    fermerEnCliquantSurLeFond: true,
-    chargementDiffere: true
+    fermerEnCliquantSurLeFond: false
 });

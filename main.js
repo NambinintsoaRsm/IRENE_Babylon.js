@@ -380,15 +380,33 @@ function brancherFermetureApplication({ etatApplication, destination = "#" } = {
         return;
     }
 
+    // Le bouton de fermeture est une action globale : il doit rester facilement
+    // repérable quel que soit le thème ou l’épaisseur de bordure choisie ailleurs.
+    const styleBoutonFermeture = constantesInterface.stylesComposants?.boutonFermeture ?? {};
+    boutonOuvrir.width = styleBoutonFermeture.largeur ?? "4.7%";
+    boutonOuvrir.fixedRatio = Number(styleBoutonFermeture.ratio) || 1;
+    boutonOuvrir.fixedRatioMasterIsWidth = styleBoutonFermeture.largeurPiloteRatio !== false;
+    boutonOuvrir.cornerRadius = styleBoutonFermeture.rayonCoin ?? 10;
+    boutonOuvrir.thickness = Math.max(
+        Number(boutonOuvrir.thickness) || 0,
+        Number(styleBoutonFermeture.epaisseurBordureMinimum) || 4
+    );
+    boutonOuvrir.zIndex = styleBoutonFermeture.zIndex ?? 100;
+    boutonOuvrir.hoverCursor = "pointer";
+    boutonOuvrir.isPointerBlocker = true;
+
     if (icone) {
         icone.metadata = icone.metadata || {};
         icone.metadata.texteDynamique = true;
         icone.metadata.nePasModifierTailleTexte = true;
         icone.metadata.nePasAccessibilite = true;
         icone.metadata.nePasAutoFit = true;
-        icone.text = "✕";
-        icone.fontSize = "28px";
-        icone.fontWeight = "700";
+        icone.text = styleBoutonFermeture.caractereIcone ?? "X";
+        icone.fontFamily = String(etatApplication?.interface?.parametres?.police || constantesInterface.policeDefaut || "Arial");
+        icone.fontSize = styleBoutonFermeture.tailleIcone ?? "63%";
+        icone.fontWeight = styleBoutonFermeture.poidsIcone ?? "700";
+        icone.outlineWidth = Number(styleBoutonFermeture.epaisseurVisuelleIcone) || 0;
+        icone.outlineColor = icone.color;
         icone.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         icone.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
     }
@@ -465,7 +483,7 @@ function brancherFermetureApplication({ etatApplication, destination = "#" } = {
     const ajusterUneLigne = ({ textBlock, texte, tailleMax, tailleMin, poids = "700", marge = 24 }) => {
         if (!textBlock) return;
 
-        // La fenêtre utilise la police réellement sélectionnée dans IRENE.
+        // La fenêtre utilise la police réellement sélectionnée dans ANNA.
         // Arial et sans-serif restent dans la pile comme secours immédiat :
         // le texte reste visible même si la police personnalisée se charge encore.
         const famille = obtenirPoliceCourante();

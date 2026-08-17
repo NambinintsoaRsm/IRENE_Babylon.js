@@ -13,8 +13,12 @@ export class ServiceFormulaireAvisHTML {
         this.fenetre = null;
         this.titre = null;
         this.boutonFermer = null;
-        this.iframe = null;
+        this.conteneurSurvey = null;
         this.message = null;
+
+        this.survey = null;
+        this.dernieresReponses = null;
+        this.initialisationEnCours = null;
 
         this.elementFocusPrecedent = null;
         this.canvasAriaHiddenInitial = null;
@@ -61,29 +65,22 @@ export class ServiceFormulaireAvisHTML {
         boutonFermer.type = "button";
         boutonFermer.className = "irene-formulaire-avis__fermer";
         boutonFermer.textContent = this.configuration.texteBoutonFermer;
-        boutonFermer.setAttribute("aria-label", "Fermer le formulaire de satisfaction");
+        boutonFermer.setAttribute("aria-label", "Fermer le questionnaire de satisfaction");
 
         const contenu = document.createElement("div");
         contenu.className = "irene-formulaire-avis__contenu";
 
-        const iframe = document.createElement("iframe");
-        iframe.className = "irene-formulaire-avis__iframe";
-        iframe.title = this.configuration.titreIframe;
-        iframe.setAttribute("frameborder", "0");
-        iframe.setAttribute("allow", "clipboard-write");
-        iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-
-        if (this.configuration.chargementDiffere !== false) {
-            iframe.setAttribute("loading", "lazy");
-        }
+        const conteneurSurvey = document.createElement("div");
+        conteneurSurvey.className = "irene-formulaire-avis__survey anna-questionnaire";
+        conteneurSurvey.setAttribute("aria-live", "polite");
 
         const message = document.createElement("p");
         message.className = "irene-formulaire-avis__message";
-        message.textContent = this.configuration.messageNonConfigure;
+        message.textContent = this.configuration.messageModuleIndisponible;
         message.hidden = true;
 
         entete.append(titre, boutonFermer);
-        contenu.append(iframe, message);
+        contenu.append(conteneurSurvey, message);
         fenetre.append(entete, contenu);
         overlay.appendChild(fenetre);
         document.body.appendChild(overlay);
@@ -92,7 +89,7 @@ export class ServiceFormulaireAvisHTML {
         this.fenetre = fenetre;
         this.titre = titre;
         this.boutonFermer = boutonFermer;
-        this.iframe = iframe;
+        this.conteneurSurvey = conteneurSurvey;
         this.message = message;
 
         boutonFermer.addEventListener("click", this._fermerDepuisBouton);
@@ -116,7 +113,14 @@ export class ServiceFormulaireAvisHTML {
         if (!this.overlay) return;
 
         this._synchroniserApparence();
-        this._synchroniserContenu();
+        this._initialiserQuestionnaireSiNecessaire().catch((erreur) => {
+            console.error("[Avis] Impossible d'initialiser le questionnaire.", erreur);
+            if (this.conteneurSurvey) this.conteneurSurvey.hidden = true;
+            if (this.message) {
+                this.message.textContent = this.configuration.messageModuleIndisponible;
+                this.message.hidden = false;
+            }
+        });
 
         this.elementFocusPrecedent = document.activeElement;
         this.ouvert = true;
@@ -174,71 +178,238 @@ export class ServiceFormulaireAvisHTML {
         this.boutonFermer?.removeEventListener("click", this._fermerDepuisBouton);
         this.overlay?.removeEventListener("click", this._gererClicFond);
         window.removeEventListener("keydown", this._gererTouche);
+
+        this.survey?.dispose?.();
         this.overlay?.remove();
 
         this.overlay = null;
         this.fenetre = null;
         this.titre = null;
         this.boutonFermer = null;
-        this.iframe = null;
+        this.conteneurSurvey = null;
         this.message = null;
+        this.survey = null;
+        this.dernieresReponses = null;
+        this.initialisationEnCours = null;
         this.installe = false;
     }
 
-    _synchroniserContenu() {
-        const url = String(this.configuration.urlIntegration ?? "").trim();
-        const configure = url !== "" && url !== "#" && !url.includes("URL_DE_TON_GOOGLE_FORM");
+    async _initialiserQuestionnaireSiNecessaire() {
+        if (this.survey) return this.survey;
+        if (this.initialisationEnCours) return this.initialisationEnCours;
 
-        if (!configure) {
-            this.iframe.hidden = true;
-            this.message.hidden = false;
-            return;
-        }
+        this.initialisationEnCours = (async () => {
+            if (this.conteneurSurvey) this.conteneurSurvey.hidden = true;
+            if (this.message) {
+                this.message.textContent = "Chargement du questionnaire…";
+                this.message.hidden = false;
+            }
 
-        this.message.hidden = true;
-        this.iframe.hidden = false;
+            await this._chargerSurveyJSSiNecessaire();
 
-        const urlFinale = this._normaliserUrlIntegration(url);
-        if (this.iframe.getAttribute("src") !== urlFinale) {
-            this.iframe.setAttribute("src", urlFinale);
+            const SurveyJS = globalThis.Survey;
+            if (!SurveyJS?.Model) {
+                throw new Error("SurveyJS n'est pas disponible après son chargement.");
+            }
+
+            if (this.message) this.message.hidden = true;
+            if (this.conteneurSurvey) this.conteneurSurvey.hidden = false;
+
+            this.survey = new SurveyJS.Model(this.configuration.questionnaire);
+
+            this.survey.onComplete.add((sender) => {
+                // On conserve les réponses en mémoire pour le futur mécanisme d'envoi.
+                // Aucun écran intermédiaire n'est affiché après « Envoyer ».
+                this.dernieresReponses = this._construireExport(sender.data ?? {});
+                this.fermer();
+            });
+
+            this.survey.onCurrentPageChanged.add(() => {
+                requestAnimationFrame(() => {
+                    this.conteneurSurvey?.scrollTo?.({ top: 0, behavior: "smooth" });
+                    this._synchroniserNavigationSurveyJS();
+                });
+            });
+
+            this.survey.render(this.conteneurSurvey);
+            requestAnimationFrame(() => this._synchroniserNavigationSurveyJS());
+            return this.survey;
+        })();
+
+        try {
+            return await this.initialisationEnCours;
+        } finally {
+            this.initialisationEnCours = null;
         }
     }
 
-    _normaliserUrlIntegration(url) {
-        try {
-            const resultat = new URL(url, window.location.href);
+    async _chargerSurveyJSSiNecessaire() {
+        if (globalThis.Survey?.Model) return;
 
-            if (resultat.hostname.includes("docs.google.com") && !resultat.searchParams.has("embedded")) {
-                resultat.searchParams.set("embedded", "true");
+        const ressources = this.configuration.ressourcesSurveyJS ?? {};
+        await this._chargerFeuilleStyle(ressources.css, "anna-surveyjs-css");
+        await this._chargerScript(ressources.core, "anna-surveyjs-core");
+        await this._chargerScript(ressources.ui, "anna-surveyjs-ui");
+    }
+
+    _chargerFeuilleStyle(url, id) {
+        const adresse = String(url ?? "").trim();
+        if (!adresse) return Promise.reject(new Error("URL CSS SurveyJS manquante."));
+
+        if (document.getElementById(id)) return Promise.resolve();
+
+        return new Promise((resolve, reject) => {
+            const lien = document.createElement("link");
+            lien.id = id;
+            lien.rel = "stylesheet";
+            lien.href = adresse;
+            lien.addEventListener("load", () => resolve(), { once: true });
+            lien.addEventListener(
+                "error",
+                () => reject(new Error(`Impossible de charger ${adresse}`)),
+                { once: true }
+            );
+            document.head.appendChild(lien);
+        });
+    }
+
+    _chargerScript(url, id) {
+        const adresse = String(url ?? "").trim();
+        if (!adresse) return Promise.reject(new Error("URL JavaScript SurveyJS manquante."));
+
+        const existant = document.getElementById(id);
+        if (existant?.dataset?.annaCharge === "true") return Promise.resolve();
+
+        return new Promise((resolve, reject) => {
+            const script = existant ?? document.createElement("script");
+
+            const terminer = () => {
+                script.dataset.annaCharge = "true";
+                resolve();
+            };
+
+            script.addEventListener("load", terminer, { once: true });
+            script.addEventListener(
+                "error",
+                () => reject(new Error(`Impossible de charger ${adresse}`)),
+                { once: true }
+            );
+
+            if (!existant) {
+                script.id = id;
+                script.src = adresse;
+                script.async = true;
+                document.head.appendChild(script);
             }
+        });
+    }
 
-            return resultat.toString();
-        } catch (erreur) {
-            console.warn("[Avis] URL du formulaire invalide.", erreur);
-            return url;
-        }
+    _construireExport(reponses) {
+        return {
+            questionnaire: "ANNA – Enquête de satisfaction",
+            anonyme: true,
+            dateEnvoi: new Date().toISOString(),
+            reponses
+        };
     }
 
     _synchroniserApparence() {
+        if (!this.overlay) return;
+
         const apparence = this.obtenirApparence?.() ?? {};
         const police = String(apparence.police || "Arial").replace(/["']/g, "").trim();
         const pilePolice = police.toLowerCase() === "arial"
             ? "Arial, sans-serif"
             : `"${police}", Arial, sans-serif`;
 
+        // taillePolice reste la variation relative utilisée par ANNA.
+        // La taille de référence du formulaire est exprimée en rem et non en pixels.
         const variation = Number(apparence.taillePolice) || 0;
-        const echelle = Math.max(0.8, Math.min(1.5, 1 + variation / 100));
+        const echelle = Math.max(0.8, Math.min(1.6, 1 + variation / 100));
+        const tailleBaseRem = Math.max(1, Math.min(2, 1.25 * echelle));
 
-        this.overlay.style.setProperty("--irene-avis-police", pilePolice);
-        this.overlay.style.setProperty("--irene-avis-poids", apparence.gras ? "700" : "400");
-        this.overlay.style.setProperty("--irene-avis-taille-titre", `${Math.round(28 * echelle)}px`);
-        this.overlay.style.setProperty("--irene-avis-taille-bouton", `${Math.round(21 * echelle)}px`);
-        this.overlay.style.setProperty("--irene-avis-taille-message", `${Math.round(20 * echelle)}px`);
-        this.overlay.style.setProperty("--irene-avis-fond", apparence.fond ?? "#ffffff");
-        this.overlay.style.setProperty("--irene-avis-texte", apparence.texte ?? "#000000");
-        this.overlay.style.setProperty("--irene-avis-bordure", apparence.bordure ?? "#000000");
-        this.overlay.style.setProperty("--irene-avis-bouton-fond", apparence.boutonFond ?? "#000000");
-        this.overlay.style.setProperty("--irene-avis-bouton-texte", apparence.boutonTexte ?? "#ffffff");
+        const definir = (nom, valeur, secours) => {
+            this.overlay.style.setProperty(nom, String(valeur || secours));
+        };
+
+        definir("--irene-avis-police", pilePolice, "Arial, sans-serif");
+        definir("--irene-avis-poids", apparence.gras ? "700" : "400", "400");
+        definir("--irene-avis-echelle", String(echelle), "1");
+        definir(
+            "--irene-avis-taille-formulaire",
+            `clamp(1rem, ${tailleBaseRem.toFixed(3)}rem, 2rem)`,
+            "1.25rem"
+        );
+
+        // Taille propre au texte des boutons de navigation.
+        // Elle suit la taille courante d'ANNA tout en restant modifiable depuis le CSS.
+        definir(
+            "--irene-avis-taille-navigation",
+            `${(tailleBaseRem * 1.25).toFixed(3)}rem`,
+            "1.563rem"
+        );
+
+        // SurveyJS possède ses propres jetons typographiques. On les synchronise
+        // explicitement avec ANNA afin que les boutons et leurs contenus internes
+        // utilisent réellement la police et la taille choisies dans l'interface.
+        definir("--sjs-font-family", pilePolice, "Arial, sans-serif");
+        definir(
+            "--sjs-font-size",
+            `clamp(1rem, ${tailleBaseRem.toFixed(3)}rem, 2rem)`,
+            "1.25rem"
+        );
+
+        // Couleurs du thème courant d'ANNA.
+        definir("--irene-avis-fond", apparence.fond, "#ffffff");
+        definir("--irene-avis-fond-page", apparence.fondSecondaire, apparence.fond || "#ededed");
+        definir("--irene-avis-fond-secondaire", apparence.fondSection, apparence.fondSecondaire || apparence.fond || "#f5f5f5");
+        definir("--irene-avis-texte", apparence.texte, "#111111");
+        definir("--irene-avis-texte-secondaire", apparence.texteSecondaire, apparence.texte || "#333333");
+        definir("--irene-avis-bordure", apparence.bordure, "#202020");
+        definir("--irene-avis-bordure-douce", apparence.bordure, "#777777");
+
+        // Boutons de navigation = mêmes contrastes que les boutons ANNA.
+        definir("--irene-avis-bouton-fond", apparence.boutonFond, apparence.fond || "#ffffff");
+        definir("--irene-avis-bouton-texte", apparence.boutonTexte, apparence.texte || "#111111");
+        definir("--irene-avis-bouton-bordure", apparence.boutonBordure, apparence.bordure || "#202020");
+
+        // État sélectionné / focus fort = palette active déjà définie dans ANNA.
+        definir("--irene-avis-selection", apparence.boutonActifFond, apparence.texte || "#111111");
+        definir("--irene-avis-selection-texte", apparence.boutonActifTexte, apparence.fond || "#ffffff");
+        definir("--irene-avis-selection-bordure", apparence.boutonActifBordure, apparence.bordure || "#202020");
+        definir("--irene-avis-focus", apparence.bordure, apparence.texte || "#111111");
+
+        requestAnimationFrame(() => this._synchroniserNavigationSurveyJS());
+    }
+
+    _synchroniserNavigationSurveyJS() {
+        if (!this.conteneurSurvey || !this.overlay) return;
+
+        const styleOverlay = getComputedStyle(this.overlay);
+        const police = styleOverlay.getPropertyValue("--irene-avis-police").trim() || "Arial, sans-serif";
+        const taille = styleOverlay.getPropertyValue("--irene-avis-taille-navigation").trim() || "1.563rem";
+
+        const pied = this.conteneurSurvey.querySelector(".sd-footer.sd-body__navigation");
+        if (pied) {
+            pied.style.setProperty("display", "flex", "important");
+            pied.style.setProperty("align-items", "center", "important");
+            pied.style.setProperty("justify-content", "flex-end", "important");
+            pied.style.setProperty("gap", "3%", "important");
+            pied.style.setProperty("width", "100%", "important");
+        }
+
+        const boutons = this.conteneurSurvey.querySelectorAll(
+            ".sd-navigation__prev-btn, .sd-navigation__next-btn, .sd-navigation__complete-btn"
+        );
+
+        boutons.forEach((bouton) => {
+            const elements = [bouton, ...bouton.querySelectorAll("*")];
+            elements.forEach((element) => {
+                element.style?.setProperty?.("font-family", police, "important");
+                element.style?.setProperty?.("font-size", taille, "important");
+                element.style?.setProperty?.("font-weight", "700", "important");
+            });
+        });
     }
 
     _gererClicFond(event) {

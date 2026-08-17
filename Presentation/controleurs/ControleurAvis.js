@@ -68,11 +68,24 @@ export class ControleurAvis {
             police: parametres.police,
             taillePolice: parametres.taillePolice,
             gras: parametres.gras,
+
+            // Le formulaire reprend exactement le thème courant d'ANNA.
             fond: theme.fondPrincipal,
+            fondSecondaire: theme.fondSecondaire,
+            fondSection: theme.fondSection,
             texte: theme.textePrincipal,
+            texteSecondaire: theme.texteSecondaire,
             bordure: theme.bordure,
-            boutonFond: theme.boutonActifFond,
-            boutonTexte: theme.boutonActifTexte
+
+            // Couleurs normales des boutons de l'interface.
+            boutonFond: theme.boutonFond,
+            boutonTexte: theme.boutonTexte,
+            boutonBordure: theme.boutonBordure,
+
+            // Couleurs déjà définies dans ANNA pour un état mis en avant.
+            boutonActifFond: theme.boutonActifFond,
+            boutonActifTexte: theme.boutonActifTexte,
+            boutonActifBordure: theme.boutonActifBordure
         };
     }
 }

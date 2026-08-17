@@ -1,4 +1,4 @@
-/* Fenêtre HTML du formulaire de satisfaction IRENE. */
+/* Fenêtre HTML du questionnaire de satisfaction ANNA. */
 
 .irene-formulaire-avis[hidden] {
     display: none !important;
@@ -7,18 +7,30 @@
 .irene-formulaire-avis {
     --irene-avis-police: Arial, sans-serif;
     --irene-avis-poids: 400;
+    --irene-avis-echelle: 1;
+    --irene-avis-taille-formulaire: 1.25rem;
+    --irene-avis-taille-titre: 1.4em;
+    --irene-avis-taille-bouton: 1em;
+    --irene-avis-taille-message: 1em;
 
-    /* Tailles adaptatives */
-    --irene-avis-taille-titre: clamp(1.4rem, 2.2vw, 2.2rem);
-    --irene-avis-taille-bouton: clamp(1rem, 1.45vw, 1.5rem);
-    --irene-avis-taille-message: clamp(1rem, 1.5vw, 1.6rem);
-
+    /* Valeurs de secours uniquement : elles sont remplacées à l'ouverture
+       par les couleurs du thème actif d'ANNA. */
+    --irene-avis-fond-page: #ededed;
     --irene-avis-fond: #ffffff;
-    --irene-avis-texte: #000000;
-    --irene-avis-bordure: #000000;
-    --irene-avis-bouton-fond: #000000;
-    --irene-avis-bouton-texte: #ffffff;
-    --irene-avis-focus: #4d90fe;
+    --irene-avis-fond-secondaire: #f5f5f5;
+    --irene-avis-texte: #111111;
+    --irene-avis-texte-secondaire: #333333;
+    --irene-avis-bordure: #202020;
+    --irene-avis-bordure-douce: #777777;
+
+    --irene-avis-bouton-fond: #ffffff;
+    --irene-avis-bouton-texte: #111111;
+    --irene-avis-bouton-bordure: #202020;
+
+    --irene-avis-selection: #111111;
+    --irene-avis-selection-texte: #ffffff;
+    --irene-avis-selection-bordure: #111111;
+    --irene-avis-focus: #111111;
 
     position: fixed;
     inset: 0;
@@ -33,163 +45,489 @@
     padding: 2vh 2vw;
     box-sizing: border-box;
 
-    background: rgba(0, 0, 0, 0.78);
-
+    background: rgba(0, 0, 0, 0.76);
+    color: var(--irene-avis-texte);
     font-family: var(--irene-avis-police);
+    font-size: var(--irene-avis-taille-formulaire);
     font-weight: var(--irene-avis-poids);
 }
 
-/* Fenêtre principale : presque toute la surface de l’écran */
 .irene-formulaire-avis__fenetre {
     position: relative;
-
     display: flex;
     flex-direction: column;
-
     width: 96vw;
     height: 94vh;
-
     overflow: hidden;
     box-sizing: border-box;
-
     background: var(--irene-avis-fond);
     color: var(--irene-avis-texte);
-
-    border: clamp(0.2rem, 0.35vw, 0.4rem)
-    solid var(--irene-avis-bordure);
-
-    border-radius: clamp(0.6rem, 1.2vw, 1.3rem);
-
-    box-shadow:
-            0 1.5vh 4vw rgba(0, 0, 0, 0.55);
+    border: clamp(0.2rem, 0.35vw, 0.4rem) solid var(--irene-avis-bordure);
+    border-radius: clamp(0.5rem, 0.9vw, 1rem);
+    box-shadow: 0 1.5vh 4vw rgba(0, 0, 0, 0.55);
 }
 
-/* En-tête */
 .irene-formulaire-avis__entete {
     flex: 0 0 auto;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     gap: 2vw;
-
     width: 100%;
     min-height: clamp(4.5rem, 9vh, 7rem);
-
-    padding:
-            clamp(0.6rem, 1.2vh, 1rem)
-            clamp(1rem, 2vw, 2.2rem);
-
+    padding: clamp(0.6rem, 1.2vh, 1rem) clamp(1rem, 2vw, 2.2rem);
     box-sizing: border-box;
-
     background: var(--irene-avis-fond);
-
-    border-bottom:
-            clamp(0.15rem, 0.25vw, 0.3rem)
-            solid var(--irene-avis-bordure);
+    border-bottom: clamp(0.15rem, 0.25vw, 0.3rem) solid var(--irene-avis-bordure);
 }
 
-/* Titre */
 .irene-formulaire-avis__titre {
     min-width: 0;
-    max-width: 70%;
-
+    max-width: 72%;
     margin: 0;
-
     overflow-wrap: anywhere;
-
     color: var(--irene-avis-texte);
-
     font-family: inherit;
     font-size: var(--irene-avis-taille-titre);
     font-weight: 700;
     line-height: 1.2;
 }
 
-/* Bouton Fermer */
 .irene-formulaire-avis__fermer {
-    flex: 0 0 auto;
-
-    min-width: clamp(7rem, 14vw, 13rem);
-    min-height: clamp(3rem, 6vh, 4.5rem);
-
-    padding:
-            clamp(0.45rem, 0.8vh, 0.8rem)
-            clamp(0.8rem, 1.7vw, 1.8rem);
-
-    border:
-            clamp(0.15rem, 0.25vw, 0.3rem)
-            solid var(--irene-avis-bordure);
-
-    border-radius: clamp(0.4rem, 0.7vw, 0.8rem);
-
+    min-height: clamp(3.2rem, 7vh, 4.5rem);
+    padding: clamp(0.6rem, 1.2vh, 1rem) clamp(1rem, 2vw, 2rem);
+    border: clamp(0.12rem, 0.2vw, 0.22rem) solid var(--irene-avis-bouton-bordure);
+    border-radius: clamp(0.2rem, 0.4vw, 0.45rem);
     background: var(--irene-avis-bouton-fond);
     color: var(--irene-avis-bouton-texte);
-
     font-family: inherit;
     font-size: var(--irene-avis-taille-bouton);
     font-weight: 700;
-    line-height: 1.1;
-
+    line-height: 1.2;
     cursor: pointer;
 }
 
-.irene-formulaire-avis__fermer:hover,
-.irene-formulaire-avis__fermer:focus-visible {
-    filter: brightness(1.08);
-
-    outline:
-            clamp(0.15rem, 0.3vw, 0.3rem)
-            solid var(--irene-avis-focus);
-
-    outline-offset: clamp(0.1rem, 0.2vw, 0.2rem);
+.irene-formulaire-avis__fermer {
+    flex: 0 0 auto;
+    min-width: clamp(8rem, 14vw, 14rem);
 }
 
-/* Le contenu prend automatiquement toute la place restante */
+
+.irene-formulaire-avis__fermer:hover,
+.irene-formulaire-avis__fermer:focus-visible {
+    background: var(--irene-avis-selection);
+    color: var(--irene-avis-selection-texte);
+    border-color: var(--irene-avis-selection-bordure);
+    outline: clamp(0.12rem, 0.2vw, 0.22rem) solid var(--irene-avis-focus);
+    outline-offset: 0.18rem;
+}
+
 .irene-formulaire-avis__contenu {
     position: relative;
-
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
-
-    overflow: hidden;
-
-    background: #ffffff;
+    overflow: auto;
+    background: var(--irene-avis-fond-page);
+    scrollbar-gutter: stable;
 }
 
-/* Google Form */
-.irene-formulaire-avis__iframe {
-    display: block;
+.irene-formulaire-avis__survey {
+    width: min(100%, 78rem);
+    min-height: 100%;
+    margin: 0 auto;
+    padding: clamp(1rem, 2.2vw, 2rem);
+    box-sizing: border-box;
+    color: var(--irene-avis-texte);
+    background: var(--irene-avis-fond-page);
+    font-family: var(--irene-avis-police);
+    font-size: var(--irene-avis-taille-formulaire);
+    font-weight: var(--irene-avis-poids);
+}
 
+.irene-formulaire-avis__survey[hidden],
+.irene-formulaire-avis__message[hidden] {
+    display: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   SurveyJS — neutralisation du thème et lisibilité
+   ------------------------------------------------------------------------- */
+
+/*
+   SurveyJS possède sa propre palette interne. On la redirige vers les
+   variables du thème ANNA afin d'éviter que sa couleur d'accent par défaut
+   (vert/bleu-vert) ne réapparaisse notamment sur Suivant / Retour / Envoyer.
+*/
+.anna-questionnaire {
+    /* Typographie native SurveyJS reliée directement à ANNA. */
+    --sjs-font-family: var(--irene-avis-police);
+    --sjs-font-size: var(--irene-avis-taille-formulaire);
+
+    --sjs-primary-backcolor: var(--irene-avis-bouton-fond);
+    --sjs-primary-forecolor: var(--irene-avis-bouton-texte);
+    --sjs-primary-backcolor-light: var(--irene-avis-fond-secondaire);
+    --sjs-primary-backcolor-dark: var(--irene-avis-selection);
+    --sjs-general-backcolor: var(--irene-avis-fond);
+    --sjs-general-forecolor: var(--irene-avis-texte);
+    --sjs-general-forecolor-light: var(--irene-avis-texte-secondaire);
+    --sjs-border-default: var(--irene-avis-bouton-bordure);
+}
+
+.anna-questionnaire,
+.anna-questionnaire .sd-root-modern,
+.anna-questionnaire .sd-container-modern,
+.anna-questionnaire .sd-body,
+.anna-questionnaire .sd-page,
+.anna-questionnaire .sd-row,
+.anna-questionnaire .sd-element,
+.anna-questionnaire .sd-question,
+.anna-questionnaire .sd-title,
+.anna-questionnaire .sd-description,
+.anna-questionnaire .sd-question__title,
+.anna-questionnaire .sd-item__control-label,
+.anna-questionnaire .sd-table,
+.anna-questionnaire .sd-table__cell,
+.anna-questionnaire input,
+.anna-questionnaire textarea,
+.anna-questionnaire button {
+    font-family: var(--irene-avis-police) !important;
+}
+
+.anna-questionnaire .sd-root-modern,
+.anna-questionnaire .sd-container-modern,
+.anna-questionnaire .sd-body,
+.anna-questionnaire .sd-page {
+    background: transparent !important;
+    color: var(--irene-avis-texte) !important;
+}
+
+.anna-questionnaire .sd-header,
+.anna-questionnaire .sd-page__title,
+.anna-questionnaire .sd-element--with-frame,
+.anna-questionnaire .sd-question--with-frame,
+.anna-questionnaire .sd-row {
+    box-shadow: none !important;
+}
+
+.anna-questionnaire .sd-header {
+    padding-inline: 0 !important;
+}
+
+.anna-questionnaire .sd-title,
+.anna-questionnaire .sd-page__title,
+.anna-questionnaire .sd-question__title,
+.anna-questionnaire .sd-description,
+.anna-questionnaire .sd-page__description,
+.anna-questionnaire .sd-item__control-label,
+.anna-questionnaire .sd-matrix__text,
+.anna-questionnaire .sd-table__cell {
+    color: var(--irene-avis-texte) !important;
+}
+
+.anna-questionnaire .sd-title,
+.anna-questionnaire .sd-page__title {
+    font-size: calc(var(--irene-avis-taille-formulaire) * 1.35) !important;
+    line-height: 1.28 !important;
+}
+
+.anna-questionnaire .sd-description,
+.anna-questionnaire .sd-page__description {
+    font-size: var(--irene-avis-taille-formulaire) !important;
+    line-height: 1.55 !important;
+    white-space: pre-line;
+}
+
+.anna-questionnaire .sd-question {
+    margin-bottom: 1rem !important;
+    padding: 1.15rem !important;
+    background: var(--irene-avis-fond) !important;
+    border: 0.12rem solid var(--irene-avis-bordure-douce) !important;
+    border-radius: 0.45rem !important;
+}
+
+.anna-questionnaire .sd-question__title {
+    font-size: calc(var(--irene-avis-taille-formulaire) * 1.08) !important;
+    font-weight: 700 !important;
+    line-height: 1.45 !important;
+}
+
+.anna-questionnaire .sd-selectbase__item {
+    min-height: 3rem;
+    padding-block: 0.35rem !important;
+}
+
+.anna-questionnaire .sd-item__control-label,
+.anna-questionnaire .sd-matrix__text {
+    font-size: var(--irene-avis-taille-formulaire) !important;
+    line-height: 1.4 !important;
+}
+
+/* Champs texte et zones de remarques */
+.anna-questionnaire .sd-input,
+.anna-questionnaire .sd-comment,
+.anna-questionnaire .sd-formbox__input,
+.anna-questionnaire input[type="text"],
+.anna-questionnaire textarea {
+    min-height: 3.2rem !important;
+    padding: 0.7rem 0.85rem !important;
+    box-sizing: border-box !important;
+    border: 0.16rem solid var(--irene-avis-bordure) !important;
+    border-radius: 0.3rem !important;
+    background: var(--irene-avis-fond) !important;
+    color: var(--irene-avis-texte) !important;
+    font-size: var(--irene-avis-taille-formulaire) !important;
+    font-weight: var(--irene-avis-poids) !important;
+}
+
+.anna-questionnaire textarea,
+.anna-questionnaire .sd-comment {
+    min-height: 7rem !important;
+}
+
+.anna-questionnaire input:focus-visible,
+.anna-questionnaire textarea:focus-visible {
+    outline: 0.2rem solid var(--irene-avis-focus) !important;
+    outline-offset: 0.15rem !important;
+}
+
+/* -------------------------------------------------------------------------
+   Radio ANNA : comportement radio conservé, apparence carrée + coche ✓.
+   Le SVG rond de SurveyJS est masqué, sans modifier le contrôle natif caché.
+   ------------------------------------------------------------------------- */
+
+.anna-questionnaire .sd-radio__svg,
+.anna-questionnaire .sd-radio__decorator,
+.anna-questionnaire .sd-checkbox__svg,
+.anna-questionnaire .sd-checkbox__decorator {
+    display: none !important;
+}
+
+.anna-questionnaire .sd-selectbase__item.sd-radio,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox {
+    position: relative;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 3.25rem;
+    padding-left: 3.1rem !important;
+    cursor: pointer;
+}
+
+.anna-questionnaire .sd-selectbase__item.sd-radio::before,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox::before {
+    content: "";
+    position: absolute;
+    left: 0.35rem;
+    top: 50%;
+    width: 1.75rem;
+    height: 1.75rem;
+    transform: translateY(-50%);
+    box-sizing: border-box;
+    border: 0.18rem solid var(--irene-avis-bordure);
+    border-radius: 0.18rem;
+    background: var(--irene-avis-fond);
+}
+
+.anna-questionnaire .sd-selectbase__item.sd-radio--checked::before,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox--checked::before,
+.anna-questionnaire .sd-selectbase__item.sd-item--checked::before {
+    background: var(--irene-avis-selection);
+}
+
+.anna-questionnaire .sd-selectbase__item.sd-radio--checked::after,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox--checked::after,
+.anna-questionnaire .sd-selectbase__item.sd-item--checked::after {
+    content: "✓";
+    position: absolute;
+    left: 0.58rem;
+    top: 50%;
+    transform: translateY(-54%);
+    color: var(--irene-avis-selection-texte);
+    font-family: Arial, sans-serif !important;
+    font-size: 1.35rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.anna-questionnaire .sd-selectbase__item.sd-radio:focus-within::before,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox:focus-within::before {
+    outline: 0.2rem solid var(--irene-avis-focus);
+    outline-offset: 0.15rem;
+}
+
+/* Matrices : même carré et même coche, mais centrés dans la cellule. */
+.anna-questionnaire .sd-matrix__label.sd-radio {
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    min-width: 2.6rem;
+    cursor: pointer;
+}
+
+.anna-questionnaire .sd-matrix__label.sd-radio::before {
+    content: "";
+    width: 1.75rem;
+    height: 1.75rem;
+    box-sizing: border-box;
+    border: 0.18rem solid var(--irene-avis-bordure);
+    border-radius: 0.18rem;
+    background: var(--irene-avis-fond);
+}
+
+.anna-questionnaire .sd-matrix__label.sd-radio--checked::before,
+.anna-questionnaire .sd-matrix__label.sd-item--checked::before {
+    background: var(--irene-avis-selection);
+}
+
+.anna-questionnaire .sd-matrix__label.sd-radio--checked::after,
+.anna-questionnaire .sd-matrix__label.sd-item--checked::after {
+    content: "✓";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -54%);
+    color: var(--irene-avis-selection-texte);
+    font-family: Arial, sans-serif !important;
+    font-size: 1.35rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.anna-questionnaire .sd-matrix__label.sd-radio:focus-within::before {
+    outline: 0.2rem solid var(--irene-avis-focus);
+    outline-offset: 0.15rem;
+}
+
+/* Tableaux lisibles et neutres. */
+.anna-questionnaire .sd-table-wrapper {
+    overflow-x: auto;
+    border: 0.12rem solid var(--irene-avis-bordure-douce);
+}
+
+.anna-questionnaire .sd-table {
     width: 100%;
-    height: 100%;
-
-    border: 0;
-    background: #ffffff;
+    border-collapse: collapse !important;
+    background: var(--irene-avis-fond) !important;
 }
 
-/* Message affiché lorsque l’URL n’est pas configurée */
+.anna-questionnaire .sd-table__cell {
+    min-width: 7.5rem;
+    padding: 0.8rem !important;
+    border-bottom: 0.08rem solid var(--irene-avis-bordure-douce) !important;
+    background: var(--irene-avis-fond) !important;
+    text-align: center;
+    font-size: var(--irene-avis-taille-formulaire) !important;
+}
+
+.anna-questionnaire .sd-table__cell--header,
+.anna-questionnaire .sd-table__cell--row-text {
+    font-weight: 700 !important;
+    background: var(--irene-avis-fond-secondaire) !important;
+}
+
+/* Navigation SurveyJS.
+   Le vrai conteneur est .sd-footer.sd-body__navigation.
+   Retour et Suivant restent regroupés à droite avec 3 % d'espace. */
+.anna-questionnaire .sd-footer.sd-body__navigation {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 5% !important;
+    width: 100% !important;
+    padding-block: 2% !important;
+    box-sizing: border-box !important;
+}
+
+.anna-questionnaire .sd-navigation__prev-btn,
+.anna-questionnaire .sd-navigation__next-btn,
+.anna-questionnaire .sd-navigation__complete-btn {
+    flex: 0 0 auto !important;
+
+    /* Tes dimensions actuelles sont conservées. */
+    width: 9vw !important;
+    min-width: 9vw !important;
+    min-height: 7vh !important;
+
+    padding: 2% 3% !important;
+
+    border:
+        0.15rem solid
+        var(--irene-avis-bouton-bordure) !important;
+
+    border-radius: 0.35rem !important;
+
+    background: var(--irene-avis-bouton-fond) !important;
+    color: var(--irene-avis-bouton-texte) !important;
+    -webkit-text-fill-color: var(--irene-avis-bouton-texte) !important;
+
+    /* Le JS applique aussi ces valeurs directement au contenu réel du bouton. */
+    font-family: var(--irene-avis-police) !important;
+    font-size: var(--irene-avis-taille-navigation, 1.4rem) !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+
+    float: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+}
+
+/* Certaines versions de SurveyJS rendent un contenu interne dans l'action.
+   On force donc aussi tous les descendants à suivre exactement le bouton. */
+.anna-questionnaire .sd-navigation__prev-btn *,
+.anna-questionnaire .sd-navigation__next-btn *,
+.anna-questionnaire .sd-navigation__complete-btn * {
+    font-family: var(--irene-avis-police) !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}
+
+.anna-questionnaire .sd-navigation__prev-btn:hover,
+.anna-questionnaire .sd-navigation__next-btn:hover,
+.anna-questionnaire .sd-navigation__complete-btn:hover,
+.anna-questionnaire .sd-navigation__prev-btn:focus-visible,
+.anna-questionnaire .sd-navigation__next-btn:focus-visible,
+.anna-questionnaire .sd-navigation__complete-btn:focus-visible {
+    background: var(--irene-avis-selection) !important;
+    color: var(--irene-avis-selection-texte) !important;
+    -webkit-text-fill-color: var(--irene-avis-selection-texte) !important;
+    border-color: var(--irene-avis-selection-bordure) !important;
+}
+
+.anna-questionnaire .sd-navigation__prev-btn:focus-visible,
+.anna-questionnaire .sd-navigation__next-btn:focus-visible,
+.anna-questionnaire .sd-navigation__complete-btn:focus-visible {
+    outline:
+        clamp(0.12rem, 0.2vw, 0.22rem)
+        solid var(--irene-avis-focus) !important;
+    outline-offset: clamp(0.12rem, 0.25vw, 0.25rem) !important;
+}
+
+.anna-questionnaire-remerciement {
+    margin: 0;
+    font-size: var(--irene-avis-taille-formulaire);
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+/* Message de secours si SurveyJS n'est pas disponible. */
 .irene-formulaire-avis__message {
     display: flex;
     align-items: center;
     justify-content: center;
-
-    width: 100%;
-    height: 100%;
-
-    margin: 0;
-
-    padding:
-            clamp(1.2rem, 4vh, 3.5rem)
-            clamp(1rem, 5vw, 5rem);
-
+    width: min(92%, 55rem);
+    min-height: 14rem;
+    margin: 3rem auto;
+    padding: 2rem;
     box-sizing: border-box;
-
-    color: #000000;
-    background: #ffffff;
-
+    color: var(--irene-avis-texte);
+    background: var(--irene-avis-fond);
+    border: 0.15rem solid var(--irene-avis-bordure);
     font-family: var(--irene-avis-police);
     font-size: var(--irene-avis-taille-message);
     font-weight: var(--irene-avis-poids);
@@ -197,12 +535,7 @@
     text-align: center;
 }
 
-.irene-formulaire-avis__iframe[hidden],
-.irene-formulaire-avis__message[hidden] {
-    display: none !important;
-}
 
-/* Tablettes et petits écrans */
 @media (max-width: 900px) {
     .irene-formulaire-avis {
         padding: 1vh 1vw;
@@ -217,23 +550,21 @@
         max-width: 65%;
     }
 
-    .irene-formulaire-avis__fermer {
-        min-width: clamp(6.5rem, 22vw, 10rem);
+    .anna-questionnaire .sd-table__cell {
+        min-width: 6.5rem;
     }
 }
 
-/* Téléphones */
 @media (max-width: 650px) {
     .irene-formulaire-avis {
-        padding: 0.5vh 1vw;
+        padding: 0;
     }
 
     .irene-formulaire-avis__fenetre {
-        width: 98vw;
-        height: 98vh;
-
-        border-width: 0.2rem;
-        border-radius: 0.6rem;
+        width: 100vw;
+        height: 100vh;
+        border-width: 0;
+        border-radius: 0;
     }
 
     .irene-formulaire-avis__entete {
@@ -243,37 +574,30 @@
     }
 
     .irene-formulaire-avis__titre {
-        max-width: 60%;
-        font-size: clamp(1.15rem, 5vw, 1.5rem);
+        max-width: 58%;
     }
 
     .irene-formulaire-avis__fermer {
-        min-width: 30vw;
-        min-height: 6vh;
+        min-width: 32vw;
+    }
 
-        padding: 0.7vh 2vw;
+    .irene-formulaire-avis__survey {
+        padding: 0.7rem;
+    }
 
-        font-size: clamp(0.95rem, 4vw, 1.2rem);
+    .anna-questionnaire .sd-question {
+        padding: 0.85rem !important;
     }
 }
 
-/* Écran très bas */
 @media (max-height: 600px) {
     .irene-formulaire-avis {
-        padding: 1vh 1vw;
+        padding: 0;
     }
 
     .irene-formulaire-avis__fenetre {
-        width: 98vw;
-        height: 98vh;
-    }
-
-    .irene-formulaire-avis__entete {
-        min-height: 12vh;
-        padding-block: 1vh;
-    }
-
-    .irene-formulaire-avis__fermer {
-        min-height: 9vh;
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
     }
 }

@@ -167,6 +167,26 @@ export const constantesInterface = Object.freeze({
     }),
 
     stylesComposants: Object.freeze({
+        // Bouton flottant permettant de demander la fermeture d’ANNA.
+        // Il reste volontairement plus grand et plus marqué que les autres
+        // boutons afin d’être facilement repérable, y compris en basse vision.
+        boutonFermeture: Object.freeze({
+            // 60 px sur la maquette de référence 1280 px ≈ 4,69 %.
+            // La largeur pilote la taille et le ratio 1:1 calcule la hauteur,
+            // ce qui évite toute déformation sur une autre résolution.
+            largeur: "14.7%",
+            ratio: 1,
+            largeurPiloteRatio: true,
+            // 38 / 60 ≈ 63,3 % : la croix garde les mêmes proportions.
+            tailleIcone: "75%",
+            poidsIcone: "700",
+            caractereIcone: "X",
+            epaisseurVisuelleIcone: 1,
+            epaisseurBordureMinimum: 4,
+            rayonCoin: 10,
+            zIndex: 100
+        }),
+
         boutonModele: Object.freeze({
             largeur: "95%",
             hauteur: "75px",

@@ -1,4 +1,4 @@
-import { obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
+import { constantesInterface, obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
 import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
 
 /**
@@ -171,6 +171,43 @@ export class ServiceStyleInterfaceGUI {
         if (flecheMenuRect) {
             flecheMenuRect.background = theme.boutonFond;
             flecheMenuRect.color = theme.boutonBordure;
+        }
+
+        // Exception d’accessibilité : le bouton de fermeture doit conserver
+        // une bordure nettement visible même si l’utilisateur choisit des
+        // bordures fines pour les autres boutons de l’interface.
+        const boutonFermeture = controles.FermBtn;
+        if (boutonFermeture) {
+            const style = constantesInterface.stylesComposants?.boutonFermeture ?? {};
+            const epaisseurMin = Number(style.epaisseurBordureMinimum) || 4;
+
+            boutonFermeture.width = style.largeur ?? "14.7%";
+            boutonFermeture.fixedRatio = Number(style.ratio) || 1;
+            boutonFermeture.fixedRatioMasterIsWidth = style.largeurPiloteRatio !== false;
+            boutonFermeture.cornerRadius = style.rayonCoin ?? 10;
+            boutonFermeture.thickness = Math.max(
+                Number(etatApplication.interface.parametres.tailleBorduresBoutons) || 0,
+                epaisseurMin
+            );
+            boutonFermeture.zIndex = style.zIndex ?? 100;
+            boutonFermeture.background = theme.boutonFond;
+            boutonFermeture.color = theme.boutonBordure;
+
+            const texteFermeture = controles.FermBtnTxt ?? boutonFermeture.textBlock ?? null;
+            if (texteFermeture) {
+                texteFermeture.fontFamily = String(
+                    etatApplication?.interface?.parametres?.police
+                    || constantesInterface.policeDefaut
+                    || "Arial"
+                );
+                texteFermeture.text = style.caractereIcone ?? "X";
+                texteFermeture.fontSize = style.tailleIcone ?? "80%";
+                texteFermeture.fontWeight = style.poidsIcone ?? "700";
+                texteFermeture.color = theme.boutonTexte;
+                texteFermeture.outlineWidth = Number(style.epaisseurVisuelleIcone) || 0;
+                texteFermeture.outlineColor = theme.boutonTexte;
+                texteFermeture._markAsDirty?.();
+            }
         }
     }
 
