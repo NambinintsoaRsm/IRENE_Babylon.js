@@ -166,12 +166,34 @@
 
     --sjs-primary-backcolor: var(--irene-avis-bouton-fond);
     --sjs-primary-forecolor: var(--irene-avis-bouton-texte);
+    --sjs-primary-forecolor-light: var(--irene-avis-bouton-texte);
     --sjs-primary-backcolor-light: var(--irene-avis-fond-secondaire);
     --sjs-primary-backcolor-dark: var(--irene-avis-selection);
+
     --sjs-general-backcolor: var(--irene-avis-fond);
+    --sjs-general-backcolor-dark: var(--irene-avis-fond-secondaire);
+    --sjs-general-backcolor-dim: var(--irene-avis-fond-page);
+    --sjs-general-backcolor-dim-light: var(--irene-avis-fond-secondaire);
+    --sjs-general-backcolor-dim-dark: var(--irene-avis-fond-secondaire);
     --sjs-general-forecolor: var(--irene-avis-texte);
     --sjs-general-forecolor-light: var(--irene-avis-texte-secondaire);
+    --sjs-general-dim-forecolor: var(--irene-avis-texte);
+    --sjs-general-dim-forecolor-light: var(--irene-avis-texte-secondaire);
+
     --sjs-border-default: var(--irene-avis-bouton-bordure);
+    --sjs-border-light: var(--irene-avis-bordure-douce);
+    --sjs-border-inside: var(--irene-avis-bordure-douce);
+
+    /* Neutralise aussi les surfaces/accent natifs de SurveyJS.
+       Les versions récentes utilisent notamment --sjs-special-background
+       pour le fond de surface du formulaire. */
+    --sjs-special-background: var(--irene-avis-fond-page);
+    --sjs-primary-background-500: var(--irene-avis-selection);
+    --sjs-secondary-background-500: var(--irene-avis-fond-secondaire);
+
+    --sjs-special-green: var(--irene-avis-selection);
+    --sjs-special-green-light: var(--irene-avis-fond-secondaire);
+    --sjs-special-green-forecolor: var(--irene-avis-selection-texte);
 }
 
 .anna-questionnaire,
@@ -194,11 +216,18 @@
     font-family: var(--irene-avis-police) !important;
 }
 
+/* Le fond du canevas SurveyJS doit rester celui du thème ANNA.
+   On ne le laisse plus transparent : certaines versions de SurveyJS
+   injectent leur propre surface claire (#edf9f7 environ) sous la page. */
+.anna-questionnaire,
+.anna-questionnaire > div,
 .anna-questionnaire .sd-root-modern,
+.anna-questionnaire .sd-root-modern--full-container,
 .anna-questionnaire .sd-container-modern,
 .anna-questionnaire .sd-body,
 .anna-questionnaire .sd-page {
-    background: transparent !important;
+    background: var(--irene-avis-fond-page) !important;
+    background-color: var(--irene-avis-fond-page) !important;
     color: var(--irene-avis-texte) !important;
 }
 
@@ -292,8 +321,12 @@
 }
 
 /* -------------------------------------------------------------------------
-   Radio ANNA : comportement radio conservé, apparence carrée + coche ✓.
-   Le SVG rond de SurveyJS est masqué, sans modifier le contrôle natif caché.
+   Choix ANNA hors matrices : radio/checkbox carrés + coche ✓.
+
+   Important : le carré personnalisé est porté par .sd-selectbase__label,
+   qui est le vrai <label> cliquable généré par SurveyJS. Le placer sur le
+   conteneur .sd-selectbase__item rendait le carré visuellement correct mais
+   son clic pouvait ne pas activer l'input.
    ------------------------------------------------------------------------- */
 
 .anna-questionnaire .sd-radio__svg,
@@ -305,16 +338,24 @@
 
 .anna-questionnaire .sd-selectbase__item.sd-radio,
 .anna-questionnaire .sd-selectbase__item.sd-checkbox {
+    min-height: 3.25rem;
+    padding-left: 0 !important;
+}
+
+.anna-questionnaire .sd-selectbase__item.sd-radio > .sd-selectbase__label,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox > .sd-selectbase__label {
     position: relative;
     display: flex !important;
     align-items: center !important;
+    width: 100%;
     min-height: 3.25rem;
     padding-left: 3.1rem !important;
+    box-sizing: border-box;
     cursor: pointer;
 }
 
-.anna-questionnaire .sd-selectbase__item.sd-radio::before,
-.anna-questionnaire .sd-selectbase__item.sd-checkbox::before {
+.anna-questionnaire .sd-selectbase__item.sd-radio > .sd-selectbase__label::before,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox > .sd-selectbase__label::before {
     content: "";
     position: absolute;
     left: 0.35rem;
@@ -326,17 +367,18 @@
     border: 0.18rem solid var(--irene-avis-bordure);
     border-radius: 0.18rem;
     background: var(--irene-avis-fond);
+    pointer-events: none;
 }
 
-.anna-questionnaire .sd-selectbase__item.sd-radio--checked::before,
-.anna-questionnaire .sd-selectbase__item.sd-checkbox--checked::before,
-.anna-questionnaire .sd-selectbase__item.sd-item--checked::before {
+.anna-questionnaire .sd-selectbase__item.sd-item--checked > .sd-selectbase__label::before,
+.anna-questionnaire .sd-selectbase__item.sd-radio--checked > .sd-selectbase__label::before,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox--checked > .sd-selectbase__label::before {
     background: var(--irene-avis-selection);
 }
 
-.anna-questionnaire .sd-selectbase__item.sd-radio--checked::after,
-.anna-questionnaire .sd-selectbase__item.sd-checkbox--checked::after,
-.anna-questionnaire .sd-selectbase__item.sd-item--checked::after {
+.anna-questionnaire .sd-selectbase__item.sd-item--checked > .sd-selectbase__label::after,
+.anna-questionnaire .sd-selectbase__item.sd-radio--checked > .sd-selectbase__label::after,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox--checked > .sd-selectbase__label::after {
     content: "✓";
     position: absolute;
     left: 0.58rem;
@@ -347,10 +389,11 @@
     font-size: 1.35rem;
     font-weight: 900;
     line-height: 1;
+    pointer-events: none;
 }
 
-.anna-questionnaire .sd-selectbase__item.sd-radio:focus-within::before,
-.anna-questionnaire .sd-selectbase__item.sd-checkbox:focus-within::before {
+.anna-questionnaire .sd-selectbase__item.sd-radio:focus-within > .sd-selectbase__label::before,
+.anna-questionnaire .sd-selectbase__item.sd-checkbox:focus-within > .sd-selectbase__label::before {
     outline: 0.2rem solid var(--irene-avis-focus);
     outline-offset: 0.15rem;
 }
