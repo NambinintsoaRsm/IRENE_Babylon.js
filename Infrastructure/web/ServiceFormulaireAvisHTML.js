@@ -8,6 +8,7 @@ export class ServiceFormulaireAvisHTML {
         this.camera = null;
         this.canvas = null;
         this.obtenirApparence = null;
+        this.onSoumission = null;
 
         this.overlay = null;
         this.fenetre = null;
@@ -31,12 +32,15 @@ export class ServiceFormulaireAvisHTML {
         this._fermerDepuisBouton = this.fermer.bind(this);
     }
 
-    installer({ camera, canvas, obtenirApparence } = {}) {
+    installer({ camera, canvas, obtenirApparence, onSoumission } = {}) {
         if (typeof document === "undefined") return;
 
         this.camera = camera ?? this.camera;
         this.canvas = canvas ?? this.canvas;
         this.obtenirApparence = obtenirApparence ?? this.obtenirApparence;
+        if (typeof onSoumission === "function") {
+            this.onSoumission = onSoumission;
+        }
 
         if (this.installe && this.overlay?.isConnected) return;
 
@@ -106,7 +110,8 @@ export class ServiceFormulaireAvisHTML {
             this.installer({
                 camera: this.camera,
                 canvas: this.canvas,
-                obtenirApparence: this.obtenirApparence
+                obtenirApparence: this.obtenirApparence,
+                onSoumission: this.onSoumission
             });
         }
 
@@ -218,9 +223,35 @@ export class ServiceFormulaireAvisHTML {
             this.survey = new SurveyJS.Model(this.configuration.questionnaire);
 
             this.survey.onComplete.add((sender) => {
-                // On conserve les réponses en mémoire pour le futur mécanisme d'envoi.
-                // Aucun écran intermédiaire n'est affiché après « Envoyer ».
-                this.dernieresReponses = this._construireExport(sender.data ?? {});
+                const reponses = sender.data ?? {};
+
+                // Une copie structurée reste disponible en mémoire pour le débogage,
+                // mais l'enregistrement réel est délégué au contrôleur.
+                this.dernieresReponses = this._construireExport(reponses);
+
+                if (typeof this.onSoumission === "function") {
+                    Promise.resolve(this.onSoumission(reponses))
+                        .then((resultat) => {
+                            if (resultat?.ok) {
+                                console.info(
+                                    "[Enquête] Réponse enregistrée.",
+                                    {
+                                        sauvegardeServeur: resultat.sauvegardeServeur,
+                                        emailEnvoye: resultat.emailEnvoye,
+                                        identifiant: resultat.identifiant
+                                    }
+                                );
+                            } else if (resultat) {
+                                console.warn("[Enquête]", resultat.message);
+                            }
+                        })
+                        .catch((erreur) => {
+                            console.error("[Enquête] Erreur pendant la soumission.", erreur);
+                        });
+                }
+
+                // Aucun second écran de remerciement : la dernière page du
+                // questionnaire contient déjà le message prévu par les encadrants.
                 this.fermer();
             });
 
@@ -378,6 +409,33 @@ export class ServiceFormulaireAvisHTML {
         definir("--irene-avis-selection-texte", apparence.boutonActifTexte, apparence.fond || "#ffffff");
         definir("--irene-avis-selection-bordure", apparence.boutonActifBordure, apparence.bordure || "#202020");
         definir("--irene-avis-focus", apparence.bordure, apparence.texte || "#111111");
+
+        // SurveyJS utilise plusieurs variantes de fond en plus de la couleur
+        // primaire. Sans ce pont complet, sa teinte vert clair par défaut peut
+        // réapparaître sur certains états avec un texte blanc en thème sombre.
+        definir("--sjs-primary-backcolor", apparence.boutonFond, apparence.fond || "#ffffff");
+        definir("--sjs-primary-forecolor", apparence.boutonTexte, apparence.texte || "#111111");
+        definir("--sjs-primary-forecolor-light", apparence.boutonTexte, apparence.texte || "#111111");
+        definir("--sjs-primary-backcolor-light", apparence.fondSection, apparence.fondSecondaire || apparence.fond || "#f5f5f5");
+        definir("--sjs-primary-backcolor-dark", apparence.boutonActifFond, apparence.texte || "#111111");
+
+        definir("--sjs-general-backcolor", apparence.fond, "#ffffff");
+        definir("--sjs-general-backcolor-dark", apparence.fondSecondaire, apparence.fond || "#ededed");
+        definir("--sjs-general-backcolor-dim", apparence.fondSecondaire, apparence.fond || "#ededed");
+        definir("--sjs-general-backcolor-dim-light", apparence.fondSection, apparence.fondSecondaire || apparence.fond || "#f5f5f5");
+        definir("--sjs-general-backcolor-dim-dark", apparence.fondSecondaire, apparence.fond || "#ededed");
+        definir("--sjs-general-forecolor", apparence.texte, "#111111");
+        definir("--sjs-general-forecolor-light", apparence.texteSecondaire, apparence.texte || "#333333");
+        definir("--sjs-general-dim-forecolor", apparence.texte, "#111111");
+        definir("--sjs-general-dim-forecolor-light", apparence.texteSecondaire, apparence.texte || "#333333");
+
+        definir("--sjs-border-default", apparence.boutonBordure, apparence.bordure || "#202020");
+        definir("--sjs-border-light", apparence.bordure, "#777777");
+        definir("--sjs-border-inside", apparence.bordure, "#777777");
+
+        definir("--sjs-special-green", apparence.boutonActifFond, apparence.texte || "#111111");
+        definir("--sjs-special-green-light", apparence.fondSection, apparence.fondSecondaire || apparence.fond || "#f5f5f5");
+        definir("--sjs-special-green-forecolor", apparence.boutonActifTexte, apparence.fond || "#ffffff");
 
         requestAnimationFrame(() => this._synchroniserNavigationSurveyJS());
     }

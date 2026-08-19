@@ -28,6 +28,14 @@ export const configurationFormulaireAvis = Object.freeze({
     sujetEmail: "Réponses anonymes – Questionnaire ANNA",
     prefixeNomFichier: "reponses_questionnaire_ANNA",
 
+    // Enregistrement des réponses. Le chemin est relatif à index.html afin
+    // de fonctionner également lorsque ANNA est publié dans un sous-dossier.
+    enregistrement: Object.freeze({
+        endpoint: "./api/enregistrer_enquete.php",
+        cleStockageSecours: "anna.enquete.reponses.enAttente",
+        delaiMaximumMs: 12000
+    }),
+
     fermerAvecEchap: true,
     fermerEnCliquantSurLeFond: false
 });

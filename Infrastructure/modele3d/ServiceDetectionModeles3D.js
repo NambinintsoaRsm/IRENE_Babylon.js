@@ -22,11 +22,13 @@ export class ServiceDetectionModeles3D {
     constructor({
                     dossierModeles = "assets/modeles/",
                     fichiersManifest = ["modeles.json", "manifest.json"],
+                    endpointDetection = "api/lister_modeles.php",
                     extensions = ["obj"],
                     profondeurRecherche = 2
                 } = {}) {
         this.dossierModeles = this.normaliserDossier(dossierModeles);
         this.fichiersManifest = fichiersManifest;
+        this.endpointDetection = String(endpointDetection ?? "").trim();
         this.extensions = extensions.map((extension) => extension.toLowerCase());
         this.profondeurRecherche = Math.max(0, Number(profondeurRecherche) || 0);
     }
@@ -38,6 +40,17 @@ export class ServiceDetectionModeles3D {
             return depuisManifest;
         }
 
+        // Sur Apache/PHP (et avec le serveur PHP intégré), l'index automatique
+        // des dossiers n'est généralement pas exposé. L'API PHP parcourt alors
+        // assets/modeles/ côté serveur et renvoie la même structure que le manifeste.
+        const depuisApi = await this.detecterDepuisApi();
+
+        if (depuisApi.length > 0) {
+            return depuisApi;
+        }
+
+        // Ce dernier mode conserve le fonctionnement historique avec
+        // `python -m http.server`, qui expose un index HTML des dossiers.
         const dossiers = await this.detecterDossiersDepuisIndex();
         const modeles = [];
 
@@ -59,6 +72,41 @@ export class ServiceDetectionModeles3D {
         }
 
         return modeles.sort((a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" }));
+    }
+
+
+    async detecterDepuisApi() {
+        if (!this.endpointDetection) {
+            return [];
+        }
+
+        const donnees = await this.lireJson(this.endpointDetection);
+
+        if (!donnees) {
+            return [];
+        }
+
+        const entrees = Array.isArray(donnees)
+            ? donnees
+            : donnees.modeles ?? donnees.models ?? [];
+
+        if (!Array.isArray(entrees)) {
+            return [];
+        }
+
+        const modeles = entrees
+            .map((entree) => this.creerModeleDepuisManifest(entree))
+            .filter(Boolean);
+
+        if (modeles.length > 0) {
+            console.info(
+                `[Modèles 3D] ${modeles.length} modèle(s) détecté(s) via ${this.endpointDetection}.`
+            );
+        }
+
+        return modeles.sort((a, b) =>
+            a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" })
+        );
     }
 
     async detecterDepuisManifest() {

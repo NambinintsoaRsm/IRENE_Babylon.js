@@ -3,12 +3,14 @@ export class ControleurAvis {
         etatApplication,
         serviceFormulaireAvisHTML,
         configurationFormulaireAvis,
-        constantesInterface
+        constantesInterface,
+        enregistrerReponseEnqueteUC
     } = {}) {
         this.etatApplication = etatApplication;
         this.serviceFormulaireAvisHTML = serviceFormulaireAvisHTML;
         this.configurationFormulaireAvis = configurationFormulaireAvis;
         this.constantesInterface = constantesInterface;
+        this.enregistrerReponseEnqueteUC = enregistrerReponseEnqueteUC;
 
         this.boutonAvis = null;
         this.observateurBouton = null;
@@ -38,7 +40,8 @@ export class ControleurAvis {
         this.serviceFormulaireAvisHTML.installer({
             camera: this.etatApplication?.camera?.cameraBabylon,
             canvas: this.etatApplication?.canvas,
-            obtenirApparence: () => this._obtenirApparenceCourante()
+            obtenirApparence: () => this._obtenirApparenceCourante(),
+            onSoumission: (reponses) => this._enregistrerReponses(reponses)
         });
 
         this.boutonAvis = bouton;
@@ -55,6 +58,16 @@ export class ControleurAvis {
         this.observateurBouton = null;
         this.boutonAvis = null;
         this.serviceFormulaireAvisHTML.detruire();
+    }
+
+
+    async _enregistrerReponses(reponses) {
+        if (!this.enregistrerReponseEnqueteUC) {
+            console.warn("[Avis] Aucun mécanisme d'enregistrement n'est configuré.");
+            return { ok: false, message: "Enregistrement non configuré." };
+        }
+
+        return this.enregistrerReponseEnqueteUC.executer({ reponses });
     }
 
     _obtenirApparenceCourante() {

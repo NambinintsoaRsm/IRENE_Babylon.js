@@ -50,6 +50,7 @@ import { StockageProfilLocal } from "./Infrastructure/stockage/StockageProfilLoc
 import { ServiceDetectionModeles3D } from "./Infrastructure/modele3d/ServiceDetectionModeles3D.js";
 import { ServiceLoupe3D } from "./Infrastructure/loupe/ServiceLoupe3D.js";
 import { ServiceFormulaireAvisHTML } from "./Infrastructure/web/ServiceFormulaireAvisHTML.js";
+import { ServiceEnregistrementEnqueteHTTP } from "./Infrastructure/web/ServiceEnregistrementEnqueteHTTP.js";
 
 import { BasculerMenuUC } from "./UseCases/animIntUseCases/BasculerMenuUC.js";
 import { BasculerSectionUC } from "./UseCases/animIntUseCases/BasculerSectionUC.js";
@@ -99,6 +100,7 @@ import { SauvegarderProfilLocalUC } from "./UseCases/profilUseCases/SauvegarderP
 import { AppliquerProfilUC } from "./UseCases/profilUseCases/AppliquerProfilUC.js";
 import { ReinitialiserProfilUC } from "./UseCases/profilUseCases/ReinitialiserProfilUC.js";
 import { ToggleAccessUC } from "./UseCases/accessibiliteUseCases/ToggleAccessUC.js";
+import { EnregistrerReponseEnqueteUC } from "./UseCases/enqueteUseCases/EnregistrerReponseEnqueteUC.js";
 
 import { ControleurAnimationInterface } from "./Presentation/controleurs/ControleurAnimationInterface.js";
 import { ControleurInterface } from "./Presentation/controleurs/ControleurInterface.js";
@@ -728,7 +730,7 @@ function supprimerBoutonsEtPanneauxTest(advancedTexture) {
 }
 
 function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe3D }) {
-    const nomsBoutonsFlottants = ["AccesBtn", "LoupeBtn"];
+    const nomsBoutonsFlottants = ["AccesBtn", "LoupeBtn", "AvisBtn"];
     const nomsPanneauxBloquants = [
         "PoliRect",
         "MenuRect",
@@ -894,6 +896,23 @@ async function main() {
     const serviceFormulaireAvisHTML = new ServiceFormulaireAvisHTML({
         configuration: configurationFormulaireAvis
     });
+    const serviceEnregistrementEnqueteHTTP = new ServiceEnregistrementEnqueteHTTP({
+        endpoint: configurationFormulaireAvis.enregistrement?.endpoint,
+        cleStockageSecours: configurationFormulaireAvis.enregistrement?.cleStockageSecours,
+        delaiMaximumMs: configurationFormulaireAvis.enregistrement?.delaiMaximumMs
+    });
+
+    // Une réponse conservée localement après une panne réseau est renvoyée
+    // automatiquement lors d'un prochain chargement de l'application.
+    serviceEnregistrementEnqueteHTTP.reessayerEnvoisEnAttente()
+        .then(({ envoyees, restantes }) => {
+            if (envoyees > 0 || restantes > 0) {
+                console.info("[Enquête] Réponses en attente :", { envoyees, restantes });
+            }
+        })
+        .catch((erreur) => {
+            console.warn("[Enquête] Réessai des réponses en attente impossible.", erreur);
+        });
 
     etatApplication.services = {
         ...(etatApplication.services ?? {}),
@@ -1038,6 +1057,10 @@ async function main() {
     const appliquerProfilUC = new AppliquerProfilUC(etatApplication);
     const reinitialiserProfilUC = new ReinitialiserProfilUC(etatApplication);
 
+    const enregistrerReponseEnqueteUC = new EnregistrerReponseEnqueteUC({
+        serviceEnregistrement: serviceEnregistrementEnqueteHTTP
+    });
+
     const toggleAccessUC = new ToggleAccessUC({
         etatApplication,
         accessNav,
@@ -1181,7 +1204,8 @@ async function main() {
         etatApplication,
         serviceFormulaireAvisHTML,
         configurationFormulaireAvis,
-        constantesInterface
+        constantesInterface,
+        enregistrerReponseEnqueteUC
     });
 
     // Après chaque changement de thème, on remet l’icône Accessibilité
