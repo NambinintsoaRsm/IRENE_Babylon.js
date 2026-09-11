@@ -1,3 +1,12 @@
+/**
+ * @file Calcul de cadrage d'un ensemble de meshes avec ArcRotateCamera.
+ *
+ * Rôle : déterminer le centre et le rayon nécessaires pour garder le modèle visible
+ * sans modifier sa géométrie.
+ *
+ * Utilisation : ControleurModele3D l'appelle après chargement, orientation et
+ * normalisation du modèle.
+ */
 import {
     filtrerMeshesValides,
     calculerBornesMeshes

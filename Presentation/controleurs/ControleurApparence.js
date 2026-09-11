@@ -1,3 +1,12 @@
+/**
+ * @file Contrôleur des réglages visuels appliqués à la scène 3D.
+ *
+ * Rôle : brancher les sliders/boutons d'apparence aux Use Cases et déclencher les
+ * post-traitements ou changements de matériaux correspondants.
+ *
+ * Utilisation : main.js fournit les contrôles GUI ; le contrôleur met à jour l'état
+ * métier puis demande aux services de refléter cet état dans Babylon.js.
+ */
 import { constantesApparence } from "../../Configuration/constantesApparence.js";
 /**
  * Branche les réglages d'apparence :
@@ -21,7 +30,8 @@ export class ControleurApparence {
         postTraitApparence,
         postTraitNettete,
         serviceMateriauxBabylon = null,
-        serviceSceneBabylon = null
+        serviceSceneBabylon = null,
+        sauvegarderProfilLocalUC = null
     }) {
         this.etatApplication = etatApplication;
 
@@ -37,12 +47,46 @@ export class ControleurApparence {
         this.postTraitNettete = postTraitNettete;
         this.serviceMateriauxBabylon = serviceMateriauxBabylon;
         this.serviceSceneBabylon = serviceSceneBabylon;
+        this.sauvegarderProfilLocalUC = sauvegarderProfilLocalUC;
+    }
+
+    /**
+     * Mémorise un réglage modifié manuellement.
+     *
+     * Lorsque le mode Accessibilité est actif, StockageProfilLocal conserve
+     * volontairement la copie des réglages présente avant son activation.
+     * Sans cette synchronisation, un slider modifié par l'utilisateur pendant
+     * l'accessibilité revenait donc à son ancienne valeur au prochain démarrage.
+     */
+    notifierReglageManuel(changements = {}, { sauvegarder = true } = {}) {
+        const valeurs = Object.fromEntries(
+            Object.entries(changements).filter(([, valeur]) => Number.isFinite(Number(valeur)))
+        );
+
+        if (Object.keys(valeurs).length === 0) return;
+
+        const sauvegardeAccessibilite = this.etatApplication.accessibilite?.sauvegardeAvantActivation;
+        if (sauvegardeAccessibilite) {
+            sauvegardeAccessibilite.apparence = {
+                ...(sauvegardeAccessibilite.apparence ?? {}),
+                ...valeurs
+            };
+        }
+
+        if (sauvegarder) {
+            try {
+                this.sauvegarderProfilLocalUC?.executer?.();
+            } catch (erreur) {
+                console.warn("[Sauvegarde] Impossible de sauvegarder un réglage d'apparence.", erreur);
+            }
+        }
     }
 
     brancherSliderContraste(slider) {
         this.brancherSliderApparence(slider, (valeur) => {
             this.changerContrasteUC.executer(valeur);
             this.postTraitApparence.appliquer(this.etatApplication);
+            this.notifierReglageManuel({ contraste: valeur });
         });
     }
 
@@ -50,6 +94,7 @@ export class ControleurApparence {
         this.brancherSliderApparence(slider, (valeur) => {
             this.changerLuminositeUC.executer(valeur);
             this.postTraitApparence.appliquer(this.etatApplication);
+            this.notifierReglageManuel({ luminosite: valeur });
         });
     }
 
@@ -57,6 +102,7 @@ export class ControleurApparence {
         this.brancherSliderApparence(slider, (valeur) => {
             this.changerSaturationUC.executer(valeur);
             this.postTraitApparence.appliquer(this.etatApplication);
+            this.notifierReglageManuel({ saturation: valeur });
         });
     }
 
@@ -64,6 +110,7 @@ export class ControleurApparence {
         this.brancherSliderApparence(slider, (valeur) => {
             this.changerNetteteUC.executer(valeur);
             this.postTraitNettete.appliquer(this.etatApplication);
+            this.notifierReglageManuel({ nettete: valeur });
         });
     }
 
@@ -210,6 +257,10 @@ export class ControleurApparence {
             return;
         }
 
+        // Ne pas modifier la géométrie ni le zIndex du bouton ici.
+        // Sa position et sa taille proviennent exclusivement du GUI (dernière ligne de RegGrid).
+        // Le problème de clic est traité au niveau du BotGrid superposé.
+
         bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(() => {
             this.reinitialiserApparenceUC.executer();
@@ -225,13 +276,20 @@ export class ControleurApparence {
             this.reglerSliderEtTexte(c.SaturationSlider, c.RegLumSatTxt, constantesApparence.saturation.defaut, false);
 
             const sliderTheme = c.ThmSlider;
-            const texteTheme = c.RegThmValTxt;
+            const texteTheme = c.ConfThmValTxt;
 
             if (sliderTheme) {
                 sliderTheme.value = 0;
             }
 
             this.appliquerFondScene(0, texteTheme);
+            this.notifierReglageManuel({
+                nettete: constantesApparence.nettete.defaut,
+                contraste: constantesApparence.contraste.defaut,
+                luminosite: constantesApparence.luminosite.defaut,
+                saturation: constantesApparence.saturation.defaut,
+                fondScene: 0
+            });
             this.etatApplication.gui.advancedTexture?.markAsDirty?.();
         });
     }
@@ -244,6 +302,8 @@ export class ControleurApparence {
             texte.metadata = texte.metadata || {};
             texte.metadata.texteDynamique = true;
             texte.text = signe && pourcentage > 0 ? `+${pourcentage}%` : `${pourcentage}%`;
+            texte.metadata.responsiveTexteOriginal = texte.text;
+            delete texte.metadata.dernierTexteAutoFit;
             texte._markAsDirty?.();
         }
     }

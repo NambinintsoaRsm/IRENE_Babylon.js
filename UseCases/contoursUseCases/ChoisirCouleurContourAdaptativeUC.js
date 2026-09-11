@@ -1,3 +1,9 @@
+/**
+ * @file Cas d'utilisation du choix automatique de couleur de silhouette.
+ *
+ * Rôle : demander au service Babylon une couleur adaptée au rendu courant puis mettre
+ * à jour ParametresContours sans exposer le calcul d'image au contrôleur.
+ */
 import { TypeContour } from "../../Domain/contours/TypeContour.js";
 
 export class ChoisirCouleurContourAdaptativeUC {

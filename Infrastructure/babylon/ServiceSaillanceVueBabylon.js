@@ -1,3 +1,16 @@
+/**
+ * @file Sélection automatique de la vue initiale par saillance visuelle.
+ *
+ * Rôle : évaluer plusieurs points de vue autour du modèle avec la carte de saillance
+ * GMM puis retenir la vue ayant le meilleur score.
+ *
+ * Utilisation : ControleurModele3D lance l'analyse après chargement et mémorise la
+ * vue obtenue comme vue de départ du modèle. L'analyse cède périodiquement la main
+ * au navigateur afin que la GUI reste interactive pendant le calcul.
+ *
+ * Architecture : cette classe hérite volontairement de ServiceEntropieVueBabylon
+ * pour réutiliser le parcours sphérique et la gestion de la caméra d'analyse.
+ */
 import { constantesSaillance } from "../../Configuration/constantesSaillance.js";
 import { ServiceEntropieVueBabylon } from "./ServiceEntropieVueBabylon.js";
 
@@ -27,6 +40,12 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         });
     }
 
+    /**
+     * Évalue les vues configurées et place la caméra sur la vue de score maximal.
+     *
+     * @param {Object} options Paramètres transmis au pipeline de parcours hérité.
+     * @returns {Promise<Object|null>} Résultat de l'analyse avec la vue retenue.
+     */
     async placerCameraSurVueSaillanceMaximale(options = {}) {
         const resultat = await super.placerCameraSurVueEntropieMaximale({
             configuration: constantesSaillance,
@@ -62,7 +81,11 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         const engine = scene?.getEngine?.();
         const largeur = Math.max(1, Number(engine?.getRenderWidth?.()) || 16);
         const hauteur = Math.max(1, Number(engine?.getRenderHeight?.()) || 9);
-        const ratioAspect = largeur / hauteur;
+        const ratioAspectConfigure = Number(cadrage.ratioAspectAnalyse);
+        const ratioAspect = Number.isFinite(ratioAspectConfigure)
+            && ratioAspectConfigure > 0
+            ? ratioAspectConfigure
+            : largeur / hauteur;
 
         const fovCamera = Number(camera?.fov) || Math.PI / 4;
         const fovVertical = camera?.fovMode === BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED
@@ -130,7 +153,7 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         });
     }
 
-    calculerScoreDepuisPixels(pixels, width, height, configurationAnalyse = {}) {
+    async calculerScoreDepuisPixels(pixels, width, height, configurationAnalyse = {}) {
         const carte = this.calculerCarteSaillanceAchanta(pixels, width, height, configurationAnalyse);
 
         if (!carte || !carte.valeurs?.length) {
@@ -158,7 +181,9 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
             };
         }
 
-        const resultatGmm = this.construireGmmDepuisPixelsSaillants({
+        await this.cederAuNavigateur();
+
+        const resultatGmm = await this.construireGmmDepuisPixelsSaillants({
             pixelsSaillants,
             largeur: carte.largeur,
             hauteur: carte.hauteur,
@@ -415,7 +440,7 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
             .slice(0, maxPixels);
     }
 
-    construireGmmDepuisPixelsSaillants({ pixelsSaillants, largeur, hauteur, configurationAnalyse }) {
+    async construireGmmDepuisPixelsSaillants({ pixelsSaillants, largeur, hauteur, configurationAnalyse }) {
         const gmm = new Float64Array(largeur * hauteur);
         const gmmConfig = configurationAnalyse.gmm ?? {};
         const lambda = this.calculerLambdaGmm({
@@ -426,7 +451,15 @@ export class ServiceSaillanceVueBabylon extends ServiceEntropieVueBabylon {
         const sigmaMin = Math.max(0.0001, Number(gmmConfig.sigmaMin ?? 1));
         const rayonInfluenceSigma = Math.max(1, Number(gmmConfig.rayonInfluenceSigma ?? 3));
 
-        for (const pixelSaillant of pixelsSaillants) {
+        for (let indexPixel = 0; indexPixel < pixelsSaillants.length; indexPixel++) {
+            // Le GMM est la partie CPU la plus coûteuse. Le découper en petits
+            // lots préserve exactement le même calcul mais évite un long blocage
+            // continu du thread UI.
+            if (indexPixel > 0 && indexPixel % 32 === 0) {
+                await this.cederAuNavigateur();
+            }
+
+            const pixelSaillant = pixelsSaillants[indexPixel];
             const sigma = Math.max(sigmaMin, lambda * pixelSaillant.poids);
             const deuxSigmaCarre = 2 * sigma * sigma;
             const rayon = Math.ceil(rayonInfluenceSigma * sigma);

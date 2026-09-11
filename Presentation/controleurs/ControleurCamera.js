@@ -1,16 +1,20 @@
 /**
+ * @file Contrôleur des interactions caméra exposées par l'interface.
+ *
+ * Rôle : traduire les actions utilisateur vers ServiceCameraBabylon tout en gardant
+ * les paramètres métier dans etatApplication.
+ */
+/**
  * Contrôleur des actions caméra : vitesse, dropdown zoom et réinitialisations.
  */
 export class ControleurCamera {
     constructor({
         etatApplication,
         changerVitesseCameraUC,
-        reinitialiserCameraUC,
         serviceCameraBabylon
     }) {
         this.etatApplication = etatApplication;
         this.changerVitesseCameraUC = changerVitesseCameraUC;
-        this.reinitialiserCameraUC = reinitialiserCameraUC;
         this.serviceCameraBabylon = serviceCameraBabylon;
     }
 

@@ -1,3 +1,10 @@
+/**
+ * @file Cas d'utilisation qui applique un ProfilUtilisateur à l'état partagé.
+ *
+ * Rôle : copier uniquement les données métier du profil dans etatApplication.
+ * Les effets Babylon/GUI sont volontairement appliqués ensuite par ControleurProfil,
+ * afin que ce Use Case reste indépendant de l'infrastructure graphique.
+ */
 export class AppliquerProfilUC {
     constructor(etatApplication) {
         this.etatApplication = etatApplication;
@@ -37,14 +44,6 @@ export class AppliquerProfilUC {
 
         this.etatApplication.camera.parametres = profil.camera;
 
-        if (profil.miseLumiere) {
-            const parametresMiseLumiere = this.etatApplication.contours.parametresMiseLumiere ?? {};
-            Object.assign(parametresMiseLumiere, profil.miseLumiere.parametres ?? {});
-            this.etatApplication.contours.parametresMiseLumiere = parametresMiseLumiere;
-
-            this.etatApplication.contours.miseLumiereNormalesActif = Boolean(profil.miseLumiere.normalesActif);
-            this.etatApplication.contours.miseLumiereCouleursActif = Boolean(profil.miseLumiere.couleursActif);
-        }
 
         if (profil.lumiere) {
             this.etatApplication.lumiere = this.etatApplication.lumiere || {};

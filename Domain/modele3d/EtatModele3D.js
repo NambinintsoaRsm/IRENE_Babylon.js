@@ -1,3 +1,12 @@
+/**
+ * @file État de chargement et de sélection des modèles 3D.
+ *
+ * Rôle : distinguer le modèle sélectionné, le modèle réellement chargé, les meshes
+ * Babylon associés et l'état d'une opération de chargement.
+ *
+ * Utilisation : ControleurModele3D orchestre les transitions et les services
+ * Babylon ne reçoivent que les meshes effectivement chargés.
+ */
 export class EtatModele3D {
     constructor({
                     modelesDisponibles = [],

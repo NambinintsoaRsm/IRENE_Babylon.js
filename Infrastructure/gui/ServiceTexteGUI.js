@@ -1,10 +1,12 @@
+import { constantesInterface } from "../../Configuration/constantesInterface.js";
+
 /**
  * Service de gestion du texte de l'interface Babylon GUI.
  *
  * Règle importante :
  * - on ne convertit plus les tailles en pixels en mode standard ;
  * - on conserve l'unité définie dans guiTexture.json : %, px ou nombre ;
- * - taillePolice est une variation relative : 0 = taille originale, -10 = -10 %, +2 = +2 % ;
+ * - taillePolice est une variation relative positive : 0 = taille originale, +2 = +2 % ;
  * - en mode accessibilité, certains rôles ont une hiérarchie de taille :
  *   les titres restent plus grands que les textes courants.
  */
@@ -17,10 +19,31 @@ export class ServiceTexteGUI {
             "AccesBtnTxt"
         ]);
 
+        // La liste des flèches est centralisée dans constantesInterface afin que
+        // la police fixe, l'exclusion du calcul de taille et le centrage optique
+        // utilisent exactement les mêmes contrôles.
+        this.nomsFlechesPoliceFixeArial = new Set(
+            constantesInterface.flechesNavigation?.noms ?? []
+        );
+        this.nomsFlechesCentrageExclues = new Set(
+            constantesInterface.flechesNavigation?.exclusCentrageOptique ?? []
+        );
+
+        this.canvasMesureFleches = null;
+        this.contexteMesureFleches = null;
+        this.timerCentrageFleches = null;
+        this.resizeCentrageFlechesBranche = false;
+        this.interactionCentrageFlechesBranche = false;
+        this.dernierEtatApplicationCentrageFleches = null;
+
         this.nomsTitresMenus = new Set([
+            "FichBtnTxt",
+            "OuvBtnText",
+            "EnrBtnText",
             "ConfBtnTxt",
             "PolBtnText",
             "MenuBtnText",
+            "OutiBtnText",
             "RegBtnTxt",
             "Mod3DBtnText",
             "ContBtnText",
@@ -35,8 +58,10 @@ export class ServiceTexteGUI {
         // rôle explicite, l'auto-fit pouvait les réduire beaucoup plus que les
         // boutons, notamment avec OpenDyslexic en taille navigateur 32 px.
         this.nomsLibellesSections = new Set([
+            // Configurations / Scène
+            "ConfThmTxt",
+
             // Réglages
-            "RegThmTxt",
             "RegNetTxt",
             "RegConTxt",
             "RegLumTxt",
@@ -44,10 +69,7 @@ export class ServiceTexteGUI {
 
             // Contours
             "ContCoulTxt",
-            "ContSurbTxt",
             "ContoAutoTxt",
-            "HighClairTxt",
-            "HighSombrTxt",
             "ContEpaiTxt",
 
             // Police, texture et lumière
@@ -67,7 +89,7 @@ export class ServiceTexteGUI {
         // Ces libellés courts doivent rester proches de la taille demandée :
         // leur largeur disponible est largement suffisante.
         this.nomsLibellesSectionsCourts = new Set([
-            "RegThmTxt",
+            "ConfThmTxt",
             "RegNetTxt",
             "RegConTxt",
             "RegLumTxt",
@@ -84,11 +106,10 @@ export class ServiceTexteGUI {
             "MenuPosiTxt"
         ]);
 
-        // Nouveaux textes du guiTexture mis à jour qui doivent pouvoir
-        // utiliser plusieurs lignes sans être réduits excessivement.
-        this.nomsTextesMultilignes = new Set([
-            "EspaceTxt"
-        ]);
+        // Textes multiligne identifiés statiquement par nom. L'aide de la
+        // touche Espace n'est volontairement plus ici : son rôle est posé au
+        // runtime par ControleurLumiere à partir de son conteneur EspaceRect.
+        this.nomsTextesMultilignes = new Set();
     }
 
     appliquerParametresTexte(etatApplication) {
@@ -115,16 +136,24 @@ export class ServiceTexteGUI {
             }
         });
 
+        // La police choisie reste appliquée normalement à tous les textes.
+        // On ne corrige qu’ensuite les pictogrammes de flèche afin de les
+        // remettre en Arial, sans toucher au mécanisme Tiresias/Liberation/etc.
+        this.appliquerPoliceFixeFleches(advancedTexture);
+        this.installerSuiviCentrageFleches(etatApplication);
+
         // Si le mode accessibilité est actif, on applique ensuite la taille
         // navigateur en conservant une hiérarchie : titres > textes courants.
         const remPx = Number(etatApplication?.accessibilite?.preferencesNavigateur?.remPx);
         if (etatApplication?.accessibilite?.actif && Number.isFinite(remPx) && remPx > 0) {
             this.appliquerTailleNavigateurPx(etatApplication, Math.round(remPx));
+            this.planifierCentrageOptiqueFleches(etatApplication);
             return;
         }
 
         advancedTexture.markAsDirty();
         this.reappliquerAutoFitApresChangement(etatApplication);
+        this.planifierCentrageOptiqueFleches(etatApplication);
     }
 
     appliquerSurTextBlock(textBlock, parametres) {
@@ -156,7 +185,7 @@ export class ServiceTexteGUI {
 
         const estTexteDynamique = textBlock.metadata.texteDynamique === true;
         const estBoutonModeleAutoFit = textBlock.metadata.boutonModeleAutoFit === true;
-        const estTexteMultiligne = this.nomsTextesMultilignes.has(String(textBlock.name ?? ""));
+        const estTexteMultiligne = this.estTexteMultiligne(textBlock);
 
         if (!estTexteDynamique && textBlock.metadata.texteOriginal === undefined) {
             textBlock.metadata.texteOriginal = textBlock.text;
@@ -190,6 +219,8 @@ export class ServiceTexteGUI {
         // et non d'une ancienne valeur mise en cache après un ajustement.
         delete textBlock.metadata.responsiveFontSizeBasePx;
         delete textBlock.metadata.fontSizeDemandeeAutoFitPx;
+        delete textBlock.metadata.signatureAutoFit;
+        delete textBlock.metadata.dernierFontSizeAutoFit;
 
         const texteSource = estBoutonModeleAutoFit
             ? (textBlock.metadata.texteOriginal ?? textBlock.text)
@@ -197,7 +228,9 @@ export class ServiceTexteGUI {
                 ? textBlock.text
                 : (textBlock.metadata.texteOriginal ?? textBlock.text));
 
-        textBlock.text = String(texteSource).replace(/\u2009/g, " ");
+        textBlock.text = estTexteMultiligne
+            ? String(texteSource).replace(/[\u2009\u202F\u00A0]/g, " ")
+            : this.normaliserTexteUneLigne(texteSource);
 
         if (estBoutonModeleAutoFit) {
             textBlock.resizeToFit = false;
@@ -207,6 +240,7 @@ export class ServiceTexteGUI {
         }
 
         if (estTexteMultiligne) {
+            delete textBlock.metadata.nePasAutoFit;
             textBlock.metadata.lignesMaxAutoFit = 2;
             textBlock.metadata.tailleMinAutoFitPx = 13;
             textBlock.metadata.facteurMinAutoFit = 0.52;
@@ -217,6 +251,238 @@ export class ServiceTexteGUI {
         }
 
         textBlock._markAsDirty();
+    }
+
+    estTexteMultiligne(textBlock) {
+        if (!textBlock) return false;
+
+        return textBlock.metadata?.roleAideEspace === true
+            || this.nomsTextesMultilignes.has(String(textBlock.name ?? ""));
+    }
+
+    appliquerPoliceFixeFleches(advancedTexture) {
+        if (!advancedTexture) return;
+
+        const policeFleches = constantesInterface.flechesNavigation?.police || "Arial";
+
+        advancedTexture.getDescendants().forEach((controle) => {
+            if (!(controle instanceof BABYLON.GUI.TextBlock)) return;
+            if (!this.nomsFlechesPoliceFixeArial.has(String(controle.name ?? ""))) return;
+
+            controle.fontFamily = policeFleches;
+            controle._markAsDirty?.();
+        });
+    }
+
+    /**
+     * Branche une seule fois le recalcul du centrage après resize / chargement
+     * des polices. Le JSON n'est jamais modifié : seules de petites compensations
+     * runtime sont appliquées aux TextBlock de flèches concernés.
+     */
+    installerSuiviCentrageFleches(etatApplication) {
+        this.dernierEtatApplicationCentrageFleches = etatApplication ?? this.dernierEtatApplicationCentrageFleches;
+
+        if (!this.resizeCentrageFlechesBranche && typeof window !== "undefined") {
+            window.addEventListener("resize", () => {
+                this.planifierCentrageOptiqueFleches(this.dernierEtatApplicationCentrageFleches, 60);
+            }, { passive: true });
+            this.resizeCentrageFlechesBranche = true;
+        }
+
+        // Les accordéons changent leur symbole ▶/▼ au clic. Un recalcul après
+        // pointerup suffit : pas de boucle par frame et aucune dépendance aux
+        // contrôleurs particuliers.
+        if (!this.interactionCentrageFlechesBranche && typeof window !== "undefined") {
+            window.addEventListener("pointerup", () => {
+                this.planifierCentrageOptiqueFleches(this.dernierEtatApplicationCentrageFleches, 0);
+            }, { passive: true });
+            window.addEventListener("keyup", () => {
+                this.planifierCentrageOptiqueFleches(this.dernierEtatApplicationCentrageFleches, 0);
+            }, { passive: true });
+            this.interactionCentrageFlechesBranche = true;
+        }
+
+        if (typeof document !== "undefined" && document.fonts?.ready) {
+            document.fonts.ready
+                .then(() => this.planifierCentrageOptiqueFleches(this.dernierEtatApplicationCentrageFleches, 0))
+                .catch(() => {});
+        }
+    }
+
+    planifierCentrageOptiqueFleches(etatApplication, delai = 0) {
+        const etat = etatApplication ?? this.dernierEtatApplicationCentrageFleches;
+        if (!etat?.gui?.advancedTexture) return;
+
+        if (this.timerCentrageFleches !== null) {
+            clearTimeout(this.timerCentrageFleches);
+        }
+
+        this.timerCentrageFleches = setTimeout(() => {
+            this.timerCentrageFleches = null;
+
+            const executer = () => this.appliquerCentrageOptiqueFleches(etat);
+            if (typeof requestAnimationFrame === "function") {
+                requestAnimationFrame(() => requestAnimationFrame(executer));
+            } else {
+                executer();
+            }
+        }, Math.max(0, Number(delai) || 0));
+    }
+
+    appliquerCentrageOptiqueFleches(etatApplication) {
+        const advancedTexture = etatApplication?.gui?.advancedTexture;
+        if (!advancedTexture?.getDescendants) return;
+
+        const debug = constantesInterface.flechesNavigation?.debugCentrage === true;
+        const diagnostics = [];
+
+        advancedTexture.getDescendants().forEach((controle) => {
+            if (!(controle instanceof BABYLON.GUI.TextBlock)) return;
+
+            const nom = String(controle.name ?? "");
+            if (!this.nomsFlechesPoliceFixeArial.has(nom)) return;
+            if (this.nomsFlechesCentrageExclues.has(nom)) return;
+
+            const symbole = String(controle.text ?? "").trim();
+            if (!/^[▶▼▲◀]$/.test(symbole)) return;
+
+            const decalage = this.calculerDecalageOptiqueFleche(controle, symbole);
+            if (!decalage) return;
+
+            controle.metadata = controle.metadata || {};
+            const metadata = controle.metadata;
+
+            if (metadata.centrageFlecheBaseLeftPx === undefined) {
+                metadata.centrageFlecheBaseLeftPx = this.valeurPxSimple(controle.left);
+            }
+            if (metadata.centrageFlecheBaseTopPx === undefined) {
+                metadata.centrageFlecheBaseTopPx = this.valeurPxSimple(controle.top);
+            }
+
+            const baseLeft = Number(metadata.centrageFlecheBaseLeftPx) || 0;
+            const baseTop = Number(metadata.centrageFlecheBaseTopPx) || 0;
+
+            // Compensation calculée avec les métriques du navigateur courant.
+            // Aucun décalage fixe spécifique à Firefox/Chrome/Brave n'est stocké.
+            controle.left = `${baseLeft + decalage.x}px`;
+            controle.top = `${baseTop + decalage.y}px`;
+            controle._markAsDirty?.();
+
+            diagnostics.push({
+                nom,
+                symbole,
+                police: controle.fontFamily,
+                taillePx: Math.round(decalage.taillePx * 100) / 100,
+                decalageX: Math.round(decalage.x * 100) / 100,
+                decalageY: Math.round(decalage.y * 100) / 100
+            });
+        });
+
+        if (debug && diagnostics.length) {
+            console.groupCollapsed?.("[ANNA][Flèches] Centrage optique navigateur");
+            console.table?.(diagnostics);
+            console.groupEnd?.();
+        }
+    }
+
+    calculerDecalageOptiqueFleche(textBlock, symbole) {
+        if (typeof document === "undefined") return null;
+
+        if (!this.canvasMesureFleches) {
+            this.canvasMesureFleches = document.createElement("canvas");
+            this.contexteMesureFleches = this.canvasMesureFleches.getContext("2d");
+        }
+
+        const contexte = this.contexteMesureFleches;
+        if (!contexte) return null;
+
+        const taillePx = this.taillePoliceTextBlockPx(textBlock);
+        if (!Number.isFinite(taillePx) || taillePx <= 0) return null;
+
+        const familleBrute = String(textBlock.fontFamily || "Arial").trim();
+        const famille = familleBrute.includes(",") || /^['"].*['"]$/.test(familleBrute)
+            ? familleBrute
+            : (familleBrute.includes(" ") ? `"${familleBrute}"` : familleBrute);
+        const poids = String(textBlock.fontWeight || "400");
+
+        contexte.font = `${poids} ${taillePx}px ${famille}`;
+        contexte.textAlign = "center";
+        contexte.textBaseline = "alphabetic";
+
+        const metriques = contexte.measureText(symbole);
+        const gauche = Number(metriques.actualBoundingBoxLeft);
+        const droite = Number(metriques.actualBoundingBoxRight);
+
+        const decalageX = Number.isFinite(gauche) && Number.isFinite(droite)
+            ? (gauche - droite) / 2
+            : 0;
+
+        const asc = Number(metriques.actualBoundingBoxAscent);
+        const desc = Number(metriques.actualBoundingBoxDescent);
+        const ascPolice = Number(metriques.fontBoundingBoxAscent ?? metriques.emHeightAscent);
+        const descPolice = Number(metriques.fontBoundingBoxDescent ?? metriques.emHeightDescent);
+
+        let decalageY = 0;
+        if ([asc, desc, ascPolice, descPolice].every(Number.isFinite)) {
+            const centreEncre = (desc - asc) / 2;
+            const centrePolice = (descPolice - ascPolice) / 2;
+            decalageY = centrePolice - centreEncre;
+        }
+
+        return {
+            x: this.limiterDecalageFleche(decalageX, taillePx),
+            y: this.limiterDecalageFleche(decalageY, taillePx),
+            taillePx
+        };
+    }
+
+    taillePoliceTextBlockPx(textBlock) {
+        const directe = Number(textBlock?.fontSizeInPixels);
+        if (Number.isFinite(directe) && directe > 0) return directe;
+
+        const valeur = parseFloat(textBlock?.fontSize);
+        if (!Number.isFinite(valeur) || valeur <= 0) return NaN;
+
+        const brute = String(textBlock?.fontSize ?? "");
+        if (brute.includes("%")) {
+            const hauteur = Number(textBlock?._currentMeasure?.height ?? 0);
+            return hauteur > 0 ? hauteur * valeur / 100 : NaN;
+        }
+
+        return valeur;
+    }
+
+    limiterDecalageFleche(valeur, taillePx) {
+        if (!Number.isFinite(valeur)) return 0;
+
+        // Le correctif reste une compensation optique et ne peut jamais déplacer
+        // la flèche de plus d'un quart de sa taille. La limite est proportionnelle
+        // à la taille courante, donc indépendante de la résolution.
+        const limite = Math.max(1, Number(taillePx) * 0.25);
+        return Math.max(-limite, Math.min(limite, valeur));
+    }
+
+    valeurPxSimple(valeur) {
+        if (typeof valeur === "number" && Number.isFinite(valeur)) return valeur;
+        const texte = String(valeur ?? "0px").trim();
+        if (!texte || texte === "0") return 0;
+        if (!texte.endsWith("px")) return 0;
+        const nombre = parseFloat(texte);
+        return Number.isFinite(nombre) ? nombre : 0;
+    }
+
+    normaliserTexteUneLigne(texte) {
+        const normalise = String(texte ?? "")
+            .replace(/[\u2009\u202F\u00A0]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const morceaux = normalise.split(" ").filter(Boolean);
+        if (morceaux.length >= 3 && morceaux.every((morceau) => Array.from(morceau).length === 1)) {
+            return morceaux.join("");
+        }
+
+        return normalise;
     }
 
     poidsParDefaut(textBlock) {
@@ -241,6 +507,18 @@ export class ServiceTexteGUI {
     extraireNombre(valeur, defaut = 0) {
         const nombre = parseFloat(valeur);
         return Number.isFinite(nombre) ? nombre : defaut;
+    }
+
+    appliquerFacteurFontSize(fontSize, facteur) {
+        const valeur = parseFloat(fontSize);
+        if (!Number.isFinite(valeur) || !Number.isFinite(facteur)) return fontSize;
+
+        const nouvelleValeur = Math.max(1, valeur * facteur);
+        if (typeof fontSize === "number") return nouvelleValeur;
+
+        const texte = String(fontSize);
+        if (texte.includes("%")) return `${nouvelleValeur}%`;
+        return `${nouvelleValeur}px`;
     }
 
     calculerFontSizeAvecVariation(fontSizeOriginal, variationPourcentage) {
@@ -302,6 +580,7 @@ export class ServiceTexteGUI {
 
         advancedTexture.markAsDirty();
         this.reappliquerAutoFitApresChangement(etatApplication);
+        this.planifierCentrageOptiqueFleches(etatApplication);
     }
 
     reappliquerAutoFitApresChangement(etatApplication) {
@@ -312,46 +591,32 @@ export class ServiceTexteGUI {
         this.timersAutoFit.forEach((timer) => clearTimeout(timer));
         this.timersAutoFit = [];
 
-        const ajusterImmediatement = () => {
-            advancedTexture.markAsDirty?.();
+        advancedTexture.markAsDirty?.();
 
-            // La police choisie est déjà chargée avant l'appel de ce service.
-            // Les dimensions des contrôles ne changent pas : on peut donc
-            // calculer la taille finale avec leurs mesures courantes, dans le
-            // même tour JavaScript, avant le prochain rendu Babylon. Cela évite
-            // d'afficher brièvement la grande taille puis sa correction.
+        // Ne pas auto-fitter immédiatement avec les mesures de la frame précédente.
+        // Après un changement de police/taille, Babylon doit d'abord recalculer la
+        // disposition. Sinon certains textes sont momentanément tronqués puis un
+        // second auto-fit global les corrige avec des dimensions différentes.
+        const ajusterApresDisposition = () => {
             if (typeof serviceResponsive.ajuster === "function") {
                 serviceResponsive.ajuster();
             } else {
                 serviceResponsive.planifierAjustement?.(0);
             }
-
-            advancedTexture.markAsDirty?.();
         };
 
-        const verifierApresDisposition = () => {
-            advancedTexture.markAsDirty?.();
-            serviceResponsive.planifierAjustement?.(0);
-        };
-
-        // Premier calcul atomique avant l'image suivante : il masque le flash
-        // visible sur les boutons lors d'un changement de police ou de taille.
-        ajusterImmediatement();
-
-        // Les passages différés restent uniquement des vérifications, utiles si
-        // Babylon recalcule ensuite une dimension ou si une métrique de police
-        // arrive légèrement plus tard. En principe ils ne changent plus le
-        // rendu visible, puisque la première taille a déjà été calculée.
         if (typeof requestAnimationFrame === "function") {
-            requestAnimationFrame(() => requestAnimationFrame(verifierApresDisposition));
+            requestAnimationFrame(() => {
+                ajusterApresDisposition();
+                // Une seconde passe stabilise les contrôles dont la hauteur dépend
+                // elle-même du texte, sans déclencher de recalcul de borne du slider.
+                requestAnimationFrame(ajusterApresDisposition);
+            });
         } else {
-            verifierApresDisposition();
+            const timer = setTimeout(ajusterApresDisposition, 20);
+            const timer2 = setTimeout(ajusterApresDisposition, 50);
+            this.timersAutoFit.push(timer, timer2);
         }
-
-        [60, 160, 360].forEach((delai) => {
-            const timer = setTimeout(verifierApresDisposition, delai);
-            this.timersAutoFit.push(timer);
-        });
     }
 
     appliquerTailleNavigateurSurTextBlock(
@@ -442,8 +707,9 @@ export class ServiceTexteGUI {
             textBlock.resizeToFit = false;
         }
 
-        if (this.nomsTextesMultilignes.has(String(textBlock.name ?? ""))) {
+        if (this.estTexteMultiligne(textBlock)) {
             textBlock.metadata.roleAccessibilite = "texteMultiligne";
+            delete textBlock.metadata.nePasAutoFit;
             textBlock.metadata.lignesMaxAutoFit = 2;
             textBlock.metadata.tailleMinAutoFitPx = Math.max(13, Math.round(tailleAppliquee * 0.52));
             textBlock.metadata.facteurMinAutoFit = 0.52;
@@ -457,6 +723,8 @@ export class ServiceTexteGUI {
             textBlock.metadata.responsiveTexteOriginal = textBlock.metadata.texteOriginal ?? textBlock.text;
         }
 
+        // Aucun facteur fixe spécifique à OpenDyslexic : l'auto-fit mesure la
+        // police réellement active et ne réduit le texte que si nécessaire.
         textBlock.fontSize = `${tailleAppliquee}px`;
         textBlock._markAsDirty?.();
     }
@@ -581,5 +849,43 @@ export class ServiceTexteGUI {
             || parent?.metadata?.estBoutonLoupe3D === true
             || nom === "LoupeBtnTxt"
             || (texte === "🔍" || texte === "✕") && parent?.metadata?.estBoutonLoupe3D === true;
+    }
+
+    /**
+     * Règles spécifiques au calcul de la borne haute du slider. Un texte peut
+     * suivre visuellement le réglage de taille sans pour autant devoir limiter
+     * la borne globale : valeurs numériques, pourcentages et pictogrammes sont
+     * par exemple des contenus dynamiques courts.
+     */
+    estTexteExcluCalculMaximum(textBlock) {
+        if (!textBlock) return true;
+        if (this.estTexteExcluTaille(textBlock)) return true;
+
+        const nom = String(textBlock.name ?? "");
+        const texte = String(
+            textBlock.metadata?.texteOriginal
+            ?? textBlock.text
+            ?? ""
+        ).trim();
+
+        if (this.nomsFlechesPoliceFixeArial.has(nom)) return true;
+
+        // Un libellé de modèle est créé dynamiquement parce que son texte dépend
+        // du fichier chargé, mais il doit malgré tout participer au réglage global
+        // de police et au calcul de la borne du slider. Les autres textes
+        // dynamiques (valeurs numériques, pourcentages, états) restent exclus.
+        const participeMalgreTexteDynamique =
+            textBlock.metadata?.participeCalculMaximumTaillePolice === true
+            || textBlock.metadata?.estLabelBoutonModele === true;
+        if (textBlock.metadata?.texteDynamique === true && !participeMalgreTexteDynamique) {
+            return true;
+        }
+
+        if (textBlock.isVisible === false || textBlock.notRenderable === true) return true;
+        if (!texte || texte.length <= 1) return true;
+        if (/^[✓✕▶▼▲◀🔍+\-]+$/.test(texte)) return true;
+        if (/^[+\-]?\d+(?:[.,]\d+)?\s*%?$/.test(texte)) return true;
+
+        return false;
     }
 }

@@ -1,8 +1,23 @@
+/**
+ * @file Point d'entrée et composition de l'application ANNA.
+ *
+ * Rôle : instancier les services, Use Cases et contrôleurs, charger la scène
+ * Babylon.js et relier les contrôles de la GUI aux comportements applicatifs.
+ *
+ * Utilisation : ce fichier est chargé une seule fois par la page principale.
+ * Les règles métier doivent rester dans les classes du domaine et les Use Cases ;
+ * main.js ne doit contenir que du câblage, de l'initialisation et les adaptations
+ * nécessaires entre Babylon.js et la GUI.
+ *
+ * Contrainte : l'ordre d'initialisation est important. La scène, la GUI et l'état
+ * partagé doivent exister avant le branchement des contrôleurs qui les utilisent.
+ */
 import { chemins } from "./Configuration/chemins.js";
 import { constantesCamera } from "./Configuration/constantesCamera.js";
 import { constantesApparence } from "./Configuration/constantesApparence.js";
 import { constantesInterface } from "./Configuration/constantesInterface.js";
 import { constantesContours } from "./Configuration/constantesContours.js";
+import { constantesSauvegarde } from "./Configuration/constantesSauvegarde.js";
 import { configurationFormulaireAvis } from "./Configuration/formulaireAvis.js";
 import { etatApplication } from "./Etat/etatApplication.js";
 
@@ -18,7 +33,6 @@ import { ServiceNormalisationModeleBabylon } from "./Infrastructure/babylon/Serv
 import { ServiceOrientationModeleBabylon } from "./Infrastructure/babylon/ServiceOrientationModeleBabylon.js";
 import { ServiceMateriauxBabylon } from "./Infrastructure/babylon/ServiceMateriauxBabylon.js";
 import { ServiceLumiereBabylon } from "./Infrastructure/babylon/ServiceLumiereBabylon.js";
-import { ServiceEntropieVueBabylon } from "./Infrastructure/babylon/ServiceEntropieVueBabylon.js";
 import { ServiceSaillanceVueBabylon } from "./Infrastructure/babylon/ServiceSaillanceVueBabylon.js";
 import { ServiceCouleurContourAdaptativeBabylon } from "./Infrastructure/babylon/ServiceCouleurContourAdaptativeBabylon.js";
 import { BoucleRenduBabylon } from "./Infrastructure/babylon/BoucleRenduBabylon.js";
@@ -27,9 +41,7 @@ import { ChargeurInterfaceGUI } from "./Infrastructure/gui/ChargeurInterfaceGUI.
 import { RechercheControleGUI } from "./Infrastructure/gui/RechercheControleGUI.js";
 import { ServiceDimensionsGUI } from "./Infrastructure/gui/ServiceDimensionsGUI.js";
 import { ServiceAnimationGUI } from "./Infrastructure/gui/ServiceAnimationGUI.js";
-import { ServiceDropdownGUI } from "./Infrastructure/gui/ServiceDropdownGUI.js";
 import { ServiceStyleInterfaceGUI } from "./Infrastructure/gui/ServiceStyleInterfaceGUI.js";
-import { ServiceStyleBoutonsGUI } from "./Infrastructure/gui/ServiceStyleBoutonsGUI.js";
 import { ServiceTexteGUI } from "./Infrastructure/gui/ServiceTexteGUI.js";
 import { ServiceTexteResponsiveGUI } from "./Infrastructure/gui/ServiceTexteResponsiveGUI.js";
 import { ServiceBlocagePointeurGUI } from "./Infrastructure/gui/ServiceBlocagePointeurGUI.js";
@@ -41,10 +53,7 @@ import { AccessNav } from "./Infrastructure/accessibilite/AccessNav.js";
 
 import { PostTraitApparence } from "./Infrastructure/postTraitements/PostTraitApparence.js";
 import { PostTraitNettete } from "./Infrastructure/postTraitements/PostTraitNettete.js";
-import { PostTraitContProfNorm } from "./Infrastructure/postTraitements/PostTraitContProfNorm.js";
-import { PostTraitContoursCouleur } from "./Infrastructure/postTraitements/PostTraitementContoursCouleur.js";
-import { PostTraitMiseLumiereNormales } from "./Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js";
-import { PostTraitMiseLumiereCouleurs } from "./Infrastructure/postTraitements/PostTraitMiseLumiereCouleurs.js";
+import { PostTraitSilhouette } from "./Infrastructure/postTraitements/PostTraitSilhouette.js";
 
 import { StockageProfilLocal } from "./Infrastructure/stockage/StockageProfilLocal.js";
 import { ServiceDetectionModeles3D } from "./Infrastructure/modele3d/ServiceDetectionModeles3D.js";
@@ -53,8 +62,6 @@ import { ServiceFormulaireAvisHTML } from "./Infrastructure/web/ServiceFormulair
 import { ServiceEnregistrementEnqueteHTTP } from "./Infrastructure/web/ServiceEnregistrementEnqueteHTTP.js";
 
 import { BasculerMenuUC } from "./UseCases/animIntUseCases/BasculerMenuUC.js";
-import { BasculerSectionUC } from "./UseCases/animIntUseCases/BasculerSectionUC.js";
-import { FermerSectionsUC } from "./UseCases/animIntUseCases/FermerSectionsUC.js";
 
 import { ChangerPoliceUC } from "./UseCases/interfaceUseCases/ChangerPoliceUC.js";
 import { ChangerTaillePoliceUC } from "./UseCases/interfaceUseCases/ChangerTaillePoliceUC.js";
@@ -74,8 +81,6 @@ import { ChangerTailleMotifTextureUC } from "./UseCases/apparenceUseCases/Change
 import { ReinitialiserApparenceUC } from "./UseCases/apparenceUseCases/ReinitialiserApparenceUC.js";
 
 import { ActiverSilhouetteUC } from "./UseCases/contoursUseCases/ActiverSilhouetteUC.js";
-import { ActiverReliefUC } from "./UseCases/contoursUseCases/ActiverReliefUC.js";
-import { ActiverContourCouleurUC } from "./UseCases/contoursUseCases/ActiverContourCouleurUC.js";
 import { ChangerEpaisseurContourUC } from "./UseCases/contoursUseCases/ChangerEpaisseurContourUC.js";
 import { ChangerCouleurContourUC } from "./UseCases/contoursUseCases/ChangerCouleurContourUC.js";
 import { DesactiverContoursUC } from "./UseCases/contoursUseCases/DesactiverContoursUC.js";
@@ -83,17 +88,10 @@ import { ReinitialiserContoursUC } from "./UseCases/contoursUseCases/Reinitialis
 import { ChoisirCouleurContourAdaptativeUC } from "./UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js";
 
 import { ChangerVitesseCameraUC } from "./UseCases/cameraUseCases/ChangerVitesseCameraUC.js";
-import { ReinitialiserCameraUC } from "./UseCases/cameraUseCases/ReinitialiserCameraUC.js";
-import { BloquerCameraUC } from "./UseCases/cameraUseCases/BloquerCameraUC.js";
-import { DebloquerCameraUC } from "./UseCases/cameraUseCases/DebloquerCameraUC.js";
 
 import { ListerModelesUC } from "./UseCases/modele3dUseCases/ListerModelesUC.js";
 import { ChangerModeleActifUC } from "./UseCases/modele3dUseCases/ChangerModeleActifUC.js";
 import { ChargerModeleUC } from "./UseCases/modele3dUseCases/ChargerModeleUC.js";
-import { SupprimerModeleActuelUC } from "./UseCases/modele3dUseCases/SupprimerModeleActuelUC.js";
-import { NormaliserModeleUC } from "./UseCases/modele3dUseCases/NormaliserModeleUC.js";
-import { ChoisirVueEntropieUC } from "./UseCases/modele3dUseCases/ChoisirVueEntropieUC.js";
-import { ChoisirVueSaillanceUC } from "./UseCases/modele3dUseCases/ChoisirVueSaillanceUC.js";
 
 import { ChargerProfilLocalUC } from "./UseCases/profilUseCases/ChargerProfilLocalUC.js";
 import { SauvegarderProfilLocalUC } from "./UseCases/profilUseCases/SauvegarderProfilLocalUC.js";
@@ -112,6 +110,7 @@ import { ControleurProfil } from "./Presentation/controleurs/ControleurProfil.js
 import { ControleurLumiere } from "./Presentation/controleurs/ControleurLumiere.js";
 import { ControleurAccess } from "./Presentation/controleurs/ControleurAccess.js";
 import { ControleurAvis } from "./Presentation/controleurs/ControleurAvis.js";
+import { ControleurAccueil } from "./Presentation/controleurs/ControleurAccueil.js";
 
 const NOMS_GUI = Object.freeze({
     menu: {
@@ -122,11 +121,21 @@ const NOMS_GUI = Object.freeze({
         flecheTxt: "FlecheMenuBtnTxt"
     },
 
+    // Niveau 1 : les trois volets du menu principal.
     accordions: {
-        configurations: { bouton: "ConfBtn", rect: "ConfOptnRect", fleche: "ConfDropBtnTxt", hauteur: 160 },
-        reglages: { bouton: "RegBtn", rect: "RegOptnRect", fleche: "RegBtnDropTxt", hauteur: 600 }
-        // ZoomReintBtn reste un bouton simple : il ne doit pas être utilisé comme conteneur d'accordéon,
-        // sinon il disparaît quand les accordéons sont initialisés.
+        fichier: { bouton: "FichBtn", rect: "FichOptnRect", fleche: "FichDropBtnTxt" },
+        configurations: { bouton: "ConfBtn", rect: "ConfOptnRect", fleche: "ConfDropBtnTxt" },
+        outils: { bouton: "OutiBtn", rect: "OutiRect", fleche: "OutiBtnDropText" }
+    },
+
+    // Niveau 2 : Réglages est contenu dans Outils.
+    accordionsImbriques: {
+        reglages: { bouton: "RegBtn", rect: "RegOptnRect", fleche: "RegBtnDropTxt" }
+    },
+
+    fichier: {
+        ouvrirBtn: "OuvBtn",
+        enregistrerBtn: "EnrBtn"
     },
 
     panneaux: {
@@ -135,7 +144,7 @@ const NOMS_GUI = Object.freeze({
         contours: { bouton: "ContBtn", panneau: "ContoRect", retour: "ContRetourBtn" },
         texture: { bouton: "TextuBtn", panneau: "TextuRect", retour: "TxtuRetourBtn" },
         lumiere: { bouton: "LumBtn", panneau: "LumRect", retour: "LumRetourBtn" },
-        modeles: { bouton: "Mod3DBtn", panneau: "ModelRect", retour: "ModelRetourBtn" }
+        modeles: { bouton: "OuvBtn", panneau: "ModelRect", retour: "ModelRetourBtn" }
     },
 
     police: {
@@ -143,8 +152,8 @@ const NOMS_GUI = Object.freeze({
         texteSelection: "PlcDropBtnTxt",
         liste: "PlcTyPoScrollV",
         options: [
-            { bouton: "FntFmBtn0", valeur: "Liberation" },
-            { bouton: "FntFmBtn1", valeur: "Luciole" },
+            { bouton: "FntFmBtn0", valeur: "OpenDyslexic" },
+            { bouton: "FntFmBtn1", valeur: "Liberation" },
             { bouton: "FntFmBtn2", valeur: "Tiresias" },
             { bouton: "FntFmBtn3", valeur: "Arial" }
         ],
@@ -178,14 +187,13 @@ const NOMS_GUI = Object.freeze({
         saturationSlider: "SaturationSlider",
         saturationValeurTxt: "RegLumSatTxt",
         themeSceneSlider: "ThmSlider",
-        themeSceneValeurTxt: "RegThmValTxt",
+        themeSceneValeurTxt: "ConfThmValTxt",
         reinitialiserBtn: "RegReintBtn"
     },
 
+    // V1 : uniquement Silhouette + épaisseur + couleur manuelle/automatique.
     contours: {
         silhouetteBtn: "ContDBtn",
-        reliefBtn: "ContNBtn",
-        couleurBtn: "ContCBtn",
         couleurOptimaleBtns: [
             "ContoAutoBtn",
             "ContAutoBtn",
@@ -198,28 +206,6 @@ const NOMS_GUI = Object.freeze({
         ],
         epaisseurSlider: "ContEpaiSlider",
         epaisseurValeurTxt: "ContEpaiValTxt",
-        presetSombreBtns: [
-            "SombreBtn",
-            "HighSombrBtn",
-            "HighSombreBtn",
-            "ContPresetSombreBtn",
-            "PresetSombreBtn",
-            "ContSombreBtn",
-            "ContourSombreBtn"
-        ],
-        presetClairBtns: [
-            "ClairBtn",
-            "HighClairBtn",
-            "ContPresetClairBtn",
-            "PresetClairBtn",
-            "ContClairBtn",
-            "ContourClairBtn"
-        ],
-        reinitialiserHighlightContoursBtns: [
-            "ContPresetReintBtn",
-            "ContReintHighlightBtn",
-            "ContReintReglagesBtn"
-        ],
         couleurs: ["ContBtn1", "ContBtn2", "ContBtn3", "ContBtn4", "ContBtn5", "ContBtn6", "ContBtn7", "ContBtn8"]
     },
 
@@ -251,27 +237,12 @@ const NOMS_GUI = Object.freeze({
         panneau: "AccesRect",
         retour: "AccesRetourBtn",
         caseBtn: "AccessCheckBtn",
-        caseTxt: "AccessCheckBtnTxt",
-        anciensBoutons: ["AccessBtn", "AccBtn"],
-        anciensTextes: ["AccessBtnTxt", "AccBtnTxt"]
+        caseTxt: "AccessCheckBtnTxt"
     },
 
     avis: {
         bouton: "AvisBtn",
         texte: "AvisBtnTxt"
-    },
-
-    entropie: {
-        bouton: "EntropieBtn",
-        texte: "EntropieTxt",
-        boutonAncien: "EntropieTestBtn",
-        texteAncien: "EntropieResultTxt"
-    },
-
-    saillance: {
-        bouton: "SaillanceBtn",
-        texte: "SaillanceTxt",
-        texteBouton: "SaillanceBtnTxt"
     }
 });
 
@@ -334,7 +305,7 @@ function recupererTousLesControles(advancedTexture) {
         "LumIntSlider", "LumIntValTxt", "LumIntTxt",
         "LumTempSlider", "LumTempValTxt", "LumTempTxt",
         "LumReintBtn", "LumReintBtnTxt",
-        "EspaceRect", "EspaceTxt",
+        "EspaceRect",
 
         // Bouton flottant et fenêtre de confirmation de fermeture.
         "FermBtn", "FermBtnTxt", "FermRect", "FermMainGrid", "FermBtnGrid", "Fermer",
@@ -344,10 +315,7 @@ function recupererTousLesControles(advancedTexture) {
 
         "TextuTailleSlider", "TextuTailleTxt", "TxtuReintBtn", "TxtuReintBtnTxt",
         "AccesBtn", "AccesBtnTxt", "AccesRect", "AccesRetourBtn", "AccesRetourBtnTxt",
-        "AccessCheckBtn", "AccessCheckBtnTxt",
-        "AccessBtn", "AccessBtnTxt", "AccBtn", "AccBtnTxt",
-        "EntropieBtn", "EntropieTxt", "EntropieTestBtn", "EntropieResultTxt",
-        "SaillanceBtn", "SaillanceTxt", "SaillanceBtnTxt"
+        "AccessCheckBtn", "AccessCheckBtnTxt"
     ].forEach((nom) => {
         controles[nom] = recherche.obtenir(nom, false);
     });
@@ -360,7 +328,15 @@ function recupererTousLesControles(advancedTexture) {
  * La destination se modifie dans Configuration/chemins.js :
  * chemins.navigation.fermetureApplication.
  */
-function brancherFermetureApplication({ etatApplication, destination = "#" } = {}) {
+/**
+ * Configure la fenêtre de confirmation utilisée par le bouton de fermeture ANNA.
+ *
+ * @param {Object} options
+ * @param {Object} options.etatApplication État partagé contenant les contrôles GUI.
+ * @param {string} [options.destination="#"] URL cible après confirmation.
+ * @param {Function|null} [options.avantFermeture=null] Action appelée juste avant la navigation, notamment pour sauvegarder le profil.
+ */
+function brancherFermetureApplication({ etatApplication, destination = "#", avantFermeture = null } = {}) {
     const controles = etatApplication?.gui?.controles ?? {};
     const panneau = controles.FermRect;
     const boutonOuvrir = controles.FermBtn;
@@ -425,11 +401,11 @@ function brancherFermetureApplication({ etatApplication, destination = "#" } = {
     };
 
     const obtenirPoliceCourante = () => String(
-        etatApplication?.interface?.parametres?.police || "OpenDyslexic"
+        etatApplication?.interface?.parametres?.police || constantesInterface.policeDefaut
     );
 
     const obtenirPilePolice = (famille) => {
-        const nom = String(famille || "OpenDyslexic").replace(/["']/g, "").trim();
+        const nom = String(famille || constantesInterface.policeDefaut).replace(/["']/g, "").trim();
         return nom.toLowerCase() === "arial"
             ? "Arial, sans-serif"
             : `"${nom}", Arial, sans-serif`;
@@ -461,7 +437,7 @@ function brancherFermetureApplication({ etatApplication, destination = "#" } = {
     const attendrePolice = async (famille) => {
         if (typeof document === "undefined" || !document.fonts?.load) return;
 
-        const nom = String(famille || "OpenDyslexic").replace(/["']/g, "").trim();
+        const nom = String(famille || constantesInterface.policeDefaut).replace(/["']/g, "").trim();
         const chargement = Promise.allSettled([
             document.fonts.load(`400 28px "${nom}"`),
             document.fonts.load(`700 28px "${nom}"`)
@@ -687,51 +663,34 @@ function brancherFermetureApplication({ etatApplication, destination = "#" } = {
         ++jetonOuverture;
         changerVisibilite(false);
 
+        // Sauvegarde explicite avant la navigation. On ne dépend donc plus
+        // uniquement de beforeunload/pagehide, qui peuvent arriver trop tard
+        // selon le navigateur ou le mode de fermeture.
+        try {
+            avantFermeture?.();
+        } catch (erreur) {
+            console.warn("[Sauvegarde] Échec de la sauvegarde juste avant fermeture.", erreur);
+        }
+
         const url = String(destination ?? "#").trim() || "#";
         window.location.assign(url);
     });
 }
 
-function supprimerBoutonsEtPanneauxTest(advancedTexture) {
-    if (!advancedTexture?.getControlByName) return;
-
-    const nomsTest = [
-        "AccessBtn",
-        "AccessBtnTxt",
-        "AccBtn",
-        "AccBtnTxt",
-        "EntropieBtn",
-        "EntropieTxt",
-        "EntropiePanel",
-        "EntropieTestBtn",
-        "EntropieResultTxt",
-        "SaillanceBtn",
-        "SaillanceTxt",
-        "SaillancePanel",
-        "SaillanceBtnTxt"
-    ];
-
-    nomsTest.forEach((nom) => {
-        const controle = advancedTexture.getControlByName(nom);
-        if (!controle) return;
-
-        controle.isVisible = false;
-        controle.isEnabled = false;
-        controle.notRenderable = true;
-        controle.isHitTestVisible = false;
-        controle.isPointerBlocker = false;
-
-        if (controle.parent?.removeControl) {
-            controle.parent.removeControl(controle);
-        }
-    });
-
-    advancedTexture.markAsDirty?.();
-}
-
+/**
+ * Gère la visibilité de Loupe, Accessibilité et Avis selon le panneau affiché.
+ *
+ * Les trois boutons restent visibles au niveau des accordéons principaux
+ * (Fichier, Configurations, Outils) et sont masqués dès qu'un sous-menu
+ * occupe l'espace de travail du menu latéral.
+ */
 function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe3D }) {
     const nomsBoutonsFlottants = ["AccesBtn", "LoupeBtn", "AvisBtn"];
-    const nomsPanneauxBloquants = [
+
+    // Les trois boutons restent visibles tant que l'utilisateur se trouve au
+    // niveau principal : Fichier, Configurations ou Outils peuvent être déroulés.
+    // Ils disparaissent uniquement lorsqu'un vrai sous-menu/panneau est ouvert.
+    const nomsPanneauxSecondairesBloquants = [
         "PoliRect",
         "MenuRect",
         "ContoRect",
@@ -739,13 +698,6 @@ function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe
         "LumRect",
         "ModelRect",
         "AccesRect"
-    ];
-
-    // Quand un sous-menu du menu principal est déroulé, les boutons ronds du bas
-    // peuvent recouvrir les réglages. On les masque donc complètement dans ce cas.
-    const nomsPanneauxDeroulantsBloquants = [
-        "RegOptnRect",
-        "ConfOptnRect"
     ];
 
     const controles = () => etatApplication?.gui?.controles ?? {};
@@ -770,13 +722,17 @@ function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe
         return Boolean(controle);
     };
 
-    const estPanneauOuvert = () => [
-        ...nomsPanneauxBloquants,
-        ...nomsPanneauxDeroulantsBloquants
-    ].some((nom) => {
+    const estReglagesOuvert = () => {
+        const reglages = obtenirControle("RegOptnRect");
+        return Boolean(reglages?.metadata?.estOuvert === true);
+    };
+
+    const estPanneauSecondaireOuvert = () => nomsPanneauxSecondairesBloquants.some((nom) => {
         const panneau = obtenirControle(nom);
         return controleEffectivementVisible(panneau);
     });
+
+    const doitMasquerBoutons = () => estReglagesOuvert() || estPanneauSecondaireOuvert();
 
     const memoriserEtatInitial = (bouton) => {
         if (!bouton) return;
@@ -802,11 +758,6 @@ function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe
 
         if (!disponible) {
             bouton.metadata.boutonFlottantSuspendu = true;
-
-            // On masque les boutons flottants pour qu'ils ne recouvrent pas les menus,
-            // mais on ne les met plus en isEnabled=false / notRenderable=true.
-            // Ces états peuvent rester coincés avec certains contrôles GUI et donner
-            // l'impression que toute l'interface est désactivée.
             bouton.isVisible = false;
             bouton.alpha = 0;
             bouton.isHitTestVisible = false;
@@ -831,15 +782,22 @@ function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe
     let dernierControleMs = 0;
     const delaiControleMs = 80;
 
+    // BotGrid ne doit jamais capturer les clics lorsqu'il est masqué.
+    const botGrid = obtenirControle("BotGrid");
+    if (botGrid) {
+        botGrid.isPointerBlocker = false;
+        botGrid._markAsDirty?.();
+    }
+
     const synchroniser = ({ forcer = false } = {}) => {
         const maintenant = globalThis.performance?.now?.() ?? Date.now();
         if (!forcer && maintenant - dernierControleMs < delaiControleMs) return;
         dernierControleMs = maintenant;
 
-        const panneauOuvert = estPanneauOuvert();
-        const disponible = !panneauOuvert;
+        const masquer = doitMasquerBoutons();
+        const disponible = !masquer;
 
-        if (panneauOuvert && serviceLoupe3D?.actif) {
+        if (masquer && serviceLoupe3D?.actif) {
             serviceLoupe3D.desactiver?.();
         }
 
@@ -847,6 +805,15 @@ function installerGestionBoutonsFlottants({ etatApplication, scene, serviceLoupe
         dernierEtat = disponible;
 
         nomsBoutonsFlottants.forEach((nom) => appliquerDisponibilite(obtenirControle(nom), disponible));
+
+        if (botGrid) {
+            botGrid.isVisible = disponible;
+            botGrid.alpha = disponible ? 1 : 0;
+            botGrid.isHitTestVisible = disponible;
+            botGrid.isPointerBlocker = false;
+            botGrid._markAsDirty?.();
+        }
+
         etatApplication?.gui?.advancedTexture?.markAsDirty?.();
     };
 
@@ -887,7 +854,6 @@ async function main() {
     const serviceCadrageCameraBabylon = new ServiceCadrageCameraBabylon();
     const serviceMateriauxBabylon = new ServiceMateriauxBabylon();
     const serviceLumiereBabylon = new ServiceLumiereBabylon();
-    const serviceEntropieVueBabylon = new ServiceEntropieVueBabylon();
     const serviceSaillanceVueBabylon = new ServiceSaillanceVueBabylon();
     const serviceCouleurContourAdaptativeBabylon = new ServiceCouleurContourAdaptativeBabylon();
     const boucleRenduBabylon = new BoucleRenduBabylon();
@@ -934,14 +900,12 @@ async function main() {
 
     // GUI séparée de la scène 3D : les post-traitements 3D ne touchent plus les menus.
     etatApplication.scenes.sceneGUI = fabriqueSceneGUI.creerScene(etatApplication.moteur);
-    etatApplication.gui.advancedTexture = fabriqueSceneGUI.creerTexture(etatApplication.scenes.sceneGUI);
+    etatApplication.gui.advancedTexture = fabriqueSceneGUI.creerTexture(etatApplication.scenes.sceneGUI, "InterfaceUtilisateur");
 
     const chargeurInterfaceGUI = new ChargeurInterfaceGUI();
     const serviceDimensionsGUI = new ServiceDimensionsGUI();
     const serviceAnimationGUI = new ServiceAnimationGUI(serviceDimensionsGUI, etatApplication.scenes.sceneGUI, etatApplication);
-    const serviceDropdownGUI = new ServiceDropdownGUI();
     const serviceStyleInterfaceGUI = new ServiceStyleInterfaceGUI();
-    const serviceStyleBoutonsGUI = new ServiceStyleBoutonsGUI();
     const serviceTexteGUI = new ServiceTexteGUI();
     const serviceTexteResponsiveGUI = new ServiceTexteResponsiveGUI();
 
@@ -969,10 +933,9 @@ async function main() {
     ////////////////////////////////////////////////////////////////
 
     // Ligne de base avec le fichier JSON :
-     await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.fichier);
+     await chargeurInterfaceGUI.chargerDepuisJson(etatApplication.gui.advancedTexture, chemins.gui.principale);
 
     etatApplication.gui.controles = recupererTousLesControles(etatApplication.gui.advancedTexture);
-    supprimerBoutonsEtPanneauxTest(etatApplication.gui.advancedTexture);
     serviceTexteResponsiveGUI.installer({
         etatApplication,
         advancedTexture: etatApplication.gui.advancedTexture
@@ -993,15 +956,10 @@ async function main() {
 
     const postTraitApparence = new PostTraitApparence();
     const postTraitNettete = new PostTraitNettete();
-    const postTraitContProfNorm = new PostTraitContProfNorm();
-    const postTraitContoursCouleur = new PostTraitContoursCouleur();
-    const postTraitMiseLumiereNormales = new PostTraitMiseLumiereNormales();
-    const postTraitMiseLumiereCouleurs = new PostTraitMiseLumiereCouleurs();
+    const postTraitSilhouette = new PostTraitSilhouette();
     const stockageProfilLocal = new StockageProfilLocal();
 
     const basculerMenuUC = new BasculerMenuUC(etatApplication);
-    const basculerSectionUC = new BasculerSectionUC(etatApplication);
-    const fermerSectionsUC = new FermerSectionsUC(etatApplication);
 
     const changerPoliceUC = new ChangerPoliceUC(etatApplication);
     const changerTaillePoliceUC = new ChangerTaillePoliceUC(etatApplication);
@@ -1021,8 +979,6 @@ async function main() {
     const reinitialiserApparenceUC = new ReinitialiserApparenceUC(etatApplication);
 
     const activerSilhouetteUC = new ActiverSilhouetteUC(etatApplication);
-    const activerReliefUC = new ActiverReliefUC(etatApplication);
-    const activerContourCouleurUC = new ActiverContourCouleurUC(etatApplication);
     const changerEpaisseurContourUC = new ChangerEpaisseurContourUC(etatApplication);
     const changerCouleurContourUC = new ChangerCouleurContourUC(etatApplication);
     const desactiverContoursUC = new DesactiverContoursUC(etatApplication, constantesContours.epaisseurDefaut);
@@ -1032,9 +988,6 @@ async function main() {
         serviceCouleurContourAdaptativeBabylon
     );
     const changerVitesseCameraUC = new ChangerVitesseCameraUC(etatApplication);
-    const reinitialiserCameraUC = new ReinitialiserCameraUC(etatApplication);
-    const bloquerCameraUC = new BloquerCameraUC(etatApplication);
-    const debloquerCameraUC = new DebloquerCameraUC(etatApplication);
 
     const listerModelesUC = new ListerModelesUC(etatApplication, {
         serviceDetectionModeles3D
@@ -1047,10 +1000,6 @@ async function main() {
     }
     const changerModeleActifUC = new ChangerModeleActifUC(etatApplication);
     const chargerModeleUC = new ChargerModeleUC(etatApplication);
-    const supprimerModeleActuelUC = new SupprimerModeleActuelUC(etatApplication);
-    const normaliserModeleUC = new NormaliserModeleUC(etatApplication);
-    const choisirVueEntropieUC = new ChoisirVueEntropieUC(etatApplication);
-    const choisirVueSaillanceUC = new ChoisirVueSaillanceUC(etatApplication);
 
     const chargerProfilLocalUC = new ChargerProfilLocalUC(etatApplication, stockageProfilLocal);
     const sauvegarderProfilLocalUC = new SauvegarderProfilLocalUC(etatApplication, stockageProfilLocal);
@@ -1076,13 +1025,9 @@ async function main() {
     const controleurAnimationInterface = new ControleurAnimationInterface({
         etatApplication,
         basculerMenuUC,
-        basculerSectionUC,
-        fermerSectionsUC,
         serviceAnimationGUI,
         serviceDimensionsGUI,
         serviceBlocagePointeurGUI,
-        bloquerCameraUC,
-        debloquerCameraUC,
         serviceCameraBabylon,
         serviceControlesSpeciauxGUI
     });
@@ -1099,8 +1044,6 @@ async function main() {
         reinitialiserInterfaceUC,
         serviceTexteGUI,
         serviceStyleInterfaceGUI,
-        serviceStyleBoutonsGUI,
-        serviceDropdownGUI,
         servicePolicesNavigateur,
         serviceControlesSpeciauxGUI
     });
@@ -1117,31 +1060,24 @@ async function main() {
         postTraitApparence,
         postTraitNettete,
         serviceMateriauxBabylon,
-        serviceSceneBabylon
+        serviceSceneBabylon,
+        sauvegarderProfilLocalUC
     });
 
     const controleurContours = new ControleurContours({
         etatApplication,
         activerSilhouetteUC,
-        activerReliefUC,
-        activerContourCouleurUC,
         changerEpaisseurContourUC,
         changerCouleurContourUC,
         choisirCouleurContourAdaptativeUC,
         desactiverContoursUC,
         reinitialiserContoursUC,
-        postTraitContProfNorm,
-        postTraitContoursCouleur,
-        postTraitMiseLumiereNormales,
-        postTraitMiseLumiereCouleurs,
-        postTraitApparence,
-        serviceSceneBabylon
+        postTraitSilhouette
     });
 
     const controleurCamera = new ControleurCamera({
         etatApplication,
         changerVitesseCameraUC,
-        reinitialiserCameraUC,
         serviceCameraBabylon
     });
 
@@ -1150,9 +1086,6 @@ async function main() {
         listerModelesUC,
         changerModeleActifUC,
         chargerModeleUC,
-        supprimerModeleActuelUC,
-        normaliserModeleUC,
-        choisirVueEntropieUC,
         serviceListeModelesGUI,
         serviceSceneBabylon,
         chargeurModeleBabylon,
@@ -1161,7 +1094,6 @@ async function main() {
         serviceCadrageCameraBabylon,
         serviceMateriauxBabylon,
         serviceCameraBabylon,
-        serviceEntropieVueBabylon,
         serviceSaillanceVueBabylon,
         constantesCamera
     });
@@ -1188,11 +1120,7 @@ async function main() {
         serviceMateriauxBabylon,
         serviceControlesSpeciauxGUI,
         postTraitApparence,
-        postTraitNettete,
-        postTraitContProfNorm,
-        postTraitContoursCouleur,
-        postTraitMiseLumiereNormales,
-        postTraitMiseLumiereCouleurs
+        postTraitNettete
     });
 
     const controleurAccess = new ControleurAccess({
@@ -1215,7 +1143,6 @@ async function main() {
         const retour = appliquerThemeInterfaceOriginal(...args);
         const synchroniserInterfaceSpeciale = () => {
             controleurAccess.synchroniserEtatVisuel?.();
-            controleurContours.mettreAJourBoutonsPresets?.();
             controleurContours.mettreAJourBoutonCouleurAdaptative?.();
             serviceListeModelesGUI.actualiserStylesBoutonsModeles?.(etatApplication);
             serviceTexteGUI.appliquerParametresTexte?.(etatApplication);
@@ -1229,8 +1156,21 @@ async function main() {
     controleurInterface.brancherDepuisNomsGUI(NOMS_GUI, serviceAnimationGUI);
     brancherFermetureApplication({
         etatApplication,
-        destination: chemins.navigation?.fermetureApplication ?? "#"
+        destination: chemins.navigation?.fermetureApplication ?? "#",
+        avantFermeture: () => controleurProfil.sauvegarderMaintenant()
     });
+    // Le bouton X reçoit sa taille finale dans brancherFermetureApplication.
+    // On recalcule ensuite le haut du menu pour garantir la marge sous le bouton.
+    serviceAnimationGUI.ajusterDispositionMenuPrincipal?.();
+
+    // Sauvegarde manuelle : le bouton Enregistrer déclenche exactement la même
+    // sauvegarde que l'automatique, mais avec un retour visuel explicite.
+    controleurProfil.configurerConfirmationSauvegarde?.();
+    controleurProfil.brancherSauvegarde(
+        etatApplication.gui.controles?.[NOMS_GUI.fichier.enregistrerBtn]
+        ?? etatApplication.gui.advancedTexture?.getControlByName?.(NOMS_GUI.fichier.enregistrerBtn)
+    );
+
     brancherApparence(controleurApparence);
     brancherContours(controleurContours);
     controleurCamera.brancherDepuisNomsGUI(NOMS_GUI.camera);
@@ -1252,19 +1192,22 @@ async function main() {
         toggleAccessUC,
         controleurAccess
     });
+    // Si un profil existe, ses quatre réglages visuels manuels reprennent la
+    // priorité après la réactivation automatique du mode Accessibilité.
+    controleurProfil.restaurerReglagesApparenceDepuisProfil?.(profilRestaure);
     controleurProfil.installerSauvegardeAutomatique();
 
     // Aide de test en développement : permet de forcer la sauvegarde depuis la console
     // sans attendre la fermeture de l’onglet.
     if (typeof window !== "undefined") {
-        window.saotraSauvegarde = {
-            cle: "saotra_reglages_utilisateur",
+        window.annaSauvegarde = {
+            cle: constantesSauvegarde.cleProfil,
             sauvegarder: () => controleurProfil.sauvegarderMaintenant(),
-            charger: () => JSON.parse(localStorage.getItem("saotra_reglages_utilisateur") || "null"),
-            effacer: () => localStorage.removeItem("saotra_reglages_utilisateur")
+            charger: () => JSON.parse(localStorage.getItem(constantesSauvegarde.cleProfil) || "null"),
+            effacer: () => localStorage.removeItem(constantesSauvegarde.cleProfil)
         };
 
-        window.saotraModeles = {
+        window.annaModeles = {
             dossier: chemins.modeles.dossier,
             liste: () => etatApplication.modele3d.modelesDisponibles.map((modele) => ({
                 id: modele.id,
@@ -1278,27 +1221,29 @@ async function main() {
                     await controleurModele3D.afficherListeModeles(conteneurListe);
                 }
                 serviceTexteResponsiveGUI.planifierAjustement();
-                return window.saotraModeles.liste();
+                return window.annaModeles.liste();
             }
         };
 
-        window.saotraContours = {
-            presetSombre: () => controleurContours.appliquerPresetContours("sombre"),
-            presetClair: () => controleurContours.appliquerPresetContours("clair"),
-            basculerPresetSombre: () => controleurContours.basculerPresetContours("sombre"),
-            basculerPresetClair: () => controleurContours.basculerPresetContours("clair"),
-            desactiverHighlight: () => controleurContours.desactiverPresetContours(),
-            reinitialiserHighlight: () => controleurContours.reinitialiserReglagesContoursHighlight(),
-            proposerPresetAccessibilite: () => controleurContours.proposerPresetSelonAccessibilite(),
-            appliquerPresetAccessibilite: () => controleurContours.proposerPresetSelonAccessibilite({ appliquer: true }),
-            etatHighlight: () => ({
-                normalesActif: Boolean(etatApplication.contours?.miseLumiereNormalesActif),
-                couleursActif: Boolean(etatApplication.contours?.miseLumiereCouleursActif),
-                parametres: { ...(etatApplication.contours?.parametresMiseLumiere ?? {}) }
+        window.annaContours = {
+            activerSilhouette: () => {
+                const p = etatApplication.contours?.parametres;
+                if (!p?.estActif?.("silhouette")) activerSilhouetteUC.executer();
+                controleurContours.appliquerDepuisEtat();
+            },
+            desactiverSilhouette: () => {
+                desactiverContoursUC.executer("silhouette");
+                controleurContours.appliquerDepuisEtat();
+            },
+            etat: () => ({
+                actif: Boolean(etatApplication.contours?.parametres?.actif),
+                epaisseur: etatApplication.contours?.parametres?.epaisseur,
+                couleur: etatApplication.contours?.parametres?.couleur,
+                couleurAutomatiqueActive: Boolean(etatApplication.contours?.parametres?.couleurAutomatiqueActive)
             })
         };
 
-        window.saotraLoupe = {
+        window.annaLoupe = {
             activer: () => serviceLoupe3D.activer(),
             desactiver: () => serviceLoupe3D.desactiver(),
             basculer: () => serviceLoupe3D.basculer(),
@@ -1309,7 +1254,7 @@ async function main() {
             etat: () => serviceLoupe3D.etat()
         };
 
-        window.saotraTexteResponsive = {
+        window.annaTexteResponsive = {
             ajuster: () => serviceTexteResponsiveGUI.ajuster(),
             planifier: () => serviceTexteResponsiveGUI.planifierAjustement(),
             debug: (actif = true) => serviceTexteResponsiveGUI.debug(actif)
@@ -1317,9 +1262,45 @@ async function main() {
     }
 
     serviceStyleInterfaceGUI.appliquerTheme(etatApplication);
-    controleurContours.mettreAJourBoutonsPresets?.();
     serviceTexteGUI.appliquerParametresTexte(etatApplication);
     serviceTexteResponsiveGUI.planifierAjustement();
+
+    // Écran d'accueil séparé : guiTexture_acc.json est chargé dans sa propre
+    // AdvancedDynamicTexture. La préférence « Ne plus afficher au démarrage »
+    // est vérifiée AVANT le chargement pour éviter une requête inutile.
+    let controleurAccueil = null;
+    if (ControleurAccueil.doitAfficherAuDemarrage()) {
+        try {
+            etatApplication.gui.advancedTextureAccueil = fabriqueSceneGUI.creerTexture(
+                etatApplication.scenes.sceneGUI,
+                "InterfaceAccueil"
+            );
+
+            await chargeurInterfaceGUI.chargerDepuisJson(
+                etatApplication.gui.advancedTextureAccueil,
+                chemins.gui.accueil
+            );
+
+            controleurAccueil = new ControleurAccueil({
+                etatApplication,
+                serviceBlocagePointeurGUI,
+                advancedTexture: etatApplication.gui.advancedTextureAccueil
+            });
+
+            controleurAccueil.installer();
+            etatApplication.scenes.sceneGUI?.onDisposeObservable?.add?.(() => {
+                controleurAccueil?.detruire();
+            });
+        } catch (erreur) {
+            // Une erreur de l'accueil ne doit jamais empêcher l'ouverture d'ANNA.
+            console.warn("[Accueil] Impossible de charger l'interface d'accueil.", erreur);
+            etatApplication.gui.advancedTextureAccueil?.dispose?.();
+            etatApplication.gui.advancedTextureAccueil = null;
+            serviceBlocagePointeurGUI.definirVerrouForce?.(false);
+        }
+    } else if (etatApplication.interface) {
+        etatApplication.interface.accueilOuvert = false;
+    }
 
 
     // On crée une première sauvegarde légère dès que l’interface est prête.
@@ -1332,9 +1313,7 @@ async function main() {
     boucleRenduBabylon.lancer(
         etatApplication.moteur,
         etatApplication.scenes.scene3D,
-        etatApplication.scenes.sceneGUI,
-        etatApplication.scenes.sceneContoursCouleur,
-        () => etatApplication.contours.parametres.actif
+        etatApplication.scenes.sceneGUI
     );
     boucleRenduBabylon.gererRedimensionnement(etatApplication.moteur);
 
@@ -1366,6 +1345,13 @@ function brancherAnimationInterface(controleur) {
         hauteur: item.hauteur
     })));
 
+    controleur.brancherAccordeonsImbriques(Object.values(NOMS_GUI.accordionsImbriques).map((item) => ({
+        bouton: obtenir(c, item.bouton),
+        rect: obtenir(c, item.rect),
+        fleche: obtenir(c, item.fleche),
+        hauteur: item.hauteur
+    })));
+
     controleur.brancherPanneauxSecondaires(Object.values(NOMS_GUI.panneaux).map((item) => ({
         bouton: obtenir(c, item.bouton),
         panneau: obtenir(c, item.panneau),
@@ -1376,6 +1362,7 @@ function brancherAnimationInterface(controleur) {
         obtenir(c, NOMS_GUI.menu.rect),
         obtenir(c, NOMS_GUI.menu.flecheRect),
         ...Object.values(NOMS_GUI.accordions).map((item) => obtenir(c, item.rect)),
+        ...Object.values(NOMS_GUI.accordionsImbriques).map((item) => obtenir(c, item.rect)),
         ...Object.values(NOMS_GUI.panneaux).map((item) => obtenir(c, item.panneau))
     ]);
 }
@@ -1400,6 +1387,7 @@ function brancherApparence(controleur) {
             majTextePourcentageApparence(obtenir(c, n.netteteValeurTxt), v, 100);
             controleur.changerNetteteUC.executer(v);
             controleur.postTraitNettete.appliquer(etatApplication);
+            controleur.notifierReglageManuel?.({ nettete: v });
         });
     }
 
@@ -1419,6 +1407,7 @@ function brancherApparence(controleur) {
             majTextePourcentageApparence(obtenir(c, n.contrasteValeurTxt), v, 100);
             controleur.changerContrasteUC.executer(v);
             controleur.postTraitApparence.appliquer(etatApplication);
+            controleur.notifierReglageManuel?.({ contraste: v });
         });
     }
 
@@ -1438,6 +1427,7 @@ function brancherApparence(controleur) {
             majTextePourcentageApparence(obtenir(c, n.luminositeValeurTxt), v, 100, true);
             controleur.changerLuminositeUC.executer(v);
             controleur.postTraitApparence.appliquer(etatApplication);
+            controleur.notifierReglageManuel?.({ luminosite: v });
         });
     }
 
@@ -1457,6 +1447,7 @@ function brancherApparence(controleur) {
             majTextePourcentageApparence(obtenir(c, n.saturationValeurTxt), v, 100);
             controleur.changerSaturationUC.executer(v);
             controleur.postTraitApparence.appliquer(etatApplication);
+            controleur.notifierReglageManuel?.({ saturation: v });
         });
     }
 
@@ -1496,12 +1487,19 @@ function majTextePourcentageApparence(textBlock, valeur, facteur = 100, afficher
     if (!textBlock) return;
 
     const pourcentage = Math.round(valeur * facteur);
+    textBlock.metadata = textBlock.metadata || {};
+    textBlock.metadata.texteDynamique = true;
 
     if (afficherSigne && pourcentage > 0) {
         textBlock.text = `+${pourcentage}%`;
     } else {
         textBlock.text = `${pourcentage}%`;
     }
+
+    textBlock.metadata.responsiveTexteOriginal = textBlock.text;
+    delete textBlock.metadata.dernierTexteAutoFit;
+    textBlock._markAsDirty?.();
+    etatApplication.gui?.advancedTexture?.markAsDirty?.();
 }
 
 function brancherContours(controleur) {
@@ -1509,8 +1507,6 @@ function brancherContours(controleur) {
     const n = NOMS_GUI.contours;
 
     if (obtenir(c, n.silhouetteBtn)) controleur.brancherSilhouette(obtenir(c, n.silhouetteBtn));
-    if (obtenir(c, n.reliefBtn)) controleur.brancherRelief(obtenir(c, n.reliefBtn));
-    if (obtenir(c, n.couleurBtn)) controleur.brancherContourCouleur(obtenir(c, n.couleurBtn));
 
     const boutonCouleurOptimale = obtenirPremier(c, n.couleurOptimaleBtns);
     if (boutonCouleurOptimale) controleur.brancherCouleurAdaptative(boutonCouleurOptimale);
@@ -1520,13 +1516,6 @@ function brancherContours(controleur) {
         texteValeur: obtenir(c, n.epaisseurValeurTxt)
     });
 
-    // L'ancienne interface Highlight (boutons Normale/Couleur + sliders)
-    // n'existe plus dans le GUI. On garde seulement les presets Contours.
-    controleur.brancherPresetsDepuisNomsGUI?.({
-        sombreBtns: n.presetSombreBtns,
-        clairBtns: n.presetClairBtns,
-        reinitialiserBtns: n.reinitialiserHighlightContoursBtns
-    });
 
     n.couleurs.forEach((nom) => {
         const bouton = obtenir(c, nom);
@@ -1651,5 +1640,5 @@ async function chargerModeleInitial(controleurModele3D) {
 }
 
 main().catch((erreur) => {
-    console.error("Erreur au démarrage de l'application Saotra :", erreur);
+    console.error("Erreur au démarrage de l'application ANNA :", erreur);
 });

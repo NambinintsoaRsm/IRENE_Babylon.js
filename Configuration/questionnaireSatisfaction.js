@@ -1,11 +1,10 @@
 /**
- * Contenu du questionnaire de satisfaction ANNA.
+ * @file Structure et libellés du questionnaire de satisfaction ANNA.
  *
- * Ce fichier contient uniquement la structure et les formulations du formulaire.
- * Les modifications futures de questions doivent être faites ici, sans toucher
- * au service d'affichage SurveyJS.
+ * Modifier les formulations, pages et choix ici. Le rendu et l'enregistrement
+ * sont volontairement séparés afin qu'une évolution du questionnaire ne demande
+ * pas de modifier le service SurveyJS.
  */
-
 const choixOuiNon = ["Oui", "Non"];
 const choixOuiNonNonUtilise = ["Oui", "Non", "Non utilisé"];
 
@@ -148,18 +147,6 @@ export const questionnaireSatisfactionANNA = {
                     name: "couleurAutomatiqueContour",
                     title: "Le choix automatique de la couleur du contour vous convient-il ?",
                     choices: choixOuiNonNonUtilise
-                },
-                {
-                    type: "radiogroup",
-                    name: "surbrillanceClaire",
-                    title: "Le mode surbrillance claire vous aide-t-il à mieux voir l’objet ?",
-                    choices: choixOuiNon
-                },
-                {
-                    type: "radiogroup",
-                    name: "surbrillanceSombre",
-                    title: "Le mode surbrillance sombre vous aide-t-il à mieux voir l’objet ?",
-                    choices: choixOuiNon
                 },
                 {
                     type: "radiogroup",

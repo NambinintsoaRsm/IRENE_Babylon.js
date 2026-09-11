@@ -1,6 +1,17 @@
+/**
+ * @file Valeurs appliquées par le mode Accessibilité d'ANNA.
+ *
+ * Ce fichier décrit des profils de réglages, pas l'état courant de l'interface.
+ * ToggleAccessUC applique temporairement ces valeurs puis restaure les réglages
+ * précédents de l'utilisateur lorsque le mode est désactivé.
+ *
+ * Les coefficients sont empiriques et correspondent au comportement validé de
+ * la V1. Ils doivent être testés avec les profils utilisateurs avant modification.
+ */
 import { ThemeInterface } from "../Domain/interface/ThemeInterface.js";
 import { constantesAnimation } from "./constantesAnimation.js";
 import { constantesCamera } from "./constantesCamera.js";
+
 
 export const access = Object.freeze({
     bouton: Object.freeze({
@@ -9,18 +20,24 @@ export const access = Object.freeze({
     }),
 
     rem: Object.freeze({
-        // Taille de référence si la mesure 1rem échoue.
-        // Si le navigateur renvoie 16px, 19px ou 52px, on applique directement cette valeur.
+        /**
+         * Valeur de secours de 1rem en pixels si la mesure navigateur échoue.
+         * 16 px correspond à la valeur par défaut des navigateurs courants.
+         */
         basePx: 16
     }),
 
     mouvement: Object.freeze({
-        // prefers-reduced-motion ne supprime pas les animations : il les ralentit.
+        /**
+         * Le mode de réduction des mouvements ralentit les transitions au lieu de
+         * les supprimer, afin de conserver le retour visuel d'ouverture/fermeture.
+         */
         facteurDuree: 2,
         facteurVitesseLumiere: 0.5,
         facteurSensibiliteCamera: 2
     }),
 
+    /** Valeurs à restaurer quand le ralentissement d'accessibilité est retiré. */
     animationDefaut: Object.freeze({
         dureeMenuLateral: constantesAnimation.dureeMenuLateral,
         dureePanneauDeroulant: constantesAnimation.dureePanneauDeroulant
@@ -31,6 +48,10 @@ export const access = Object.freeze({
         sensibiliteRotation: constantesCamera.sensibiliteRotation
     }),
 
+    /**
+     * Profils de contraste proposés par le mode Accessibilité.
+     * `fondScene` suit l'échelle utilisée par le slider de scène (0 à 100).
+     */
     contraste: Object.freeze({
         more: Object.freeze({
             contraste: 1.25,

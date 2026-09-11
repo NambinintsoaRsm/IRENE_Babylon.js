@@ -1,3 +1,12 @@
+/**
+ * @file Découverte des modèles 3D disponibles sans liste codée en dur.
+ *
+ * Rôle : tenter successivement un manifeste JSON, l'API PHP puis l'index de dossier
+ * afin de produire une liste de Modele3D exploitable par l'interface.
+ *
+ * Utilisation : ListerModelesUC appelle detecterModeles(). Le catalogue statique
+ * reste un secours lorsque aucune méthode de détection serveur n'est disponible.
+ */
 import { Modele3D } from "../../Domain/modele3d/Modele3D.js";
 
 /**
@@ -33,6 +42,13 @@ export class ServiceDetectionModeles3D {
         this.profondeurRecherche = Math.max(0, Number(profondeurRecherche) || 0);
     }
 
+    /**
+     * Détecte les modèles en utilisant les stratégies disponibles sur l'hébergement.
+     *
+     * Ordre : manifeste JSON, API PHP, puis index HTML de dossier.
+     *
+     * @returns {Promise<Modele3D[]>} Modèles détectés, triés par nom.
+     */
     async detecterModeles() {
         const depuisManifest = await this.detecterDepuisManifest();
 

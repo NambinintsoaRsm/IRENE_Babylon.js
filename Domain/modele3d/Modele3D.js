@@ -1,3 +1,12 @@
+/**
+ * @file Description métier d'un modèle 3D disponible dans ANNA.
+ *
+ * Rôle : fournir un identifiant stable, un nom d'affichage et les chemins de
+ * chargement sans dépendre du moteur Babylon.js.
+ *
+ * Utilisation : ServiceDetectionModeles3D construit ces objets ; la liste GUI et
+ * ChargeurModeleBabylon les consomment ensuite.
+ */
 export class Modele3D {
     constructor({
                     id,

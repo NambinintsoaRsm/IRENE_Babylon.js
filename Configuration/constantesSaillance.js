@@ -1,17 +1,18 @@
 /**
- * Paramètres de test pour la recherche de vue par saillance GMM.
+ * @file Paramètres de la recherche automatique de vue par saillance GMM.
  *
- * Cette version reprend la démarche fournie dans ScoreImageGMM.m :
- * 1. carte de saillance d'Achanta en Lab ;
- * 2. extraction des pixels saillants avec mean + std ;
- * 3. représentation GMM inspirée de Habibi, Mouaddib, Caron, IROS 2015 ;
- * 4. entropie du GMM ;
- * 5. dispersion spatiale ;
- * 6. score final H × D.
+ * Le contrôleur de modèle utilise ce calcul après l'orientation/normalisation
+ * afin de choisir une vue initiale informative. L'algorithme suit la démarche
+ * Achanta + GMM documentée dans le projet ; les seuils numériques restent des
+ * réglages expérimentaux de la base stable et doivent être comparés sur plusieurs
+ * modèles avant toute modification.
  */
 export const constantesSaillance = Object.freeze({
-    // Calque utilisé seulement pendant le chargement : le modèle est caché
-    // pour la caméra principale, mais rendu par la caméra hors écran d'analyse.
+    /**
+     * Calque réservé au modèle pendant la recherche de la vue de départ.
+     * La caméra principale l'exclut ; la caméra hors écran de saillance l'inclut.
+     * Cette valeur doit rester identique à celle de ControleurModele3D.
+     */
     masqueModeleChargement: 0x10000000,
 
     parcoursSpherique: Object.freeze({
@@ -29,7 +30,12 @@ export const constantesSaillance = Object.freeze({
         cadrageAutomatique: Object.freeze({
             actif: true,
             occupationImageMin: 0.8,
-            margeSecurite: 1
+            margeSecurite: 1,
+
+            // L'analyse de la vue initiale doit être indépendante du format
+            // courant de la fenêtre/navigateur. Le render target hors écran est
+            // carré ; on utilise donc le même ratio pour le cadrage analytique.
+            ratioAspectAnalyse: 1
         })
     }),
 
@@ -41,6 +47,12 @@ export const constantesSaillance = Object.freeze({
         // Taille maximale de la carte analysée. Plus grand = plus précis mais plus lourd.
         // On augmente légèrement pour stabiliser les scores entre deux calculs identiques.
         tailleCarteMax: 96,
+
+        // Résolution fixe du rendu hors écran. Avant, elle dépendait de la
+        // taille du canvas visible : deux sessions avec des dimensions
+        // légèrement différentes pouvaient donc classer deux vues proches dans
+        // un ordre différent. Une texture carrée fixe stabilise le calcul.
+        resolutionRenduHorsEcranFixe: 384,
 
         // Avant le calcul Achanta/GMM, on recadre automatiquement la zone utile
         // autour de l'objet rendu. Cela évite que de grandes zones de fond blanc/noir
@@ -92,12 +104,23 @@ export const constantesSaillance = Object.freeze({
         })
     }),
 
+    selectionVue: Object.freeze({
+        // Deux scores GMM très proches sont considérés comme équivalents.
+        // Dans ce cas on conserve la première vue du parcours sphérique, dont
+        // l'ordre est fixe. Cela élimine les changements d'angle dus au faible
+        // bruit de readPixels entre deux exécutions.
+        toleranceRelativeScore: 0.0075,
+        toleranceAbsolueScore: 1e-8
+    }),
+
     modeAnalyse: Object.freeze({
         // On conserve par défaut l'état visuel courant pour comparer ce que l'utilisateur voit vraiment.
         desactiverPostTraitements: false,
         restaurerMateriauxOriginauxPendantAnalyse: false
     }),
 
+    // Conservé comme dans le backup : le moteur générique peut utiliser ce bloc
+    // lorsqu'une analyse explicite de l'objet de base est demandée.
     modeObjetBase: Object.freeze({
         desactiverPostTraitements: false,
         restaurerMateriauxOriginauxPendantAnalyse: false

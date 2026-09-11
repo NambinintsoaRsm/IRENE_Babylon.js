@@ -1,3 +1,12 @@
+/**
+ * @file Agrégat des préférences persistantes d'un utilisateur ANNA.
+ *
+ * Rôle : regrouper dans un objet cohérent les paramètres d'interface, d'apparence,
+ * de contours, de caméra et les options persistées entre deux sessions.
+ *
+ * Utilisation : StockageProfilLocal convertit cet objet vers/depuis JSON et
+ * AppliquerProfilUC le réinjecte dans etatApplication au démarrage.
+ */
 import { ParametresInterface } from "../interface/ParametresInterface.js";
 import { ParametresApparence } from "../apparence/ParametresApparence.js";
 import { ParametresContours } from "../contours/ParametresContours.js";
@@ -11,7 +20,6 @@ export class ProfilUtilisateur {
                     camera = new ParametresCamera(),
                     modele3DId = null,
                     lumiere = null,
-                    miseLumiere = null,
                     fondScene = null,
                     accessibilite = null,
                     dateSauvegarde = null,
@@ -26,7 +34,6 @@ export class ProfilUtilisateur {
         // Sections extensibles : elles permettent d'ajouter plus tard les
         // préférences navigateur/OS sans casser le format de sauvegarde.
         this.lumiere = lumiere;
-        this.miseLumiere = miseLumiere;
         this.fondScene = fondScene;
         this.accessibilite = accessibilite;
         this.dateSauvegarde = dateSauvegarde;
@@ -65,7 +72,6 @@ export class ProfilUtilisateur {
             camera: nouveauxParametres.camera ?? this.camera,
             modele3DId: nouveauxParametres.modele3DId ?? this.modele3DId,
             lumiere: nouveauxParametres.lumiere ?? this.lumiere,
-            miseLumiere: nouveauxParametres.miseLumiere ?? this.miseLumiere,
             fondScene: nouveauxParametres.fondScene ?? this.fondScene,
             accessibilite: nouveauxParametres.accessibilite ?? this.accessibilite,
             dateSauvegarde: nouveauxParametres.dateSauvegarde ?? this.dateSauvegarde,

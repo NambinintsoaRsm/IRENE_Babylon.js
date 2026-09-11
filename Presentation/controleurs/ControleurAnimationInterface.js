@@ -1,34 +1,33 @@
 /**
- * Branche les interactions liées au menu, aux accordéons principaux
- * et aux panneaux secondaires de l'interface.
+ * @file Contrôleur de navigation entre les panneaux de l'interface.
+ *
+ * Rôle : connecter les boutons de niveau principal et secondaire à
+ * ServiceAnimationGUI sans dupliquer les règles d'animation dans main.js.
+ */
+/**
+ * Branche les interactions liées au menu, aux accordéons principaux,
+ * aux accordéons imbriqués et aux panneaux secondaires de l'interface.
  */
 export class ControleurAnimationInterface {
     constructor({
         etatApplication,
         basculerMenuUC,
-        basculerSectionUC = null,
-        fermerSectionsUC = null,
         serviceAnimationGUI,
         serviceDimensionsGUI,
         serviceBlocagePointeurGUI = null,
-        bloquerCameraUC = null,
-        debloquerCameraUC = null,
         serviceCameraBabylon = null,
         serviceControlesSpeciauxGUI = null
     }) {
         this.etatApplication = etatApplication;
         this.basculerMenuUC = basculerMenuUC;
-        this.basculerSectionUC = basculerSectionUC;
-        this.fermerSectionsUC = fermerSectionsUC;
         this.serviceAnimationGUI = serviceAnimationGUI;
         this.serviceDimensionsGUI = serviceDimensionsGUI;
         this.serviceBlocagePointeurGUI = serviceBlocagePointeurGUI;
-        this.bloquerCameraUC = bloquerCameraUC;
-        this.debloquerCameraUC = debloquerCameraUC;
         this.serviceCameraBabylon = serviceCameraBabylon;
         this.serviceControlesSpeciauxGUI = serviceControlesSpeciauxGUI;
 
         this.dropdownsPrincipaux = [];
+        this.dropdownsImbriques = [];
         this.panneauxSecondaires = [];
     }
 
@@ -57,7 +56,7 @@ export class ControleurAnimationInterface {
             const etatMenu = this.basculerMenuUC.executer();
 
             // Quand on ferme/replie le menu latéral, on ferme aussi tout panneau actif :
-            // accordéon principal, panneau Police/Menu/Contours/Texture/Lumière/Modèles, etc.
+            // accordéons principaux et imbriqués, panneaux Police/Menu/Contours/Texture/Lumière, etc.
             if (etatMenu?.estOuvert === false || this.etatApplication.animation.menuLateral.estOuvert === false) {
                 this.fermerTouteInterfaceActive();
             }
@@ -69,15 +68,88 @@ export class ControleurAnimationInterface {
                 flecheText
             });
 
-            this.serviceControlesSpeciauxGUI?.signalerChangementDisposition(
-                this.etatApplication
-            );
+            this.signalerChangementDisposition();
         });
     }
 
+    /**
+     * Niveau 1 : Fichier / Configurations / Outils.
+     * Un seul volet principal peut être ouvert à la fois.
+     * Changer de volet principal referme également tout accordéon imbriqué.
+     */
     brancherAccordeonsPrincipaux(dropdowns = []) {
         this.dropdownsPrincipaux = dropdowns.filter((dropdown) => dropdown?.rect);
-        this.serviceAnimationGUI.brancherAccordeonsExclusifs(this.dropdownsPrincipaux);
+        this.serviceAnimationGUI.initialiserAccordeons(this.dropdownsPrincipaux);
+
+        this.dropdownsPrincipaux.forEach((dropdown) => {
+            const { bouton, rect, fleche, hauteur } = dropdown;
+            if (!bouton || !rect) return;
+
+            bouton.onPointerClickObservable.clear();
+            bouton.onPointerClickObservable.add(() => {
+                const doitOuvrir = !rect.metadata?.estOuvert;
+
+                // Règle d'exclusivité globale : si on change de volet principal,
+                // aucun sous-accordéon de l'ancien volet ne reste mémorisé comme ouvert.
+                this.serviceAnimationGUI.fermerTousAccordeons(this.dropdownsImbriques);
+                this.serviceAnimationGUI.fermerTousPanneauxSecondaires(this.panneauxSecondaires);
+
+                this.dropdownsPrincipaux.forEach((autre) => {
+                    if (autre.rect && autre.rect !== rect) {
+                        this.serviceAnimationGUI.fermerAccordeon(autre.rect, autre.fleche);
+                    }
+                });
+
+                if (doitOuvrir) {
+                    this.serviceAnimationGUI.ouvrirAccordeon(rect, fleche, hauteur);
+                } else {
+                    this.serviceAnimationGUI.fermerAccordeon(rect, fleche);
+                }
+
+                this.signalerChangementDisposition();
+            });
+        });
+    }
+
+    /**
+     * Niveau 2 : accordéons contenus dans un volet principal.
+     * Dans la GUI actuelle, Réglages est imbriqué dans Outils.
+     * Son ouverture ne ferme pas son parent Outils, mais les accordéons
+     * imbriqués restent exclusifs entre eux.
+     */
+    brancherAccordeonsImbriques(dropdowns = []) {
+        this.dropdownsImbriques = dropdowns.filter((dropdown) => dropdown?.rect);
+        this.serviceAnimationGUI.initialiserAccordeons(this.dropdownsImbriques);
+
+        this.dropdownsImbriques.forEach((dropdown) => {
+            const { bouton, rect, fleche, hauteur } = dropdown;
+            if (!bouton || !rect) return;
+
+            bouton.onPointerClickObservable.clear();
+            bouton.onPointerClickObservable.add(() => {
+                const doitOuvrir = !rect.metadata?.estOuvert;
+
+                this.serviceAnimationGUI.fermerTousPanneauxSecondaires(this.panneauxSecondaires);
+
+                this.dropdownsImbriques.forEach((autre) => {
+                    if (autre.rect && autre.rect !== rect) {
+                        this.serviceAnimationGUI.fermerAccordeon(autre.rect, autre.fleche);
+                    }
+                });
+
+                if (doitOuvrir) {
+                    this.serviceAnimationGUI.ouvrirAccordeon(rect, fleche, hauteur);
+                } else {
+                    this.serviceAnimationGUI.fermerAccordeon(rect, fleche);
+                }
+
+                // Réglages est imbriqué dans Outils : le parent grandit/rétrécit
+                // en même temps, sans conserver une hauteur fixe inutile.
+                this.serviceAnimationGUI.synchroniserHauteurOutils?.({ animer: true });
+
+                this.signalerChangementDisposition();
+            });
+        });
     }
 
     brancherPanneauxSecondaires(panneauxConfig = []) {
@@ -89,16 +161,16 @@ export class ControleurAnimationInterface {
                 bouton.onPointerClickObservable.clear();
                 bouton.onPointerClickObservable.add(() => {
                     // Un seul panneau secondaire visible à la fois.
-                    // On ferme aussi les accordéons principaux pour éviter les menus superposés.
+                    // Avant de l'afficher on referme tous les accordéons, y compris
+                    // Réglages qui est désormais imbriqué dans Outils.
+                    this.serviceAnimationGUI.fermerTousAccordeons(this.dropdownsImbriques);
                     this.serviceAnimationGUI.fermerTousAccordeons(this.dropdownsPrincipaux);
                     this.serviceAnimationGUI.ouvrirPanneauSecondaire(
                         panneau,
                         this.panneauxSecondaires.filter((p) => p !== panneau)
                     );
 
-                    this.serviceControlesSpeciauxGUI?.signalerChangementDisposition(
-                        this.etatApplication
-                    );
+                    this.signalerChangementDisposition();
                 });
             }
 
@@ -106,10 +178,7 @@ export class ControleurAnimationInterface {
                 retour.onPointerClickObservable.clear();
                 retour.onPointerClickObservable.add(() => {
                     this.serviceAnimationGUI.fermerPanneauSecondaire(panneau);
-
-                    this.serviceControlesSpeciauxGUI?.signalerChangementDisposition(
-                        this.etatApplication
-                    );
+                    this.signalerChangementDisposition();
                 });
             }
         });
@@ -117,33 +186,11 @@ export class ControleurAnimationInterface {
 
     fermerTouteInterfaceActive() {
         this.serviceAnimationGUI.fermerTouteInterfaceActive({
-            dropdowns: this.dropdownsPrincipaux,
+            dropdowns: [
+                ...this.dropdownsPrincipaux,
+                ...this.dropdownsImbriques
+            ],
             panneaux: this.panneauxSecondaires
-        });
-    }
-
-    brancherSection({ nomSection, boutonSection, controleSection, texteFleche }) {
-        if (!boutonSection || !controleSection || !this.basculerSectionUC) return;
-
-        this.serviceDimensionsGUI?.memoriserDimensionSection(
-            this.etatApplication,
-            nomSection,
-            controleSection
-        );
-
-        this.serviceAnimationGUI.fermerSectionGUI(controleSection, texteFleche);
-
-        boutonSection.onPointerClickObservable.clear();
-        boutonSection.onPointerClickObservable.add(() => {
-            this.basculerSectionUC.executer(nomSection);
-            const hauteurInitiale = this.etatApplication.gui.dimensionsInitiales.sections[nomSection]?.hauteur;
-
-            this.serviceAnimationGUI.basculerSection({
-                section: this.etatApplication.animation.sections[nomSection],
-                controleSection,
-                texteFleche,
-                hauteurInitiale
-            });
         });
     }
 
@@ -156,5 +203,11 @@ export class ControleurAnimationInterface {
             sceneGUI: this.etatApplication.scenes.sceneGUI,
             controles: controlesInterface.filter(Boolean)
         });
+    }
+
+    signalerChangementDisposition() {
+        this.serviceControlesSpeciauxGUI?.signalerChangementDisposition(
+            this.etatApplication
+        );
     }
 }

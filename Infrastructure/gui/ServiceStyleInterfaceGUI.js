@@ -1,3 +1,12 @@
+/**
+ * @file Application des thèmes et bordures sur Babylon GUI.
+ *
+ * Rôle : traduire ParametresInterface en couleurs, contrastes, épaisseurs et position
+ * du menu tout en préservant les contrôles qui possèdent une couleur fonctionnelle.
+ *
+ * Utilisation : ControleurInterface et ControleurProfil rappellent ce service après
+ * toute modification de thème ou restauration de profil.
+ */
 import { constantesInterface, obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
 import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
 
@@ -281,11 +290,7 @@ export class ServiceStyleInterfaceGUI {
     nomsBoutonsOptionsAvecFondAdaptatif() {
         return [
             // Panneau Contours.
-            "ContDBtn", "ContNBtn", "ContCBtn",
-            "SombreBtn", "ClairBtn", "HighSombrBtn", "HighSombreBtn", "HighClairBtn",
-            "ContPresetSombreBtn", "ContPresetClairBtn",
-            "PresetSombreBtn", "PresetClairBtn",
-            "ContSombreBtn", "ContClairBtn",
+            "ContDBtn",
 
             // Panneau Texture.
             "TxtuBtn0", "TxtuBtn1", "TxtuBtn2",
@@ -501,6 +506,11 @@ export class ServiceStyleInterfaceGUI {
             });
         }
 
+        // Une seule source de vérité pour l'onglet de pliage :
+        // ServiceAnimationGUI met à jour simultanément la position, la rotation
+        // ET le symbole de la flèche selon le côté et l'état ouvert/fermé.
+        // L'ancienne seconde rotation appliquée ici provoquait un décalage d'un
+        // clic après un passage gauche <-> droite.
         serviceAnimationGUI?.appliquerPositionMenu?.({
             etatApplication,
             menuRect: controles.MainMenuRect,
@@ -508,8 +518,6 @@ export class ServiceStyleInterfaceGUI {
             flecheText: controles.FlecheMenuBtnTxt,
             animer: false
         });
-
-        this.retournerOngletPliageSelonPosition(controles, positionMenu);
 
         etatApplication.gui.advancedTexture?.markAsDirty();
     }

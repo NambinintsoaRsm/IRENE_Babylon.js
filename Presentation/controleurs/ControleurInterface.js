@@ -1,5 +1,16 @@
+/**
+ * @file Contrôleur des paramètres de configuration de l'interface.
+ *
+ * Rôle : brancher Polices et Menus aux Use Cases, puis demander aux services GUI
+ * d'appliquer le texte, le thème, les bordures et la position.
+ *
+ * Utilisation : le contrôleur manipule les noms de contrôles fournis par main.js ;
+ * il ne doit pas contenir de valeurs visuelles codées en dur qui appartiennent à
+ * Configuration/ ou guiTexture.json.
+ */
 import { ThemeInterface } from "../../Domain/interface/ThemeInterface.js";
 import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
+import { constantesInterface } from "../../Configuration/constantesInterface.js";
 
 /**
  * Contrôleur des réglages d'interface.
@@ -20,10 +31,8 @@ export class ControleurInterface {
         reinitialiserInterfaceUC,
         serviceTexteGUI,
         serviceStyleInterfaceGUI,
-        serviceStyleBoutonsGUI,
-        serviceDropdownGUI,
         servicePolicesNavigateur = null,
-                    serviceControlesSpeciauxGUI = null
+        serviceControlesSpeciauxGUI = null
     }) {
         this.etatApplication = etatApplication;
 
@@ -38,10 +47,13 @@ export class ControleurInterface {
 
         this.serviceTexteGUI = serviceTexteGUI;
         this.serviceStyleInterfaceGUI = serviceStyleInterfaceGUI;
-        this.serviceStyleBoutonsGUI = serviceStyleBoutonsGUI;
-        this.serviceDropdownGUI = serviceDropdownGUI;
         this.servicePolicesNavigateur = servicePolicesNavigateur;
         this.serviceControlesSpeciauxGUI = serviceControlesSpeciauxGUI;
+
+        this.timerMaximumTaillePolice = null;
+        this.miseAJourMaximumTaillePoliceEnCours = false;
+        this.desinscrireRecalculMaximumTaillePolice = null;
+        this.signatureDernierCalculMaximumTaillePolice = null;
     }
 
     brancherDepuisNomsGUI(nomsGUI, serviceAnimationGUI = null) {
@@ -54,13 +66,14 @@ export class ControleurInterface {
 
         this.serviceStyleInterfaceGUI.appliquerTheme(this.etatApplication);
         this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
+        this.planifierMiseAJourMaximumTaillePolice();
     }
 
     initialiserValeursParDefaut() {
         this.etatApplication.interface.parametres = this.etatApplication.interface.parametres.copierAvec({
-            police: "OpenDyslexic",
-            taillePolice: 0,
-            gras: false
+            police: constantesInterface.policeDefaut,
+            taillePolice: constantesInterface.taillePoliceDefaut,
+            gras: constantesInterface.grasDefaut
         });
     }
 
@@ -79,7 +92,9 @@ export class ControleurInterface {
         return this.obtenirToutesOptionsPolice().find((option) => {
             return option.police.toLowerCase() === normalisee
                 || option.nomCourt.toLowerCase() === normalisee;
-        }) ?? { nomCourt: "OpenDys", police: "OpenDyslexic" };
+        }) ?? this.obtenirToutesOptionsPolice().find(
+            (option) => option.police === constantesInterface.policeDefaut
+        ) ?? { nomCourt: "Luciole", police: "Luciole" };
     }
 
     obtenirBoutonsOptionsPolice(controles = this.etatApplication.gui?.controles ?? {}) {
@@ -96,7 +111,7 @@ export class ControleurInterface {
         const nomsPolice = this.nomsGUI?.police;
         const texteSelection = this.obtenir(controles, nomsPolice?.texteSelection);
         const liste = this.obtenir(controles, nomsPolice?.liste);
-        const policeCourante = this.etatApplication.interface?.parametres?.police ?? "OpenDyslexic";
+        const policeCourante = this.etatApplication.interface?.parametres?.police ?? constantesInterface.policeDefaut;
         const selection = this.trouverOptionPolice(policeCourante);
         const boutonsOptions = this.obtenirBoutonsOptionsPolice(controles);
         const optionsListe = this.obtenirOptionsPolicePourListe(selection, boutonsOptions.length);
@@ -130,20 +145,19 @@ export class ControleurInterface {
 
         this.reinitialiserScrollListePolice(liste);
         this.etatApplication?.services?.texteResponsive?.planifierAjustement?.(60);
+        this.planifierMiseAJourMaximumTaillePolice();
     }
 
     obtenirOptionsPolicePourListe(selection, limite = 4) {
         const toutes = this.obtenirToutesOptionsPolice();
-        const selectionPolice = selection?.police ?? "OpenDyslexic";
-        const options = toutes.filter((option) => option.police !== selectionPolice);
+        const selectionPolice = selection?.police ?? constantesInterface.policeDefaut;
 
-        // Sécurité : OpenDyslexic doit toujours revenir dans la liste dès qu'une
-        // autre police est sélectionnée, même après rechargement d'une sauvegarde.
-        if (selectionPolice !== "OpenDyslexic" && !options.some((option) => option.police === "OpenDyslexic")) {
-            options.unshift({ nomCourt: "OpenDys", police: "OpenDyslexic" });
-        }
-
-        return options.slice(0, limite);
+        // Le menu contient toujours les quatre polices autres que la sélection.
+        // OpenDys reste donc disponible lorsque Luciole est la valeur par défaut,
+        // et Luciole revient automatiquement dans la liste si OpenDys est choisie.
+        return toutes
+            .filter((option) => option.police !== selectionPolice)
+            .slice(0, limite);
     }
 
     reinitialiserScrollListePolice(liste) {
@@ -168,34 +182,32 @@ export class ControleurInterface {
         const iconeDropdown = this.obtenir(controles, "PlcDropBtnIcoTxt")
             || this.obtenir(controles, "PlcDropBtnDropTxt");
         const liste = this.obtenir(controles, nomsPolice.liste);
+        const boutonsOptions = this.obtenirBoutonsOptionsPolice(controles);
 
-        const options = this.obtenirBoutonsOptionsPolice(controles).map((bouton, index) => {
-            const option = this.obtenirToutesOptionsPolice()
-                .filter((item) => item.police !== "OpenDyslexic")[index];
+        const selectionInitiale = this.trouverOptionPolice(
+            this.etatApplication.interface?.parametres?.police
+            ?? constantesInterface.policeDefaut
+        );
+        const optionsInitiales = this.obtenirOptionsPolicePourListe(
+            selectionInitiale,
+            boutonsOptions.length
+        );
 
-            return {
-                bouton,
-                nomCourt: option?.nomCourt,
-                police: option?.police
-            };
-        }).filter((option) => option.bouton && option.police);
-
-        // OpenDyslexic est la valeur sélectionnée par défaut.
-        // On ne crée pas un bouton supplémentaire : quand l'utilisateur choisit
-        // une autre police, le bouton cliqué récupère l'ancien label/ancienne police.
         this.selectionPoliceActuelle = {
-            nomCourt: "OpenDys",
-            police: "OpenDyslexic"
+            nomCourt: selectionInitiale.nomCourt,
+            police: selectionInitiale.police
         };
 
-        options.forEach((option) => {
-            option.bouton.metadata = option.bouton.metadata || {};
-            option.bouton.metadata.optionPolice = {
+        boutonsOptions.forEach((bouton, index) => {
+            const option = optionsInitiales[index];
+            if (!option) return;
+
+            bouton.metadata = bouton.metadata || {};
+            bouton.metadata.optionPolice = {
                 nomCourt: option.nomCourt,
                 police: option.police
             };
-
-            this.mettreTexteBouton(option.bouton, option.nomCourt);
+            this.mettreTexteBouton(bouton, option.nomCourt);
         });
 
         if (texteSelection) {
@@ -225,11 +237,13 @@ export class ControleurInterface {
             });
         }
 
-        options.forEach((option) => {
-            option.bouton.onPointerClickObservable.clear();
-            option.bouton.onPointerClickObservable.add(async () => {
+        // Les métadonnées de chaque bouton changent lors d'un switch. Le listener
+        // lit donc la valeur courante au moment du clic au lieu de figer une police.
+        boutonsOptions.forEach((bouton) => {
+            bouton.onPointerClickObservable.clear();
+            bouton.onPointerClickObservable.add(async () => {
                 await this.selectionnerPoliceParSwitch({
-                    boutonOption: option.bouton,
+                    boutonOption: bouton,
                     texteSelection,
                     liste,
                     iconeDropdown
@@ -265,10 +279,8 @@ export class ControleurInterface {
         }
 
         const optionCliquee = boutonOption.metadata.optionPolice;
-        const ancienneSelection = this.selectionPoliceActuelle ?? {
-            nomCourt: "OpenDys",
-            police: "OpenDyslexic"
-        };
+        const ancienneSelection = this.selectionPoliceActuelle
+            ?? this.trouverOptionPolice(constantesInterface.policeDefaut);
 
         await this.chargerPoliceSiPossible(optionCliquee.police);
 
@@ -295,6 +307,7 @@ export class ControleurInterface {
             this.obtenir(this.etatApplication.gui.controles, "PoliGrasBtnTxt"),
             this.etatApplication.interface.parametres.gras
         );
+        this.planifierMiseAJourMaximumTaillePolice();
 
         if (liste) {
             liste.isVisible = false;
@@ -309,7 +322,10 @@ export class ControleurInterface {
     async chargerPoliceSiPossible(police) {
         if (document.fonts?.load) {
             try {
-                await document.fonts.load(`20px "${police}"`);
+                await Promise.all([
+                    document.fonts.load(`400 20px "${police}"`),
+                    document.fonts.load(`700 20px "${police}"`)
+                ]);
                 await document.fonts.ready;
             } catch (erreur) {
                 console.warn("Police non chargée correctement :", police, erreur);
@@ -342,7 +358,7 @@ export class ControleurInterface {
     mettreAJourLibellePoliceSelectionnee(textBlock, texte) {
         if (!textBlock) return;
 
-        const libelle = String(texte ?? "OpenDys");
+        const libelle = String(texte ?? this.trouverOptionPolice(constantesInterface.policeDefaut).nomCourt);
         textBlock.metadata = textBlock.metadata || {};
         textBlock.metadata.texteDynamique = true;
 
@@ -365,47 +381,282 @@ export class ControleurInterface {
             return;
         }
 
-        // 0 % correspond exactement à la taille définie dans guiTexture.json.
-        // Le slider ajoute ou retire un pourcentage relatif à cette taille.
-        slider.minimum = -10;
-        slider.maximum = 3;
-        slider.step = 1;
-        slider.value = 0;
-
-        if (texteValeur) {
-            texteValeur.metadata = texteValeur.metadata || {};
-            texteValeur.metadata.texteDynamique = true;
-            texteValeur.text = "0%";
+        // La borne basse vient de guiTexture.json (0 % dans la GUI courante).
+        // La borne haute n'est jamais figée ici : elle sera calculée à partir
+        // des textes, de leurs contenants et de la police réellement active.
+        const pas = Number(constantesInterface.sliderTaillePolice?.pasPourcentage);
+        if (Number.isFinite(pas) && pas > 0) {
+            slider.step = pas;
         }
+
+        const minimum = this.minimumSliderTaillePolice(slider);
+        const maximumInitial = Number.isFinite(Number(slider.maximum))
+            ? Math.max(minimum, Number(slider.maximum))
+            : minimum;
+        const variationEtat = Number(
+            this.etatApplication.interface?.parametres?.taillePolice
+            ?? constantesInterface.taillePoliceDefaut
+        );
+        const variationInitiale = Math.min(
+            maximumInitial,
+            Math.max(minimum, Number.isFinite(variationEtat)
+                ? Math.round(variationEtat)
+                : constantesInterface.taillePoliceDefaut)
+        );
+
+        slider.minimum = minimum;
+        slider.value = variationInitiale;
+        this.mettreAJourLibelleTaillePolice(texteValeur, variationInitiale);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
-            const variationPrecedente = Number(
-                this.etatApplication.interface?.parametres?.taillePolice ?? 0
+            const minimumActuel = this.minimumSliderTaillePolice(slider);
+            const maximumActuel = this.maximumFonctionnelSliderTaillePolice(slider);
+            const variation = Math.min(
+                maximumActuel,
+                Math.max(minimumActuel, Math.round(Number(valeur) || 0))
             );
-            const variation = Math.round(valeur);
 
             this.changerTaillePoliceUC.executer(variation);
             this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
-
-            // Lors d'un agrandissement, le layout Babylon change après la mise à
-            // jour de la taille. On relance explicitement l'auto-fit sur plusieurs
-            // frames afin de conserver la plus grande taille qui tient réellement.
-            if (variation > variationPrecedente) {
-                this.serviceTexteGUI.reappliquerAutoFitApresChangement?.(
-                    this.etatApplication
-                );
-            }
-
-            if (texteValeur) {
-                texteValeur.text = variation > 0 ? `+${variation}%` : `${variation}%`;
-            }
+            this.mettreAJourLibelleTaillePolice(texteValeur, variation);
 
             this.mettreAJourCocheGras(
                 this.obtenir(controles, "PoliGrasBtnTxt"),
                 this.etatApplication.interface.parametres.gras
             );
         });
+
+        this.brancherSuiviMaximumTaillePolice();
+        this.planifierMiseAJourMaximumTaillePolice();
+    }
+
+    minimumSliderTaillePolice(slider) {
+        const minimumGUI = Number(slider?.minimum);
+        const minimumReference = Number(constantesInterface.taillePoliceDefaut);
+        const minimumDefaut = Number.isFinite(minimumReference)
+            ? minimumReference
+            : 0;
+
+        return Number.isFinite(minimumGUI)
+            ? Math.max(minimumDefaut, minimumGUI)
+            : minimumDefaut;
+    }
+
+    maximumFonctionnelSliderTaillePolice(slider) {
+        const minimum = this.minimumSliderTaillePolice(slider);
+        const maximumMetadata = Number(
+            slider?.metadata?.maximumFonctionnelTaillePolice
+        );
+
+        if (Number.isFinite(maximumMetadata)) {
+            return Math.max(minimum, maximumMetadata);
+        }
+
+        const maximumSlider = Number(slider?.maximum);
+        return Number.isFinite(maximumSlider)
+            ? Math.max(minimum, maximumSlider)
+            : minimum;
+    }
+
+    appliquerBornesSliderTaillePolice(slider, minimum, maximumFonctionnel) {
+        if (!slider) return;
+
+        slider.metadata = slider.metadata || {};
+        const metadata = slider.metadata;
+
+        if (metadata.hitTestVisibleTaillePoliceInitial === undefined) {
+            metadata.hitTestVisibleTaillePoliceInitial = slider.isHitTestVisible !== false;
+        }
+
+        const borneMin = Number.isFinite(Number(minimum))
+            ? Number(minimum)
+            : constantesInterface.taillePoliceDefaut;
+        const borneMaxFonctionnelle = Number.isFinite(Number(maximumFonctionnel))
+            ? Math.max(borneMin, Number(maximumFonctionnel))
+            : borneMin;
+
+        metadata.maximumFonctionnelTaillePolice = borneMaxFonctionnelle;
+
+        const plageVisuelle = Number(
+            constantesInterface.sliderTaillePolice?.plageVisuelleMinimale
+        );
+        const plageMinimale = Number.isFinite(plageVisuelle) && plageVisuelle > 0
+            ? plageVisuelle
+            : 1;
+        const plageDegenerée = borneMaxFonctionnelle <= borneMin;
+
+        slider.minimum = borneMin;
+        slider.maximum = plageDegenerée
+            ? borneMin + plageMinimale
+            : borneMaxFonctionnelle;
+
+        // Le thumb reste toujours interactif. Même si le calcul retourne
+        // temporairement une plage fonctionnelle nulle, on ne coupe plus les
+        // événements du slider : la petite plage visuelle de secours permet de
+        // conserver le rond et le prochain recalcul peut rétablir une vraie borne.
+        slider.isHitTestVisible = metadata.hitTestVisibleTaillePoliceInitial !== false;
+        metadata.plageVisuelleDegeneréeTaillePolice = plageDegenerée;
+
+        slider._markAsDirty?.();
+    }
+
+    mettreAJourLibelleTaillePolice(texteValeur, variation) {
+        if (!texteValeur) return;
+
+        const valeur = Number.isFinite(Number(variation))
+            ? Math.round(Number(variation))
+            : constantesInterface.taillePoliceDefaut;
+
+        texteValeur.metadata = texteValeur.metadata || {};
+        texteValeur.metadata.texteDynamique = true;
+        texteValeur.text = valeur > 0 ? `+${valeur}%` : `${valeur}%`;
+        texteValeur._markAsDirty?.();
+    }
+
+    brancherSuiviMaximumTaillePolice() {
+        if (this.desinscrireRecalculMaximumTaillePolice) return;
+
+        const serviceResponsive = this.etatApplication?.services?.texteResponsive;
+        if (!serviceResponsive?.ajouterEcouteurApresAjustement) return;
+
+        this.desinscrireRecalculMaximumTaillePolice =
+            serviceResponsive.ajouterEcouteurApresAjustement(() => {
+                // L'auto-fit est une sécurité locale : il ne doit JAMAIS réduire
+                // la valeur globale choisie par l'utilisateur. On ne recalcule la
+                // borne que si un état stable a réellement changé (police, gras,
+                // accessibilité ou résolution), éléments présents dans la signature.
+                this.mettreAJourMaximumTaillePolice({ forcer: false });
+            });
+    }
+
+    planifierMiseAJourMaximumTaillePolice(delai = null) {
+        const valeurConfiguree = Number(
+            constantesInterface.sliderTaillePolice?.delaiRecalculMs
+        );
+        const attente = Number.isFinite(Number(delai))
+            ? Math.max(0, Number(delai))
+            : (Number.isFinite(valeurConfiguree) ? Math.max(0, valeurConfiguree) : 0);
+
+        if (this.timerMaximumTaillePolice !== null) {
+            clearTimeout(this.timerMaximumTaillePolice);
+        }
+
+        this.timerMaximumTaillePolice = setTimeout(() => {
+            this.timerMaximumTaillePolice = null;
+
+            const recalculer = () => this.mettreAJourMaximumTaillePolice({ forcer: true });
+            if (typeof requestAnimationFrame === "function") {
+                requestAnimationFrame(() => requestAnimationFrame(recalculer));
+            } else {
+                recalculer();
+            }
+        }, attente);
+    }
+
+    signatureCalculMaximumTaillePolice() {
+        const parametres = this.etatApplication?.interface?.parametres;
+        const accessibilite = this.etatApplication?.accessibilite;
+        const largeurFenetre = typeof window !== "undefined" ? window.innerWidth : 0;
+        const hauteurFenetre = typeof window !== "undefined" ? window.innerHeight : 0;
+
+        return [
+            parametres?.police ?? "",
+            parametres?.gras ? "1" : "0",
+            accessibilite?.actif ? "1" : "0",
+            Number(accessibilite?.preferencesNavigateur?.remPx ?? 0),
+            largeurFenetre,
+            hauteurFenetre
+        ].join("|");
+    }
+
+    mettreAJourMaximumTaillePolice({ forcer = false } = {}) {
+        if (this.miseAJourMaximumTaillePoliceEnCours) return null;
+
+        const controles = this.etatApplication?.gui?.controles ?? {};
+        const nomsPolice = this.nomsGUI?.police;
+        const slider = this.obtenir(controles, nomsPolice?.tailleSlider);
+        const texteValeur = this.obtenir(controles, nomsPolice?.tailleValeurTxt);
+        const serviceResponsive = this.etatApplication?.services?.texteResponsive;
+
+        if (!slider || !serviceResponsive?.calculerVariationMaximaleTaillePolice) {
+            return null;
+        }
+
+        const signatureCalcul = this.signatureCalculMaximumTaillePolice();
+        if (!forcer && signatureCalcul === this.signatureDernierCalculMaximumTaillePolice) {
+            return this.maximumFonctionnelSliderTaillePolice(slider);
+        }
+
+        this.miseAJourMaximumTaillePoliceEnCours = true;
+
+        try {
+            const minimum = this.minimumSliderTaillePolice(slider);
+            const variationCourante = Number(
+                this.etatApplication.interface?.parametres?.taillePolice
+                ?? constantesInterface.taillePoliceDefaut
+            );
+            const maximumCalcule = serviceResponsive.calculerVariationMaximaleTaillePolice({
+                variationCourante,
+                variationMinimale: minimum,
+                estTexteExclu: (textBlock) =>
+                    this.serviceTexteGUI?.estTexteExcluCalculMaximum?.(textBlock) === true,
+                debug: constantesInterface.sliderTaillePolice?.debugCalculMaximum === true
+            });
+
+            if (!Number.isFinite(maximumCalcule)) {
+                return null;
+            }
+
+            const maximum = Math.max(minimum, Math.floor(maximumCalcule));
+
+            if (constantesInterface.sliderTaillePolice?.debugCalculMaximum === true) {
+                console.log("[ANNA][TaillePolice][BorneStable]", {
+                    police: this.etatApplication.interface?.parametres?.police,
+                    gras: this.etatApplication.interface?.parametres?.gras === true,
+                    sliderDemande: `${Math.round(Number(variationCourante) || 0)}%`,
+                    minimum: `${minimum}%`,
+                    maximumCalcule: `${maximum}%`,
+                    raisonRecalcul: forcer ? "changement stable / initialisation" : "signature modifiée"
+                });
+            }
+
+            const variationNormalisee = Number.isFinite(variationCourante)
+                ? Math.round(variationCourante)
+                : constantesInterface.taillePoliceDefaut;
+            const variationBornee = Math.min(
+                maximum,
+                Math.max(minimum, variationNormalisee)
+            );
+
+            // On corrige d'abord l'état métier. Ainsi, si Babylon notifie une
+            // variation lors du changement de bornes, le slider et l'état restent
+            // immédiatement synchronisés. Cela migre aussi les anciens profils
+            // qui pouvaient encore contenir une valeur négative.
+            if (variationBornee !== variationCourante) {
+                this.changerTaillePoliceUC.executer(variationBornee);
+                this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
+            }
+
+            this.appliquerBornesSliderTaillePolice(slider, minimum, maximum);
+
+            const pas = Number(constantesInterface.sliderTaillePolice?.pasPourcentage);
+            if (Number.isFinite(pas) && pas > 0) {
+                slider.step = pas;
+            }
+
+            if (Number(slider.value) !== variationBornee) {
+                slider.value = variationBornee;
+            }
+
+            this.mettreAJourLibelleTaillePolice(texteValeur, variationBornee);
+            slider._markAsDirty?.();
+            this.signatureDernierCalculMaximumTaillePolice = signatureCalcul;
+
+            return maximum;
+        } finally {
+            this.miseAJourMaximumTaillePoliceEnCours = false;
+        }
     }
 
     brancherBoutonGrasDepuisNoms(controles, nomsPolice) {
@@ -429,6 +680,7 @@ export class ControleurInterface {
             this.changerGrasUC.executer(actif);
             this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
             this.mettreAJourCocheGras(coche, actif);
+            this.planifierMiseAJourMaximumTaillePolice();
         });
 
         this.mettreAJourCocheGras(coche, this.etatApplication.interface.parametres.gras);
@@ -455,7 +707,6 @@ export class ControleurInterface {
 
     brancherReinitialisationPolice(controles, nomsPolice) {
         const bouton = this.obtenir(controles, nomsPolice.reinitialiserBtn);
-        const texteSelection = this.obtenir(controles, nomsPolice.texteSelection);
         const slider = this.obtenir(controles, nomsPolice.tailleSlider);
         const texteValeur = this.obtenir(controles, nomsPolice.tailleValeurTxt);
         const coche = this.obtenir(controles, "PoliGrasBtnTxt");
@@ -466,52 +717,24 @@ export class ControleurInterface {
 
         bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(() => {
-            this.reinitialiserOptionsPolice(controles);
-
-            this.changerPoliceUC.executer("OpenDyslexic");
-            this.changerTaillePoliceUC.executer(0);
-            this.changerGrasUC.executer(false);
-
-            this.selectionPoliceActuelle = {
-                nomCourt: "OpenDys",
-                police: "OpenDyslexic"
-            };
-
-            if (texteSelection) {
-                this.mettreAJourLibellePoliceSelectionnee(texteSelection, "OpenDys");
-            }
+            this.changerPoliceUC.executer(constantesInterface.policeDefaut);
+            this.changerTaillePoliceUC.executer(constantesInterface.taillePoliceDefaut);
+            this.changerGrasUC.executer(constantesInterface.grasDefaut);
 
             if (slider) {
-                slider.value = 0;
+                slider.value = constantesInterface.taillePoliceDefaut;
             }
 
-            if (texteValeur) {
-                texteValeur.text = "0%";
-            }
+            this.mettreAJourLibelleTaillePolice(
+                texteValeur,
+                constantesInterface.taillePoliceDefaut
+            );
 
+            // Recompose le dropdown à partir de la sélection Luciole par défaut.
+            this.synchroniserDropdownPoliceDepuisEtat();
             this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
-            this.mettreAJourCocheGras(coche, false);
-        });
-    }
-
-    reinitialiserOptionsPolice(controles) {
-        const optionsInitiales = [
-            { bouton: this.obtenir(controles, "FntFmBtn0"), nomCourt: "Liberation", police: "Liberation" },
-            { bouton: this.obtenir(controles, "FntFmBtn1"), nomCourt: "Luciole", police: "Luciole" },
-            { bouton: this.obtenir(controles, "FntFmBtn2"), nomCourt: "Tiresias", police: "Tiresias" },
-            { bouton: this.obtenir(controles, "FntFmBtn3"), nomCourt: "Arial", police: "Arial" }
-        ];
-
-        optionsInitiales.forEach((option) => {
-            if (!option.bouton) return;
-
-            option.bouton.metadata = option.bouton.metadata || {};
-            option.bouton.metadata.optionPolice = {
-                nomCourt: option.nomCourt,
-                police: option.police
-            };
-
-            this.mettreTexteBouton(option.bouton, option.nomCourt);
+            this.mettreAJourCocheGras(coche, constantesInterface.grasDefaut);
+            this.planifierMiseAJourMaximumTaillePolice();
         });
     }
 

@@ -1,18 +1,21 @@
 /**
  * Gestion stable de l'interaction caméra / GUI.
  *
- * Reprise de l'esprit de app.js :
- * - les zones GUI deviennent pointerBlocker ;
- * - à chaque frame on vérifie si le pointeur est sur une zone GUI visible ;
- * - si oui, on détache la caméra ;
- * - sinon, on la rattache.
- *
- * Cette méthode évite que la caméra réagisse pendant le déplacement d'un slider.
+ * Règles :
+ * - quand le pointeur est au-dessus d'une zone GUI visible, la caméra est détachée ;
+ * - pendant le glissement d'un Slider, le verrou reste actif jusqu'au relâchement
+ *   du pointeur, même si la souris sort momentanément du panneau ;
+ * - après relâchement hors GUI, la caméra est rattachée normalement.
  */
 export class ServiceBlocagePointeurGUI {
     constructor() {
         this.cameraBloquee = false;
         this.observateur = null;
+        this.interactionGUIEnCours = false;
+        this.cameraCourante = null;
+        this.canvasCourant = null;
+        this.gestionnairesRelachementInstallés = false;
+        this.verrouForce = false;
     }
 
     brancherZones({
@@ -25,7 +28,15 @@ export class ServiceBlocagePointeurGUI {
             return;
         }
 
-        controles.forEach((controle) => this.bloquerInteractionsModele(controle));
+        this.cameraCourante = camera;
+        this.canvasCourant = canvas;
+
+        controles.forEach((controle) => {
+            this.bloquerInteractionsModele(controle);
+            this.brancherVerrouillageSlidersRecursif(controle);
+        });
+
+        this.installerRelachementGlobal();
 
         if (this.observateur) {
             sceneGUI.onBeforeRenderObservable.remove(this.observateur);
@@ -33,19 +44,104 @@ export class ServiceBlocagePointeurGUI {
         }
 
         this.observateur = sceneGUI.onBeforeRenderObservable.add(() => {
-            const sourisSurGUI = controles.some((controle) => this.sourisSurControleVisible(controle, sceneGUI));
+            const sourisSurGUI = controles.some((controle) =>
+                this.sourisSurControleVisible(controle, sceneGUI)
+            );
+            const doitBloquer = this.verrouForce || sourisSurGUI || this.interactionGUIEnCours;
 
-            if (sourisSurGUI && !this.cameraBloquee) {
-                camera.detachControl(canvas);
-                this.cameraBloquee = true;
+            if (doitBloquer && !this.cameraBloquee) {
+                this.detacherCamera();
             }
 
-            if (!sourisSurGUI && this.cameraBloquee) {
-                camera.attachControl(canvas, true);
-                this.desactiverDeplacementClicDroit(camera, canvas);
-                this.cameraBloquee = false;
+            if (!doitBloquer && this.cameraBloquee) {
+                this.rattacherCamera();
             }
         });
+    }
+
+    brancherVerrouillageSlidersRecursif(controle) {
+        if (!controle) return;
+
+        if (controle instanceof BABYLON.GUI.Slider || controle.className === "Slider") {
+            this.brancherVerrouillageSlider(controle);
+        }
+
+        const enfants = Array.isArray(controle.children)
+            ? controle.children
+            : (Array.isArray(controle._children) ? controle._children : []);
+
+        enfants.forEach((enfant) => this.brancherVerrouillageSlidersRecursif(enfant));
+    }
+
+    brancherVerrouillageSlider(slider) {
+        slider.metadata = slider.metadata || {};
+
+        if (slider.metadata.saotraVerrouillageCameraSliderInstalle === true) {
+            return;
+        }
+
+        slider.metadata.saotraVerrouillageCameraSliderInstalle = true;
+        slider.isPointerBlocker = true;
+        slider.isHitTestVisible = true;
+
+        slider.onPointerDownObservable?.add?.(() => {
+            this.interactionGUIEnCours = true;
+            this.detacherCamera();
+        });
+
+        slider.onPointerUpObservable?.add?.(() => {
+            this.interactionGUIEnCours = false;
+        });
+    }
+
+    installerRelachementGlobal() {
+        if (this.gestionnairesRelachementInstallés || typeof window === "undefined") {
+            return;
+        }
+
+        const relacher = () => {
+            this.interactionGUIEnCours = false;
+        };
+
+        window.addEventListener("pointerup", relacher, true);
+        window.addEventListener("mouseup", relacher, true);
+        window.addEventListener("touchend", relacher, true);
+        window.addEventListener("touchcancel", relacher, true);
+        window.addEventListener("blur", relacher, true);
+
+        this.gestionnairesRelachementInstallés = true;
+    }
+
+    definirVerrouForce(actif = true) {
+        this.verrouForce = Boolean(actif);
+
+        if (this.verrouForce) {
+            this.detacherCamera();
+            return;
+        }
+
+        if (!this.interactionGUIEnCours) {
+            this.rattacherCamera();
+        }
+    }
+
+    detacherCamera() {
+        const camera = this.cameraCourante;
+        const canvas = this.canvasCourant;
+        if (!camera || this.cameraBloquee) return;
+
+        camera.detachControl(canvas);
+        this.cameraBloquee = true;
+    }
+
+    rattacherCamera() {
+        const camera = this.cameraCourante;
+        const canvas = this.canvasCourant;
+        if (!camera || !canvas || !this.cameraBloquee) return;
+
+        camera.attachControl(canvas, true);
+        this.desactiverDeplacementClicDroit(camera, canvas);
+        this.cameraBloquee = false;
     }
 
     desactiverDeplacementClicDroit(camera, canvas = null) {

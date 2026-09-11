@@ -1,4 +1,19 @@
 /**
+ * @file Orchestration du chargement et des sauvegardes du profil utilisateur.
+ *
+ * Rôle : restaurer le profil au démarrage, déclencher la sauvegarde locale, réappliquer
+ * les effets visuels et afficher la confirmation de sauvegarde manuelle.
+ *
+ * Utilisation : la sauvegarde automatique est silencieuse ; le bouton Enregistrer
+ * appelle la même source de vérité avec afficherConfirmation=true.
+ *
+ * Contrainte : SauveRect/SauveText sont purement informatifs et ne doivent jamais
+ * intercepter les clics de la GUI.
+ */
+import { constantesSauvegarde } from "../../Configuration/constantesSauvegarde.js";
+import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
+
+/**
  * Branche les actions liées au profil local.
  *
  * La sauvegarde est locale au navigateur. Elle conserve les réglages sous forme
@@ -22,11 +37,7 @@ export class ControleurProfil {
                     serviceMateriauxBabylon = null,
                     serviceControlesSpeciauxGUI = null,
                     postTraitApparence = null,
-                    postTraitNettete = null,
-                    postTraitContProfNorm = null,
-                    postTraitContoursCouleur = null,
-                    postTraitMiseLumiereNormales = null,
-                    postTraitMiseLumiereCouleurs = null
+                    postTraitNettete = null
                 }) {
         this.etatApplication = etatApplication;
 
@@ -48,12 +59,10 @@ export class ControleurProfil {
 
         this.postTraitApparence = postTraitApparence;
         this.postTraitNettete = postTraitNettete;
-        this.postTraitContProfNorm = postTraitContProfNorm;
-        this.postTraitContoursCouleur = postTraitContoursCouleur;
-        this.postTraitMiseLumiereNormales = postTraitMiseLumiereNormales;
-        this.postTraitMiseLumiereCouleurs = postTraitMiseLumiereCouleurs;
 
         this.sauvegardeAutomatiqueInstallee = false;
+        this.timerConfirmationSauvegarde = null;
+        this.frameConfirmationSauvegarde = null;
     }
 
     chargerProfilAuDemarrage() {
@@ -73,17 +82,185 @@ export class ControleurProfil {
     }
 
 
-    sauvegarderMaintenant() {
+    /**
+     * Force l'écriture immédiate du profil courant dans le stockage local.
+     *
+     * @param {Object} options
+     * @param {boolean} [options.afficherConfirmation=false] Affiche SauveRect uniquement pour une sauvegarde explicitement demandée par l'utilisateur.
+     * @returns {Object|null} Profil sauvegardé, ou null si l'écriture échoue.
+     */
+    sauvegarderMaintenant({ afficherConfirmation = false } = {}) {
         try {
             const profil = this.sauvegarderProfilLocalUC.executer();
             console.info("[Sauvegarde] Réglages locaux sauvegardés.");
+
+            if (afficherConfirmation) {
+                this.afficherConfirmationSauvegarde({ succes: true });
+            }
+
             return profil;
         } catch (erreur) {
             console.warn("[Sauvegarde] Impossible de sauvegarder les réglages locaux.", erreur);
+
+            if (afficherConfirmation) {
+                this.afficherConfirmationSauvegarde({ succes: false });
+            }
+
             return null;
         }
     }
 
+    obtenirControleGUI(nom) {
+        return this.etatApplication?.gui?.controles?.[nom]
+            ?? this.etatApplication?.gui?.advancedTexture?.getControlByName?.(nom)
+            ?? null;
+    }
+
+    configurerConfirmationSauvegarde() {
+        const rectangle = this.obtenirControleGUI("SauveRect");
+        const texte = this.obtenirControleGUI("SauveText");
+        const configuration = constantesSauvegarde.confirmation;
+
+        if (rectangle) {
+            rectangle.isHitTestVisible = false;
+            rectangle.isPointerBlocker = false;
+            rectangle._markAsDirty?.();
+        }
+
+        if (texte) {
+            texte.width = configuration.largeurTexte;
+            texte.height = configuration.hauteurTexte;
+            texte.isHitTestVisible = false;
+            texte.isPointerBlocker = false;
+            texte.textWrapping = BABYLON.GUI.TextWrapping?.WordWrap ?? true;
+            texte.metadata = texte.metadata || {};
+            texte.metadata.texteDynamique = true;
+            texte._markAsDirty?.();
+        }
+
+        this.mettreAJourPositionConfirmationSauvegarde();
+    }
+
+    mettreAJourPositionConfirmationSauvegarde() {
+        const rectangle = this.obtenirControleGUI("SauveRect");
+        if (!rectangle) return;
+
+        const menu = this.obtenirControleGUI("MainMenuRect");
+        const positionMenu = this.etatApplication?.interface?.parametres?.positionMenu;
+        const largeurMenuPourcentage = this.lirePourcentage(menu?.width, 20);
+        const margeSupplementaire = Number(
+            constantesSauvegarde.confirmation.margeHorizontaleSupplementairePourcentage
+        ) || 0;
+        const decalage = largeurMenuPourcentage / 2 + margeSupplementaire;
+        const estAGauche = positionMenu === PositionMenu.GAUCHE || positionMenu === "gauche";
+
+        rectangle.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        rectangle.left = `${estAGauche ? decalage : -decalage}%`;
+        rectangle._markAsDirty?.();
+        this.etatApplication?.gui?.advancedTexture?.markAsDirty?.();
+    }
+
+    lirePourcentage(valeur, valeurParDefaut = 0) {
+        if (typeof valeur === "string") {
+            const nombre = Number.parseFloat(valeur);
+            return Number.isFinite(nombre) ? nombre : valeurParDefaut;
+        }
+
+        const nombre = Number(valeur);
+        return Number.isFinite(nombre) ? nombre : valeurParDefaut;
+    }
+
+    afficherConfirmationSauvegarde({ succes = true } = {}) {
+        const rectangle = this.obtenirControleGUI("SauveRect");
+        const texte = this.obtenirControleGUI("SauveText");
+        if (!rectangle || !texte) return;
+
+        const configuration = constantesSauvegarde.confirmation;
+
+        if (this.timerConfirmationSauvegarde) {
+            clearTimeout(this.timerConfirmationSauvegarde);
+            this.timerConfirmationSauvegarde = null;
+        }
+
+        if (this.frameConfirmationSauvegarde && typeof cancelAnimationFrame === "function") {
+            cancelAnimationFrame(this.frameConfirmationSauvegarde);
+            this.frameConfirmationSauvegarde = null;
+        }
+
+        texte.text = succes ? configuration.texteSucces : configuration.texteErreur;
+        texte.metadata = texte.metadata || {};
+        texte.metadata.texteDynamique = true;
+        texte.metadata.responsiveTexteOriginal = texte.text;
+        delete texte.metadata.dernierTexteAutoFit;
+
+        this.serviceTexteGUI?.appliquerSurTextBlock?.(
+            texte,
+            this.etatApplication?.interface?.parametres
+        );
+
+        this.mettreAJourPositionConfirmationSauvegarde();
+
+        rectangle.isVisible = true;
+        rectangle.notRenderable = false;
+        rectangle.alpha = 1;
+        rectangle.isHitTestVisible = false;
+        rectangle.isPointerBlocker = false;
+        rectangle._markAsDirty?.();
+        texte._markAsDirty?.();
+        this.etatApplication?.gui?.advancedTexture?.markAsDirty?.();
+
+        const suivrePosition = () => {
+            if (rectangle.isVisible !== true) {
+                this.frameConfirmationSauvegarde = null;
+                return;
+            }
+
+            this.mettreAJourPositionConfirmationSauvegarde();
+
+            if (typeof requestAnimationFrame === "function") {
+                this.frameConfirmationSauvegarde = requestAnimationFrame(suivrePosition);
+            }
+        };
+
+        if (typeof requestAnimationFrame === "function") {
+            this.frameConfirmationSauvegarde = requestAnimationFrame(suivrePosition);
+        }
+
+        this.timerConfirmationSauvegarde = setTimeout(() => {
+            this.masquerConfirmationSauvegarde();
+        }, Math.max(0, Number(configuration.dureeAffichageMs) || 0));
+    }
+
+    masquerConfirmationSauvegarde() {
+        const rectangle = this.obtenirControleGUI("SauveRect");
+
+        if (this.timerConfirmationSauvegarde) {
+            clearTimeout(this.timerConfirmationSauvegarde);
+            this.timerConfirmationSauvegarde = null;
+        }
+
+        if (this.frameConfirmationSauvegarde && typeof cancelAnimationFrame === "function") {
+            cancelAnimationFrame(this.frameConfirmationSauvegarde);
+            this.frameConfirmationSauvegarde = null;
+        }
+
+        if (rectangle) {
+            rectangle.isVisible = false;
+            rectangle.alpha = 0;
+            rectangle.isHitTestVisible = false;
+            rectangle.isPointerBlocker = false;
+            rectangle._markAsDirty?.();
+        }
+
+        this.etatApplication?.gui?.advancedTexture?.markAsDirty?.();
+    }
+
+    /**
+     * Installe les sauvegardes de sécurité liées au cycle de vie de la page.
+     *
+     * Cette sauvegarde reste silencieuse : elle protège les réglages si l'utilisateur
+     * quitte la page sans cliquer sur Enregistrer, mais n'affiche pas SauveRect.
+     */
     installerSauvegardeAutomatique() {
         if (this.sauvegardeAutomatiqueInstallee || typeof window === "undefined") {
             return;
@@ -105,13 +282,20 @@ export class ControleurProfil {
         this.sauvegardeAutomatiqueInstallee = true;
     }
 
+    /**
+     * Relie le bouton Enregistrer à la même persistance que la sauvegarde automatique.
+     * La différence est uniquement UX : la sauvegarde manuelle affiche une confirmation.
+     *
+     * @param {BABYLON.GUI.Button|null} bouton Contrôle EnrBtn.
+     */
     brancherSauvegarde(bouton) {
         if (!bouton) {
             return;
         }
 
+        bouton.onPointerClickObservable.clear();
         bouton.onPointerClickObservable.add(() => {
-            this.sauvegarderProfilLocalUC.executer();
+            this.sauvegarderMaintenant({ afficherConfirmation: true });
         });
     }
 
@@ -150,21 +334,9 @@ export class ControleurProfil {
             this.postTraitNettete.appliquer(this.etatApplication);
         }
 
-        if (this.postTraitContProfNorm) {
-            this.postTraitContProfNorm.appliquer(this.etatApplication);
-        }
-
-        if (this.postTraitContoursCouleur) {
-            this.postTraitContoursCouleur.appliquer(this.etatApplication);
-        }
-
-        if (this.etatApplication.contours?.miseLumiereNormalesActif && this.postTraitMiseLumiereNormales) {
-            this.postTraitMiseLumiereNormales.appliquer(this.etatApplication);
-        }
-
-        if (this.etatApplication.contours?.miseLumiereCouleursActif && this.postTraitMiseLumiereCouleurs) {
-            this.postTraitMiseLumiereCouleurs.appliquer(this.etatApplication);
-        }
+        // Le contrôleur Contours est l'unique point d'entrée de la V1.
+        // Cette séparation garde la réintégration de nouveaux pipelines simple en V2.
+        this.controleurContours?.appliquerDepuisEtat?.();
     }
 
     appliquerFondSceneSauvegarde() {
@@ -211,6 +383,50 @@ export class ControleurProfil {
         );
     }
 
+    restaurerReglagesApparenceDepuisProfil(profil) {
+        const source = profil?.apparence;
+        const courant = this.etatApplication.apparence?.parametres;
+
+        if (!source || !courant?.copierAvec) {
+            return;
+        }
+
+        const valeurs = {};
+        ["nettete", "contraste", "luminosite", "saturation"].forEach((nom) => {
+            const valeur = Number(source[nom]);
+            if (Number.isFinite(valeur)) valeurs[nom] = valeur;
+        });
+
+        if (Object.keys(valeurs).length === 0) {
+            return;
+        }
+
+        // Les choix manuels sauvegardés doivent reprendre la priorité sur les
+        // valeurs automatiques appliquées au moment où le mode Accessibilité est
+        // réactivé au démarrage. Le mode reste actif pour le reste de l'interface.
+        this.etatApplication.apparence.parametres = courant.copierAvec(valeurs);
+
+        const sauvegardeAvantAccessibilite = this.etatApplication.accessibilite?.sauvegardeAvantActivation;
+        if (sauvegardeAvantAccessibilite) {
+            sauvegardeAvantAccessibilite.apparence = {
+                ...(sauvegardeAvantAccessibilite.apparence ?? {}),
+                ...valeurs
+            };
+        }
+
+        this.postTraitApparence?.appliquer?.(this.etatApplication);
+        this.postTraitNettete?.appliquer?.(this.etatApplication);
+        this.mettreAJourInterfaceDepuisEtat();
+
+        // Deuxième synchronisation après disposition : Babylon peut reconstruire
+        // le Grid Réglages lorsqu'il devient visible pour la première fois.
+        const resynchroniser = () => this.mettreAJourInterfaceDepuisEtat();
+        if (typeof requestAnimationFrame === "function") {
+            requestAnimationFrame(() => requestAnimationFrame(resynchroniser));
+        }
+        setTimeout(resynchroniser, 120);
+    }
+
     mettreAJourInterfaceDepuisEtat() {
         const c = this.etatApplication.gui?.controles ?? {};
         const interfaceUtilisateur = this.etatApplication.interface?.parametres;
@@ -238,12 +454,12 @@ export class ControleurProfil {
             this.reglerTextePourcentage(c.RegLumValTxt, apparence.luminosite, 100, true);
             this.reglerTextePourcentage(c.RegLumSatTxt, apparence.saturation, 100);
 
-            if (this.serviceSceneBabylon && c.RegThmValTxt) {
+            if (this.serviceSceneBabylon && c.ConfThmValTxt) {
                 const resultat = this.serviceSceneBabylon.appliquerFondSceneDepuisPourcentage(
                     this.etatApplication.scenes.scene3D,
                     apparence.fondScene ?? 0
                 );
-                this.reglerTexte(c.RegThmValTxt, resultat?.libelle ?? "Clair");
+                this.reglerTexte(c.ConfThmValTxt, resultat?.libelle ?? "Clair");
             }
         }
 
@@ -280,6 +496,8 @@ export class ControleurProfil {
         textBlock.metadata = textBlock.metadata || {};
         textBlock.metadata.texteDynamique = true;
         textBlock.text = String(valeur);
+        textBlock.metadata.responsiveTexteOriginal = textBlock.text;
+        delete textBlock.metadata.dernierTexteAutoFit;
         textBlock._markAsDirty?.();
     }
 

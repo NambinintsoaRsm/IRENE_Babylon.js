@@ -1,3 +1,13 @@
+/**
+ * @file Correctifs ciblés pour des contrôles Babylon GUI nécessitant un rafraîchissement.
+ *
+ * Rôle : centraliser les adaptations spécifiques qui ne relèvent ni du thème ni de
+ * la logique métier, notamment le slider de température après un changement de mise
+ * en page.
+ *
+ * Utilisation : les contrôleurs signalent les changements de disposition ; le
+ * service recalcule uniquement les contrôles concernés.
+ */
 export class ServiceControlesSpeciauxGUI {
     constructor() {
         this.nombreFramesRafraichissement = 12;

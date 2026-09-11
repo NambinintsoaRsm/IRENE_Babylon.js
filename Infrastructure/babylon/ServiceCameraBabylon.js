@@ -1,3 +1,12 @@
+/**
+ * @file Adaptateur Babylon.js pour la caméra principale.
+ *
+ * Rôle : créer/configurer l'ArcRotateCamera, appliquer les limites de navigation,
+ * cadrer un modèle et mémoriser/restaurer les vues utiles à l'interface.
+ *
+ * Utilisation : les contrôleurs lui fournissent les ParametresCamera du domaine ;
+ * aucune préférence utilisateur ne doit être stockée durablement dans ce service.
+ */
 import { constantesCamera } from "../../Configuration/constantesCamera.js";
 import {
     filtrerMeshesValides,
@@ -93,9 +102,9 @@ export class ServiceCameraBabylon {
         }
 
         // Évite l'ouverture du menu contextuel navigateur sur le canvas.
-        if (canvas && !canvas.__saotraClicDroitDesactive) {
+        if (canvas && !canvas.__annaClicDroitDesactive) {
             canvas.addEventListener("contextmenu", (evenement) => evenement.preventDefault());
-            canvas.__saotraClicDroitDesactive = true;
+            canvas.__annaClicDroitDesactive = true;
         }
     }
 
@@ -171,27 +180,39 @@ export class ServiceCameraBabylon {
     }
 
     calculerRayonCamera(infos, facteurCadrage) {
-        const rayonObjet = Math.max(Number(infos.rayon) || 0, 0.5);
-        return Math.max(rayonObjet * facteurCadrage, 1.4);
+        const rayonObjet = Math.max(
+            Number(infos.rayon) || 0,
+            constantesCamera.rayonObjetMinimal
+        );
+
+        return Math.max(
+            rayonObjet * facteurCadrage,
+            constantesCamera.rayonCadrageMinimal
+        );
     }
 
-    appliquerLimitesDepuisInfos(camera, infos, constantesCamera = {}) {
-        const rayonObjet = Math.max(Number(infos.rayon) || 0.5, 0.5);
-
-        const multiplicateurDistanceMin = constantesCamera.multiplicateurDistanceMin ?? 1.47;
-        const distanceMinAbsolue = constantesCamera.distanceMinAbsolue ?? 1.4;
-
-        const multiplicateurDistanceMax = constantesCamera.multiplicateurDistanceMax ?? 5.2;
-        const distanceMaxAbsolue = constantesCamera.distanceMaxAbsolue ?? 5;
+    /**
+     * Recalcule les limites de zoom à partir des dimensions du modèle.
+     *
+     * Les coefficients sont centralisés dans constantesCamera. Cette méthode
+     * utilisait auparavant des fallbacks locaux ; les mêmes valeurs ont été
+     * déplacées dans la configuration afin de conserver exactement le rendu
+     * tout en supprimant les nombres magiques.
+     */
+    appliquerLimitesDepuisInfos(camera, infos) {
+        const rayonObjet = Math.max(
+            Number(infos.rayon) || constantesCamera.rayonObjetMinimal,
+            constantesCamera.rayonObjetMinimal
+        );
 
         camera.lowerRadiusLimit = Math.max(
-            rayonObjet * multiplicateurDistanceMin,
-            distanceMinAbsolue
+            rayonObjet * constantesCamera.multiplicateurDistanceMin,
+            constantesCamera.distanceMinAbsolue
         );
 
         camera.upperRadiusLimit = Math.max(
-            rayonObjet * multiplicateurDistanceMax,
-            distanceMaxAbsolue
+            rayonObjet * constantesCamera.multiplicateurDistanceMax,
+            constantesCamera.distanceMaxAbsolue
         );
 
         if (camera.radius < camera.lowerRadiusLimit) {

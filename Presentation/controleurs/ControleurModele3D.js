@@ -1,5 +1,16 @@
-import { obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
-
+/**
+ * @file Orchestration de la liste, du chargement et de la vue initiale des modèles 3D.
+ *
+ * Rôle : détecter/sélectionner un modèle, nettoyer l'ancien rendu, charger les meshes,
+ * corriger leur orientation, les normaliser, cadrer la caméra puis lancer la saillance.
+ *
+ * Utilisation : les chargements sont asynchrones et reçoivent un jeton. Seul le dernier
+ * chargement demandé peut modifier l'état et la caméra, ce qui évite les courses lorsque
+ * l'utilisateur change rapidement de modèle.
+ *
+ * Contrainte UX : les étapes lourdes cèdent périodiquement la main au navigateur afin
+ * que l'interface reste utilisable pendant le chargement et l'analyse de saillance.
+ */
 /**
  * Branche la liste dynamique des modèles 3D et orchestre le chargement.
  */
@@ -9,9 +20,6 @@ export class ControleurModele3D {
         listerModelesUC,
         changerModeleActifUC,
         chargerModeleUC,
-        supprimerModeleActuelUC = null,
-        normaliserModeleUC = null,
-        choisirVueEntropieUC = null,
         serviceListeModelesGUI,
         serviceSceneBabylon,
         chargeurModeleBabylon,
@@ -20,7 +28,6 @@ export class ControleurModele3D {
         serviceCadrageCameraBabylon,
         serviceMateriauxBabylon,
         serviceCameraBabylon = null,
-        serviceEntropieVueBabylon = null,
         serviceSaillanceVueBabylon = null,
         constantesCamera = null
     }) {
@@ -28,9 +35,6 @@ export class ControleurModele3D {
         this.listerModelesUC = listerModelesUC;
         this.changerModeleActifUC = changerModeleActifUC;
         this.chargerModeleUC = chargerModeleUC;
-        this.supprimerModeleActuelUC = supprimerModeleActuelUC;
-        this.normaliserModeleUC = normaliserModeleUC;
-        this.choisirVueEntropieUC = choisirVueEntropieUC;
         this.serviceListeModelesGUI = serviceListeModelesGUI;
         this.serviceSceneBabylon = serviceSceneBabylon;
         this.chargeurModeleBabylon = chargeurModeleBabylon;
@@ -40,23 +44,18 @@ export class ControleurModele3D {
         this.serviceMateriauxBabylon = serviceMateriauxBabylon;
         this.serviceCameraBabylon = serviceCameraBabylon;
 
-        // Entropie volontairement désactivée pour le moment.
-        this.serviceEntropieVueBabylon = null;
         this.serviceSaillanceVueBabylon = serviceSaillanceVueBabylon;
 
         this.constantesCamera = constantesCamera;
         this.indicateurChargement = null;
         this.indicateurChargementCarte = null;
         this.indicateurChargementTexte = null;
-        this.canvasMesureChargement = null;
-        this.contexteMesureChargement = null;
-        this.jetonIndicateurChargement = 0;
-        this.indicateurChargementActif = false;
-        this.policeIndicateurPersonnaliseePrete = false;
+        this.indicateurChargementEstDOM = false;
 
-        // Masque utilisé pour cacher le modèle à la caméra visible pendant le
-        // chargement, sans le cacher à la caméra hors écran utilisée pour la
-        // saillance. La GUI reste visible, seul l'objet est masqué.
+        // Même mécanisme que dans le backup validé : le modèle chargé est placé
+        // temporairement sur un calque invisible pour la caméra principale. La
+        // caméra hors écran de saillance inclut explicitement ce calque afin de
+        // calculer la vue de départ avant que l'objet n'apparaisse à l'écran.
         this.masqueModeleEnChargement = 0x10000000;
         this.etatMasquageModeleEnChargement = null;
 
@@ -64,7 +63,6 @@ export class ControleurModele3D {
         // clique rapidement sur plusieurs modèles, seuls le dernier chargement
         // et son calcul de saillance ont le droit de modifier l'état ou la caméra.
         this.jetonChangementModele = 0;
-        this.idModeleDemande = null;
 
         // Une vue de saillance est mémorisée par modèle pendant la session.
         // Ainsi, si l'utilisateur tourne manuellement l'objet puis reclique sur
@@ -95,25 +93,13 @@ export class ControleurModele3D {
             modeles,
             etatApplication: this.etatApplication,
             callbackSelection: async (modele) => {
-                // Le dernier bouton cliqué est marqué immédiatement. Un ancien
-                // chargement terminé en retard ne peut donc plus reprendre la
-                // surbrillance du modèle sélectionné ensuite.
-                this.idModeleDemande = modele.id;
+                await this.changerModele(modele.id);
+
                 this.serviceListeModelesGUI.marquerModeleActif({
                     conteneurListe,
                     idModeleActif: modele.id,
                     etatApplication: this.etatApplication
                 });
-
-                await this.changerModele(modele.id);
-
-                if (this.idModeleDemande === modele.id) {
-                    this.serviceListeModelesGUI.marquerModeleActif({
-                        conteneurListe,
-                        idModeleActif: modele.id,
-                        etatApplication: this.etatApplication
-                    });
-                }
             }
         });
     }
@@ -139,9 +125,13 @@ export class ControleurModele3D {
         });
     }
 
+    /**
+     * Charge un modèle et prépare sa vue initiale sans bloquer durablement la GUI.
+     *
+     * @param {string} idModele Identifiant métier du modèle à charger.
+     * @returns {Promise<Object|null>} État du modèle après chargement, ou null si la demande est devenue obsolète.
+     */
     async changerModele(idModele) {
-        this.idModeleDemande = idModele;
-
         const idActuel = this.etatApplication?.modele3d?.modeleActuel?.id
             ?? this.etatApplication?.modele3d?.modeleSelectionne?.id
             ?? null;
@@ -155,16 +145,17 @@ export class ControleurModele3D {
 
         const jeton = ++this.jetonChangementModele;
 
-        await this.afficherChargement("Chargement du modèle...", { jeton });
-        // On laisse au moins une image à Babylon pour afficher le label avant
-        // de lancer le chargement et les traitements synchrones du modèle.
-        await this.attendreRenduIndicateurChargement();
+        this.afficherChargement("Chargement du modèle...");
+        // Laisse le navigateur peindre le message et traiter les clics GUI avant
+        // de commencer le travail de chargement/parsing du modèle.
+        await this.cederAuNavigateur();
 
         try {
             const { modeleSelectionne } = this.changerModeleActifUC.executer(idModele);
 
             this.serviceSceneBabylon.supprimerModeleActuel(this.etatApplication.modele3d);
             this.chargerModeleUC.executer(modeleSelectionne);
+            await this.cederAuNavigateur();
 
             const resultatChargement = await this.chargeurModeleBabylon.charger(
                 this.etatApplication.scenes.scene3D,
@@ -176,6 +167,11 @@ export class ControleurModele3D {
                 return this.etatApplication.modele3d;
             }
 
+            // ImportMeshAsync peut terminer par une phase de parsing importante.
+            // On rend immédiatement la main au navigateur avant les traitements
+            // orientation / normalisation / saillance.
+            await this.cederAuNavigateur();
+
             this.etatApplication.modele3d.terminerChargement({
                 modele: modeleSelectionne,
                 meshActuel: resultatChargement.meshActuel,
@@ -184,10 +180,9 @@ export class ControleurModele3D {
 
             const meshes = this.etatApplication.modele3d.meshesImportes;
 
-            // Tant que le label de chargement est affiché, le modèle ne doit pas
-            // être visible dans la caméra principale. On le masque uniquement
-            // pour la caméra utilisateur ; la caméra d'analyse de saillance peut
-            // encore le rendre hors écran.
+            // Comportement du backup : tant que la vue de départ n'a pas été
+            // déterminée, le modèle reste invisible pour la caméra utilisateur.
+            // La caméra d'analyse hors écran continue, elle, à voir ces meshes.
             this.masquerModelePourCameraVisible(meshes);
 
             this.serviceMateriauxBabylon.corrigerMateriaux(meshes);
@@ -204,6 +199,7 @@ export class ControleurModele3D {
             this.appliquerVueInitialeModele(meshes);
             this.appliquerTextureSauvegardeeSurModele(meshes);
 
+            await this.cederAuNavigateur();
             await this.attendreModelePretPourSaillance(meshes, { jeton, idModele });
 
             if (!this.estChargementModeleCourant(jeton, idModele)) {
@@ -213,8 +209,8 @@ export class ControleurModele3D {
             // La vue de départ devient la vue optimale par saillance GMM.
             // Le calcul se fait avec une caméra d'analyse hors écran : l'utilisateur
             // ne voit pas le parcours, seulement le label de chargement.
-            await this.afficherChargement("Recherche de la meilleure vue...", { jeton });
-            await this.attendreRenduIndicateurChargement();
+            this.afficherChargement("Recherche de la meilleure vue...");
+            await this.cederAuNavigateur();
             await this.appliquerVueSaillanceInitiale(meshes, { jeton, idModele });
 
             return this.etatApplication.modele3d;
@@ -228,16 +224,11 @@ export class ControleurModele3D {
             return this.etatApplication.modele3d;
         } finally {
             if (this.estJetonChargementCourant(jeton)) {
-                // Le modèle est restauré avant de retirer le label. Le retrait du
-                // label est placé dans un finally dédié : même si l'attente d'une
-                // image échoue, la carte de chargement ne peut pas rester bloquée.
-                try {
-                    this.restaurerModelePourCameraVisible();
-                    await this.attendreRenduIndicateurChargement();
-                    await this.attendreRenduIndicateurChargement();
-                } finally {
-                    this.masquerChargement({ jeton });
-                }
+                // On restaure d'abord le layerMask du modèle. Le label n'est retiré
+                // qu'ensuite afin de ne jamais laisser un écran vide si la restauration
+                // devait rencontrer un problème inattendu.
+                this.restaurerModelePourCameraVisible();
+                this.masquerChargement();
             }
         }
     }
@@ -258,29 +249,26 @@ export class ControleurModele3D {
         return idSelectionne === idModele || idActuel === idModele;
     }
 
+    /**
+     * Masque temporairement les meshes pour la caméra visible sans les retirer
+     * de la scène. Le rendu hors écran de saillance ajoute ce même layerMask.
+     *
+     * @param {BABYLON.AbstractMesh[]} meshes Meshes du modèle en cours de chargement.
+     */
     masquerModelePourCameraVisible(meshes = []) {
+        // Nettoie un éventuel masquage précédent avant d'enregistrer le nouvel état.
         this.restaurerModelePourCameraVisible();
 
         const camera = this.etatApplication?.camera?.cameraBabylon ?? null;
         const masque = this.masqueModeleEnChargement;
-        const etatsMeshes = [];
-
         const meshesValides = Array.isArray(meshes)
             ? meshes.filter((mesh) => mesh && !mesh.isDisposed?.())
             : [];
 
-        meshesValides.forEach((mesh) => {
-            etatsMeshes.push({
-                mesh,
-                layerMask: mesh.layerMask
-            });
-
-            // Le mesh passe sur un calque réservé au chargement. La caméra
-            // principale ne le voit plus, mais la caméra d'analyse l'ajoute
-            // explicitement à son layerMask.
-            mesh.layerMask = masque;
-            mesh._markSubMeshesAsDirty?.();
-        });
+        const etatsMeshes = meshesValides.map((mesh) => ({
+            mesh,
+            layerMask: mesh.layerMask
+        }));
 
         const etatCamera = camera
             ? {
@@ -289,20 +277,40 @@ export class ControleurModele3D {
             }
             : null;
 
-        if (camera) {
-            const layerMaskCourant = Number.isFinite(camera.layerMask)
-                ? camera.layerMask
-                : 0x0FFFFFFF;
-            camera.layerMask = layerMaskCourant & ~masque;
-        }
-
+        // L'état de restauration est mémorisé AVANT toute mutation. Ainsi, même si
+        // une affectation Babylon échoue, le finally pourra toujours revenir à l'état
+        // visible précédent.
         this.etatMasquageModeleEnChargement = {
             masque,
             etatsMeshes,
             etatCamera
         };
+
+        try {
+            meshesValides.forEach((mesh) => {
+                // layerMask est une propriété publique Babylon. Il est pris en compte
+                // directement au rendu : aucun appel à une API privée de dirty-state
+                // n'est nécessaire.
+                mesh.layerMask = masque;
+            });
+
+            if (camera) {
+                const layerMaskCourant = Number.isFinite(camera.layerMask)
+                    ? camera.layerMask
+                    : 0x0FFFFFFF;
+                camera.layerMask = layerMaskCourant & ~masque;
+            }
+        } catch (erreur) {
+            // Le masquage doit être transactionnel : en cas d'erreur, on restaure
+            // immédiatement le modèle au lieu de le laisser sur le calque invisible.
+            this.restaurerModelePourCameraVisible();
+            throw erreur;
+        }
     }
 
+    /**
+     * Restaure les layerMask présents avant le calcul de la vue de départ.
+     */
     restaurerModelePourCameraVisible() {
         const etat = this.etatMasquageModeleEnChargement;
 
@@ -310,17 +318,27 @@ export class ControleurModele3D {
             return;
         }
 
+        // On détache l'état tout de suite : une seconde restauration déclenchée par
+        // un finally ne doit jamais réappliquer une ancienne transaction.
+        this.etatMasquageModeleEnChargement = null;
+
         etat.etatsMeshes?.forEach(({ mesh, layerMask }) => {
             if (!mesh || mesh.isDisposed?.()) return;
-            mesh.layerMask = layerMask;
-            mesh._markSubMeshesAsDirty?.();
+
+            try {
+                mesh.layerMask = layerMask;
+            } catch (erreur) {
+                console.warn("[Modèles 3D] Impossible de restaurer le layerMask d'un mesh.", erreur);
+            }
         });
 
         if (etat.etatCamera?.camera && !etat.etatCamera.camera.isDisposed?.()) {
-            etat.etatCamera.camera.layerMask = etat.etatCamera.layerMask;
+            try {
+                etat.etatCamera.camera.layerMask = etat.etatCamera.layerMask;
+            } catch (erreur) {
+                console.warn("[Modèles 3D] Impossible de restaurer le layerMask de la caméra.", erreur);
+            }
         }
-
-        this.etatMasquageModeleEnChargement = null;
     }
 
     detruireResultatChargementAbandonne(resultatChargement) {
@@ -629,455 +647,185 @@ export class ControleurModele3D {
         );
     }
 
-    async afficherChargement(message = "Chargement...", { jeton = this.jetonChangementModele } = {}) {
-        const advancedTexture = this.etatApplication?.gui?.advancedTexture;
+    cederAuNavigateur() {
+        // scheduler.yield() est conçu pour les traitements coopératifs quand il
+        // est disponible. Le fallback setTimeout(0) fonctionne sur Firefox/Safari.
+        if (globalThis.scheduler?.yield) {
+            return globalThis.scheduler.yield();
+        }
 
-        if (!advancedTexture) {
+        return new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    accueilEstOuvert() {
+        return this.etatApplication?.interface?.accueilOuvert === true;
+    }
+
+    afficherChargement(message = "Chargement...") {
+        // OpenDyslexic est correctement chargée dans le reste de l'interface,
+        // mais le TextBlock Babylon GUI utilisé ici reste instable avec cette
+        // police dans certains navigateurs : le rectangle est rendu alors que
+        // les glyphes du canvas disparaissent. Le message de chargement est donc
+        // volontairement rendu en HTML/CSS. Le navigateur gère directement la
+        // police web et bascule automatiquement sur Arial tant qu'elle n'est pas
+        // prête, sans produire de rectangle vide.
+        if (typeof document === "undefined" || !document.body) {
             return;
         }
 
-        this.jetonIndicateurChargement = jeton;
-        this.indicateurChargementActif = true;
-        this.policeIndicateurPersonnaliseePrete = false;
+        if (
+            this.indicateurChargementEstDOM
+            && this.indicateurChargement
+            && this.indicateurChargement.isConnected
+        ) {
+            const accueilOuvert = this.accueilEstOuvert();
+            this.indicateurChargement.dataset.annaChargementActif = "true";
+            this.indicateurChargement.dataset.annaMessageChargement = String(message);
+            this.indicateurChargement.dataset.annaZIndexNormal =
+                this.indicateurChargement.dataset.annaZIndexNormal || "9000";
 
-        if (!this.indicateurChargement || this.indicateurChargement.isDisposed?.()) {
-            this.nettoyerIndicateursChargementOrphelins();
-            this.creerIndicateurChargement(advancedTexture, message);
-        } else {
-            this.reafficherIndicateurChargement(message);
+            // Le chargement continue normalement derrière la fenêtre d'accueil.
+            // On ne modifie ni display ni visibility : fermer l'accueil révèle
+            // instantanément l'état exact déjà présent en arrière-plan.
+            this.indicateurChargement.style.display = "flex";
+            this.indicateurChargement.style.visibility = "visible";
+            this.indicateurChargement.style.opacity = "0.96";
+            this.indicateurChargement.style.pointerEvents = "none";
+            this.indicateurChargement.style.zIndex = accueilOuvert ? "-1" : "9000";
+            this.indicateurChargement.setAttribute(
+                "aria-hidden",
+                accueilOuvert ? "true" : "false"
+            );
+
+            if (this.indicateurChargementTexte) {
+                this.indicateurChargementTexte.textContent = String(message);
+                this.appliquerPoliceChargement(this.indicateurChargementTexte);
+            }
+
+            this.appliquerCouleursChargement();
+            return;
         }
 
-        // Le premier rendu utilise volontairement Arial. Le texte est donc
-        // visible immédiatement, même si OpenDyslexic n'est pas encore chargé.
-        this.ajusterIndicateurChargement(message, {
-            utiliserPolicePersonnalisee: false
+        const overlay = document.createElement("div");
+        overlay.id = "anna-indicateur-chargement-modele";
+        overlay.dataset.annaChargementActif = "true";
+        overlay.dataset.annaMessageChargement = String(message);
+        overlay.setAttribute("role", "status");
+        overlay.setAttribute("aria-live", "polite");
+        overlay.setAttribute("aria-atomic", "true");
+        const accueilOuvert = this.accueilEstOuvert();
+        overlay.dataset.annaZIndexNormal = "9000";
+        overlay.setAttribute("aria-hidden", accueilOuvert ? "true" : "false");
+
+        Object.assign(overlay.style, {
+            position: "fixed",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "min(360px, 70vw)",
+            minHeight: "64px",
+            boxSizing: "border-box",
+            padding: "0.65rem 1rem",
+            display: "flex",
+            visibility: "visible",
+            alignItems: "center",
+            justifyContent: "center",
+            borderStyle: "solid",
+            borderWidth: "2px",
+            borderRadius: "6px",
+            pointerEvents: "none",
+            opacity: "0.96",
+            zIndex: accueilOuvert ? "-1" : "9000",
+            textAlign: "center"
         });
-        this.appliquerCouleursChargement();
-        await this.attendreRenduIndicateurChargement();
 
-        // Le chargement de la police personnalisée continue sans bloquer le
-        // chargement du modèle. Arial reste visible pendant ce court délai.
-        this.attendrePoliceIndicateurChargement(message, jeton)
-            .then((policePrete) => {
-                if (!this.estIndicateurChargementActif(jeton)) {
-                    return;
-                }
+        const texte = document.createElement("span");
+        texte.id = "anna-indicateur-chargement-modele-texte";
+        texte.textContent = String(message);
+        Object.assign(texte.style, {
+            display: "block",
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+            fontSize: "20px",
+            lineHeight: "1.3",
+            textAlign: "center",
+            whiteSpace: "normal",
+            overflowWrap: "break-word",
+            fontSynthesis: "none"
+        });
 
-                this.policeIndicateurPersonnaliseePrete = policePrete;
-                this.ajusterIndicateurChargement(message, {
-                    utiliserPolicePersonnalisee: policePrete
-                });
-                this.appliquerCouleursChargement();
-            })
-            .catch(() => {
-                // Arial est déjà affichée : aucune action supplémentaire.
-            });
-    }
-
-    creerIndicateurChargement(advancedTexture, message) {
-        const overlay = new BABYLON.GUI.Rectangle("IndicateurChargementModele");
-        overlay.width = "420px";
-        overlay.height = "72px";
-        overlay.thickness = 2;
-        overlay.cornerRadius = 6;
-        overlay.alpha = 1;
-        overlay.zIndex = 100000;
-        overlay.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        overlay.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        overlay.isPointerBlocker = false;
-        overlay.metadata = {
-            ...(overlay.metadata ?? {}),
-            overlayChargementModele: true,
-            nePasAutoFit: true
-        };
-
-        const carte = new BABYLON.GUI.Rectangle("IndicateurChargementModeleCarte");
-        carte.width = "100%";
-        carte.height = "100%";
-        carte.cornerRadius = 6;
-        carte.thickness = 0;
-        carte.alpha = 1;
-        carte.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        carte.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        carte.isPointerBlocker = false;
-        carte.metadata = {
-            ...(carte.metadata ?? {}),
-            nePasAutoFit: true
-        };
-
-        const texte = new BABYLON.GUI.TextBlock("IndicateurChargementModeleTexte");
-        texte.text = String(message);
-        texte.width = "94%";
-        texte.height = "100%";
-        texte.fontSize = "20px";
-        texte.fontFamily = "Arial, sans-serif";
-        texte.fontWeight = "700";
-        texte.textWrapping = false;
-        texte.resizeToFit = false;
-        texte.clipContent = false;
-        texte.alpha = 1;
-        texte.isVisible = true;
-        texte.isEnabled = true;
-        texte.notRenderable = false;
-        texte.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        texte.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        texte.metadata = {
-            ...(texte.metadata ?? {}),
-            texteDynamique: true,
-            nePasAutoFit: true,
-            nePasModifierTailleTexte: true,
-            nePasAccessibilite: true
-        };
-
-        carte.addControl(texte);
-        overlay.addControl(carte);
-        advancedTexture.addControl(overlay);
+        overlay.appendChild(texte);
+        document.body.appendChild(overlay);
 
         this.indicateurChargement = overlay;
-        this.indicateurChargementCarte = carte;
+        this.indicateurChargementCarte = overlay;
         this.indicateurChargementTexte = texte;
+        this.indicateurChargementEstDOM = true;
+
+        this.appliquerPoliceChargement(texte);
+        this.appliquerCouleursChargement();
     }
 
-    reafficherIndicateurChargement(message) {
-        const controles = [
-            this.indicateurChargement,
-            this.indicateurChargementCarte,
-            this.indicateurChargementTexte
-        ];
+    appliquerPoliceChargement(texte) {
+        if (!texte) return;
 
-        controles.forEach((controle) => {
-            if (!controle) return;
-            controle.alpha = 1;
-            controle.isVisible = true;
-            controle.isEnabled = true;
-            controle.notRenderable = false;
-            controle.isPointerBlocker = false;
-            controle._markAsDirty?.();
-        });
+        const parametres = this.etatApplication?.interface?.parametres ?? {};
+        const police = String(parametres.police || "Luciole")
+            .replace(/["']/g, "")
+            .trim() || "Arial";
+        const poids = parametres.gras === true ? "700" : "400";
 
-        if (this.indicateurChargementTexte) {
-            this.indicateurChargementTexte.text = String(message);
-            this.indicateurChargementTexte.fontFamily = "Arial, sans-serif";
+        // DOM/CSS gère correctement les polices web. Si OpenDyslexic n'est pas
+        // encore disponible au premier frame, Arial reste visible puis le
+        // navigateur remplace automatiquement la police dès son chargement.
+        texte.style.fontFamily = `"${police}", Arial, sans-serif`;
+        texte.style.fontWeight = poids;
+        texte.style.fontStyle = "normal";
+        texte.style.fontSize = "20px";
+        texte.style.lineHeight = "1.3";
+
+        if (typeof document !== "undefined" && document.fonts?.load) {
+            document.fonts
+                .load(`normal ${poids} 20px "${police}"`)
+                .catch(() => {
+                    // Le fallback Arial reste lisible même si la police web
+                    // demandée n'est pas disponible.
+                });
         }
-
-        this.etatApplication?.gui?.advancedTexture?.markAsDirty?.();
-    }
-
-    estIndicateurChargementActif(jeton = this.jetonIndicateurChargement) {
-        return this.indicateurChargementActif === true
-            && jeton === this.jetonIndicateurChargement
-            && Boolean(this.indicateurChargement)
-            && !this.indicateurChargement.isDisposed?.();
-    }
-
-    nomPoliceIndicateurChargement() {
-        return String(
-            this.etatApplication?.interface?.parametres?.police || "OpenDyslexic"
-        ).replace(/["']/g, "").trim() || "Arial";
-    }
-
-    famillePoliceIndicateurChargement({ utiliserPolicePersonnalisee = false } = {}) {
-        const famille = this.nomPoliceIndicateurChargement();
-
-        if (!utiliserPolicePersonnalisee || famille.toLowerCase() === "arial") {
-            return "Arial, sans-serif";
-        }
-
-        return `"${famille}", Arial, sans-serif`;
-    }
-
-    async attendrePoliceIndicateurChargement(message, jeton) {
-        const famille = this.nomPoliceIndicateurChargement();
-
-        if (famille.toLowerCase() === "arial") {
-            return true;
-        }
-
-        if (typeof document === "undefined" || !document.fonts?.load) {
-            return false;
-        }
-
-        const exemple = String(message || "Chargement du modèle...");
-        const chargement = Promise.allSettled([
-            document.fonts.load(`400 22px "${famille}"`, exemple),
-            document.fonts.load(`700 22px "${famille}"`, exemple)
-        ]);
-
-        await Promise.race([
-            chargement,
-            new Promise((resolve) => setTimeout(resolve, 1200))
-        ]);
-
-        if (!this.estIndicateurChargementActif(jeton)) {
-            return false;
-        }
-
-        try {
-            return document.fonts.check(`700 22px "${famille}"`, exemple);
-        } catch {
-            return false;
-        }
-    }
-
-    ajusterIndicateurChargement(
-        message = "Chargement...",
-        { utiliserPolicePersonnalisee = this.policeIndicateurPersonnaliseePrete } = {}
-    ) {
-        const overlay = this.indicateurChargement;
-        const texte = this.indicateurChargementTexte;
-
-        if (!overlay || !texte || overlay.isDisposed?.() || texte.isDisposed?.()) {
-            return;
-        }
-
-        const engine = this.etatApplication?.scenes?.scene3D?.getEngine?.();
-        const largeurRendu = Number(engine?.getRenderWidth?.())
-            || Number(typeof window !== "undefined" ? window.innerWidth : 0)
-            || 1024;
-
-        const largeurCarte = Math.round(Math.min(600, Math.max(320, largeurRendu * 0.52)));
-        const hauteurCarte = largeurCarte < 380 ? 82 : 76;
-        const largeurDisponible = Math.max(230, largeurCarte * 0.88);
-
-        overlay.width = `${largeurCarte}px`;
-        overlay.height = `${hauteurCarte}px`;
-
-        const accessibiliteActive = this.etatApplication?.accessibilite?.actif === true;
-        const remPx = Number(this.etatApplication?.accessibilite?.preferencesNavigateur?.remPx);
-        const tailleMax = accessibiliteActive && Number.isFinite(remPx)
-            ? Math.min(30, Math.max(21, Math.round(remPx * 0.86)))
-            : 23;
-        const tailleMin = 15;
-        const famille = this.famillePoliceIndicateurChargement({ utiliserPolicePersonnalisee });
-
-        if (!this.canvasMesureChargement && typeof document !== "undefined") {
-            this.canvasMesureChargement = document.createElement("canvas");
-            this.contexteMesureChargement = this.canvasMesureChargement.getContext("2d");
-        }
-
-        let taille = tailleMax;
-        const contexte = this.contexteMesureChargement;
-
-        if (contexte) {
-            for (; taille > tailleMin; taille -= 1) {
-                contexte.font = `700 ${taille}px ${famille}`;
-                if (contexte.measureText(String(message)).width <= largeurDisponible) {
-                    break;
-                }
-            }
-        }
-
-        texte.text = String(message);
-        texte.fontFamily = famille;
-        texte.fontWeight = "700";
-        texte.fontSize = `${Math.max(tailleMin, taille)}px`;
-        texte.color = this.couleurTexteChargementContrastee();
-        texte.alpha = 1;
-        texte.isVisible = true;
-        texte.isEnabled = true;
-        texte.notRenderable = false;
-        texte._markAsDirty?.();
-        overlay._markAsDirty?.();
-        this.etatApplication?.gui?.advancedTexture?.markAsDirty?.();
-    }
-
-    attendreRenduIndicateurChargement() {
-        return new Promise((resolve) => {
-            let termine = false;
-            const terminer = () => {
-                if (termine) return;
-                termine = true;
-                resolve();
-            };
-
-            if (typeof requestAnimationFrame === "function") {
-                requestAnimationFrame(terminer);
-                setTimeout(terminer, 100);
-                return;
-            }
-
-            setTimeout(terminer, 0);
-        });
-    }
-
-    couleurTexteChargementContrastee() {
-        const themeActif = this.etatApplication?.interface?.parametres?.theme;
-        const theme = obtenirThemeInterface(themeActif);
-        const fond = theme?.fondPrincipal ?? "#2B2B2BFF";
-        const texteTheme = theme?.textePrincipal ?? "#FFFFFFFF";
-
-        return this.contrasteCouleursSuffisant(fond, texteTheme)
-            ? texteTheme
-            : (this.luminanceCouleur(fond) > 0.45 ? "#000000FF" : "#FFFFFFFF");
     }
 
     appliquerCouleursChargement() {
-        const themeActif = this.etatApplication?.interface?.parametres?.theme;
-        const theme = obtenirThemeInterface(themeActif);
-        const fond = theme?.fondPrincipal ?? "#2B2B2BFF";
-        const texte = this.couleurTexteChargementContrastee();
-        const bordureTheme = theme?.bordure ?? texte;
-        const bordure = this.contrasteCouleursSuffisant(fond, bordureTheme)
-            ? bordureTheme
-            : texte;
+        const theme = String(
+            this.etatApplication?.interface?.parametres?.theme ?? ""
+        );
+        const sombre = theme === "noir"
+            || theme === "gris-fonce"
+            || theme === "sombre";
+        const fond = sombre ? "#222222" : "#ffffff";
+        const texte = sombre ? "#ffffff" : "#000000";
 
-        if (this.indicateurChargement) {
-            this.indicateurChargement.background = fond;
-            this.indicateurChargement.color = bordure;
-            this.indicateurChargement.alpha = 1;
-        }
-
-        if (this.indicateurChargementCarte) {
-            this.indicateurChargementCarte.background = "#00000000";
-            this.indicateurChargementCarte.color = "#00000000";
-            this.indicateurChargementCarte.alpha = 1;
+        if (this.indicateurChargementEstDOM && this.indicateurChargement) {
+            this.indicateurChargement.style.backgroundColor = fond;
+            this.indicateurChargement.style.borderColor = texte;
+            this.indicateurChargement.style.color = texte;
         }
 
         if (this.indicateurChargementTexte) {
-            this.indicateurChargementTexte.color = texte;
-            this.indicateurChargementTexte.alpha = 1;
-            this.indicateurChargementTexte.isVisible = true;
-            this.indicateurChargementTexte.isEnabled = true;
-            this.indicateurChargementTexte.notRenderable = false;
-            this.indicateurChargementTexte._markAsDirty?.();
-        }
-
-        this.indicateurChargement?._markAsDirty?.();
-        this.etatApplication?.gui?.advancedTexture?.markAsDirty?.();
-    }
-
-    normaliserHexCouleur(couleur) {
-        const texte = String(couleur || "").trim();
-        const correspondance = /^#([0-9a-f]{6})(?:[0-9a-f]{2})?$/i.exec(texte);
-        return correspondance ? correspondance[1] : null;
-    }
-
-    luminanceCouleur(couleur) {
-        const hex = this.normaliserHexCouleur(couleur);
-        if (!hex) return 0;
-
-        const composantes = [0, 2, 4].map((index) => {
-            const valeur = parseInt(hex.slice(index, index + 2), 16) / 255;
-            return valeur <= 0.03928
-                ? valeur / 12.92
-                : Math.pow((valeur + 0.055) / 1.055, 2.4);
-        });
-
-        return 0.2126 * composantes[0]
-            + 0.7152 * composantes[1]
-            + 0.0722 * composantes[2];
-    }
-
-    contrasteCouleursSuffisant(fond, texte) {
-        const l1 = this.luminanceCouleur(fond);
-        const l2 = this.luminanceCouleur(texte);
-        const clair = Math.max(l1, l2);
-        const sombre = Math.min(l1, l2);
-        return (clair + 0.05) / (sombre + 0.05) >= 4.5;
-    }
-
-    masquerChargement({ jeton = this.jetonIndicateurChargement, forcer = false } = {}) {
-        if (!forcer && jeton !== this.jetonIndicateurChargement) {
-            return;
-        }
-
-        this.indicateurChargementActif = false;
-        this.policeIndicateurPersonnaliseePrete = false;
-
-        const overlay = this.indicateurChargement;
-        const carte = this.indicateurChargementCarte;
-        const texte = this.indicateurChargementTexte;
-        const advancedTexture = this.etatApplication?.gui?.advancedTexture;
-
-        this.indicateurChargement = null;
-        this.indicateurChargementCarte = null;
-        this.indicateurChargementTexte = null;
-
-        [texte, carte, overlay].forEach((controle) => {
-            if (!controle) return;
-            controle.alpha = 0;
-            controle.isVisible = false;
-            controle.isEnabled = false;
-            controle.notRenderable = true;
-            controle.isPointerBlocker = false;
-            controle._markAsDirty?.();
-        });
-
-        this.retirerControleChargement(overlay, advancedTexture);
-        advancedTexture?.markAsDirty?.();
-
-        // Un second retrait par identité est effectué après le prochain rendu.
-        // Il ne peut pas supprimer un nouvel indicateur créé entre-temps.
-        const retirerEncore = () => {
-            this.retirerControleChargement(overlay, advancedTexture);
-            advancedTexture?.markAsDirty?.();
-        };
-
-        if (typeof requestAnimationFrame === "function") {
-            requestAnimationFrame(retirerEncore);
-        }
-        setTimeout(retirerEncore, 80);
-    }
-
-    retirerControleChargement(overlay, advancedTexture) {
-        if (!overlay) return;
-
-        try {
-            overlay.parent?.removeControl?.(overlay);
-        } catch (erreur) {
-            console.warn("[Modèles 3D] Retrait du parent du label ignoré.", erreur);
-        }
-
-        try {
-            advancedTexture?.rootContainer?.removeControl?.(overlay);
-        } catch (erreur) {
-            console.warn("[Modèles 3D] Retrait du root GUI du label ignoré.", erreur);
-        }
-
-        try {
-            advancedTexture?.removeControl?.(overlay);
-        } catch (erreur) {
-            console.warn("[Modèles 3D] Retrait du label de chargement ignoré.", erreur);
-        }
-
-        try {
-            if (!overlay.isDisposed?.()) {
-                overlay.dispose?.();
-            }
-        } catch (erreur) {
-            console.warn("[Modèles 3D] Destruction du label de chargement ignorée.", erreur);
+            this.indicateurChargementTexte.style.color = texte;
         }
     }
 
-    nettoyerIndicateursChargementOrphelins() {
-        const advancedTexture = this.etatApplication?.gui?.advancedTexture;
-        const racine = advancedTexture?.rootContainer;
-        if (!racine) return;
-
-        const noms = new Set([
-            "IndicateurChargementModele",
-            "IndicateurChargementModeleCarte",
-            "IndicateurChargementModeleTexte"
-        ]);
-
-        const parcourir = (controle) => {
-            const enfants = Array.isArray(controle?.children)
-                ? [...controle.children]
-                : [];
-
-            enfants.forEach(parcourir);
-
-            if (controle !== racine && noms.has(controle?.name)) {
-                try {
-                    controle.parent?.removeControl?.(controle);
-                    controle.dispose?.();
-                } catch (erreur) {
-                    console.warn("[Modèles 3D] Nettoyage d'un ancien label ignoré.", erreur);
-                }
-            }
-        };
-
-        parcourir(racine);
-        advancedTexture.markAsDirty?.();
+    masquerChargement() {
+        if (
+            this.indicateurChargementEstDOM
+            && this.indicateurChargement
+        ) {
+            this.indicateurChargement.dataset.annaChargementActif = "false";
+            this.indicateurChargement.style.display = "none";
+            this.indicateurChargement.style.visibility = "hidden";
+            this.indicateurChargement.setAttribute("aria-hidden", "true");
+        }
     }
+
 }

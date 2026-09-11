@@ -1,3 +1,12 @@
+/**
+ * @file Opérations techniques courantes sur la scène Babylon.js.
+ *
+ * Rôle : supprimer proprement un modèle, retrouver les meshes visibles et appliquer
+ * le fond de scène à partir des paramètres métier.
+ *
+ * Utilisation : les contrôleurs utilisent ce service au lieu de manipuler directement
+ * les collections de la scène lorsque l'opération concerne l'état global du rendu.
+ */
 import {
     supprimerMeshes,
     filtrerMeshesValides

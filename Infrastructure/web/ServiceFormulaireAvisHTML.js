@@ -1,3 +1,12 @@
+/**
+ * @file Intégration du questionnaire de satisfaction dans la page ANNA.
+ *
+ * Rôle : charger SurveyJS, construire le formulaire, synchroniser son apparence avec
+ * l'interface et gérer son ouverture/fermeture.
+ *
+ * Utilisation : ControleurAvis installe ce service à partir de la configuration du
+ * questionnaire et transmet les réponses au Use Case d'enregistrement.
+ */
 export class ServiceFormulaireAvisHTML {
     constructor({ configuration } = {}) {
         if (!configuration) {

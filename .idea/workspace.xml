@@ -1,43 +1,114 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="suppression label salliance">
+    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="feat: integration du questionnaire avec enregistrement et envoie par mail">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/accessibilite.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/accessibilite.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/catalogueModeles3D.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/catalogueModeles3D.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Configuration/chemins.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/chemins.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/constantesAnimation.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesAnimation.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/constantesApparence.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesApparence.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Configuration/constantesCamera.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesCamera.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Configuration/constantesContours.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesContours.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/constantesEntropie.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesEntropie.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/constantesInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesInterface.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Configuration/constantesSaillance.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesSaillance.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/formulaireAvis.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/formulaireAvis.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/parametresContourCouleur.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Configuration/profilParDefaut.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/profilParDefaut.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/questionnaireSatisfaction.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/questionnaireSatisfaction.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Documentation/Documentation_configuration_mail_ANNA.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Documentation/algorithme_entropie.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/animationInterface/EtatMenuLateral.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/animationInterface/EtatMenuLateral.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/animationInterface/EtatPanneauDeroulant.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/animationInterface/ParametresAnimation.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/animationInterface/ParametresAnimation.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/apparence/ParametresApparence.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/apparence/ParametresApparence.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/camera/ParametresCamera.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/camera/ParametresCamera.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Domain/contours/ParametresContours.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/contours/ParametresContours.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/contours/TypeContour.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/contours/TypeContour.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/interface/ParametresInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/interface/ParametresInterface.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/modele3d/EtatModele3D.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/modele3d/EtatModele3D.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/modele3d/Modele3D.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/modele3d/Modele3D.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/profil/ProfilUtilisateur.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/profil/ProfilUtilisateur.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Etat/etatApplication.js" beforeDir="false" afterPath="$PROJECT_DIR$/Etat/etatApplication.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ChargeurModeleBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ChargeurModeleBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/accessibilite/AccessNav.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/accessibilite/AccessNav.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/accessibilite/ServiceAccessibiliteNavigateur.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/accessibilite/ServiceMesureTexteNavigateur.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/accessibilite/ServicePolicesNavigateur.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/accessibilite/ServicePolicesNavigateur.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/BoucleRenduBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/BoucleRenduBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/FabriqueSceneGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/FabriqueSceneGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCadrageCameraBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCadrageCameraBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCameraBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCameraBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCouleurContourAdaptativeBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceCouleurContourAdaptativeBabylon.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceEntropieVueBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceEntropieVueBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceLumiereBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceLumiereBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceMateriauxBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceMateriauxBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceNormalisationModeleBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceNormalisationModeleBabylon.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceOrientationModeleBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceOrientationModeleBabylon.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceSaillanceVueBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceSaillanceVueBabylon.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceSceneBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceSceneBabylon.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceAnimationGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceAnimationGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceBlocagePointeurGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceBlocagePointeurGUI.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceControlesSpeciauxGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceControlesSpeciauxGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceDimensionsGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceDimensionsGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceDropdownGUI.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceListeModelesGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceListeModelesGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceScrollGUI.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleBoutonsGUI.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteResponsiveGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteResponsiveGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/loupe/ServiceLoupe3D.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/loupe/ServiceLoupe3D.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/loupe/ServiceLoupe3D_backup_sans_camera.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/modele3d/ServiceDetectionModeles3D.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/modele3d/ServiceDetectionModeles3D.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitContProfNorm.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitContProfNorm.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereCouleurs.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereCouleurs.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitementContoursCouleur.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitementContoursCouleur.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderContoursCouleur.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/shaders/ShaderContoursCouleur.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderContoursProfondeurNormales.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/shaders/ShaderContoursProfondeurNormales.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderMiseLumiereGradients.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/shaders/ShaderMiseLumiereGradients.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitApparence.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitApparence.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitContProfNorm.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereCouleurs.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitMiseLumiereNormales.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/postTraitements/PostTraitementContoursCouleur.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/FonctionsGradientCouleurPerceptuel.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderContoursCouleur.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderContoursCouleurCanny.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderContoursProfondeurNormales.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderMiseLumiereGradients.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/shaders/ShaderReliefCanny.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/web/ServiceFormulaireAvisHTML.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/web/ServiceFormulaireAvisHTML.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurAccess.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurAccess.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurAnimationInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurAnimationInterface.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurApparence.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurApparence.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurAvis.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurAvis.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurCamera.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurCamera.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurContours.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurContours.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurInterface.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurLumiere.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurLumiere.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurModele3D.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurModele3D.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/gui/CreerBoutonTestEntropie.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/gui/EntropieGUI.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/gui/SaillanceGUI.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/UseCases/accessibiliteUseCases/ToggleAccessUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/accessibiliteUseCases/ToggleAccessUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/animIntUseCases/BasculerSectionUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/animIntUseCases/BloquerModeleUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/animIntUseCases/FermerSectionsUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/cameraUseCases/BloquerCameraUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/cameraUseCases/DebloquerCameraUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/cameraUseCases/ReinitialiserCameraUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/ActiverContourCouleurUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/ActiverReliefUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/BasculerMiseLumiereCouleursUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/BasculerMiseLumiereNormalesUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/contoursUseCases/ChoisirCouleurContourAdaptativeUC.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/UseCases/contoursUseCases/ReinitialiserContoursUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/contoursUseCases/ReinitialiserContoursUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/modele3dUseCases/ChoisirVueEntropieUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/modele3dUseCases/ChoisirVueSaillanceUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/modele3dUseCases/ListerModelesUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/modele3dUseCases/ListerModelesUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/modele3dUseCases/NormaliserModeleUC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/modele3dUseCases/SupprimerModeleActuelUC.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/UseCases/profilUseCases/AppliquerProfilUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/profilUseCases/AppliquerProfilUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Util/BabylonUtils.js" beforeDir="false" afterPath="$PROJECT_DIR$/Util/BabylonUtils.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Util/ContourEpaisseurUtils.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Util/EntropieUtils.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.mtl" beforeDir="false" />
@@ -63,7 +134,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="glb-test" />
+        <entry key="$PROJECT_DIR$" value="contoTest" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -165,7 +236,15 @@
       <workItem from="1783428012764" duration="17656000" />
       <workItem from="1783677054420" duration="1847000" />
       <workItem from="1784105955360" duration="64308000" />
-      <workItem from="1784896673627" duration="2822000" />
+      <workItem from="1784896673627" duration="6352000" />
+      <workItem from="1786956725628" duration="9788000" />
+      <workItem from="1787044190861" duration="2276000" />
+      <workItem from="1787133283787" duration="6566000" />
+      <workItem from="1787168415306" duration="5767000" />
+      <workItem from="1787501151228" duration="5124000" />
+      <workItem from="1788167708228" duration="3486000" />
+      <workItem from="1788506861847" duration="31250000" />
+      <workItem from="1788940187932" duration="18281000" />
     </task>
     <task id="LOCAL-00001" summary="animIntUseCases interfaceUseCases apparenceUseCases">
       <option name="closed" value="true" />
@@ -359,7 +438,63 @@
       <option name="project" value="LOCAL" />
       <updated>1782397622196</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="maj 28 juillet">
+      <option name="closed" value="true" />
+      <created>1785242028822</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1785242028822</updated>
+    </task>
+    <task id="LOCAL-00026" summary="correction glb">
+      <option name="closed" value="true" />
+      <created>1785243331210</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1785243331210</updated>
+    </task>
+    <task id="LOCAL-00027" summary="ajout des modèles">
+      <option name="closed" value="true" />
+      <created>1785243696863</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1785243696863</updated>
+    </task>
+    <task id="LOCAL-00028" summary="correction catalogue">
+      <option name="closed" value="true" />
+      <created>1785244798549</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1785244798549</updated>
+    </task>
+    <task id="LOCAL-00029" summary="feat: integration du questionnaire">
+      <option name="closed" value="true" />
+      <created>1786975670060</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1786975670060</updated>
+    </task>
+    <task id="LOCAL-00030" summary="feat: integration du questionnaire avec enregistrement et envoie par mail">
+      <option name="closed" value="true" />
+      <created>1787142373333</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1787142373333</updated>
+    </task>
+    <task id="LOCAL-00031" summary="feat: integration du questionnaire avec enregistrement et envoie par mail">
+      <option name="closed" value="true" />
+      <created>1787142425603</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1787142425603</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -397,12 +532,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="animIntUseCases interfaceUseCases apparenceUseCases" />
-    <MESSAGE value="Infrastructure et changement mineur" />
-    <MESSAGE value="assets" />
-    <MESSAGE value="assets gui" />
-    <MESSAGE value="11 juin" />
-    <MESSAGE value="11 juin dernier vers" />
     <MESSAGE value="version de test 15 juin 10:25" />
     <MESSAGE value="correction épaisseur des contours" />
     <MESSAGE value="test highlight , entropie + csv , correction bug background" />
@@ -422,7 +551,13 @@
     <MESSAGE value="vitesse caméra réduite , gui modifié" />
     <MESSAGE value="mise en place de la sauvegarde" />
     <MESSAGE value="suppression label salliance" />
-    <option name="LAST_COMMIT_MESSAGE" value="suppression label salliance" />
+    <MESSAGE value="maj 28 juillet" />
+    <MESSAGE value="correction glb" />
+    <MESSAGE value="ajout des modèles" />
+    <MESSAGE value="correction catalogue" />
+    <MESSAGE value="feat: integration du questionnaire" />
+    <MESSAGE value="feat: integration du questionnaire avec enregistrement et envoie par mail" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: integration du questionnaire avec enregistrement et envoie par mail" />
     <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
   </component>
 </project>

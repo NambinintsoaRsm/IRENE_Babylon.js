@@ -1,3 +1,13 @@
+/**
+ * @file Objet de valeur des réglages de caméra ANNA.
+ *
+ * Rôle : centraliser les paramètres indépendants de Babylon.js qui décrivent le
+ * comportement de navigation et de cadrage de la caméra.
+ *
+ * Utilisation : ServiceCameraBabylon traduit ces valeurs vers ArcRotateCamera.
+ * Toute nouvelle option persistante de caméra doit être ajoutée ici et dans le
+ * stockage du profil afin de garder une seule représentation métier cohérente.
+ */
 export class ParametresCamera {
     constructor({
                     alpha = Math.PI / 2,

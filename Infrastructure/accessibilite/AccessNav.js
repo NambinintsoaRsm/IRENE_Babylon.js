@@ -1,3 +1,12 @@
+/**
+ * @file Lecture des préférences d'accessibilité exposées par le navigateur.
+ *
+ * Rôle : isoler les appels à matchMedia et aux mesures CSS afin que le reste de
+ * l'application manipule des valeurs simples et testables.
+ *
+ * Utilisation : ToggleAccessUC utilise ce service pour adapter ANNA aux préférences
+ * système sans intégrer d'API navigateur dans le domaine.
+ */
 export class AccessNav {
     lire() {
         const contraste = this.lireContraste();

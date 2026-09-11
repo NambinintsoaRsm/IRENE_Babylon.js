@@ -1,3 +1,12 @@
+/**
+ * @file État métier minimal du menu latéral principal.
+ *
+ * Rôle : mémoriser si le menu est ouvert et les positions calculées pour le menu
+ * et sa flèche. Le rendu et les animations restent gérés par ServiceAnimationGUI.
+ *
+ * Utilisation : l'instance est conservée dans etatApplication.animation.menuLateral
+ * puis mise à jour par les Use Cases/contrôleurs de navigation.
+ */
 export class EtatMenuLateral {
     constructor({
                     estOuvert = true,

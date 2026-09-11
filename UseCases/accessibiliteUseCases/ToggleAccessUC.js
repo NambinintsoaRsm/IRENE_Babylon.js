@@ -1,3 +1,12 @@
+/**
+ * @file Cas d'utilisation d'activation/désactivation du mode Accessibilité.
+ *
+ * Rôle : appliquer un profil temporaire à partir des préférences navigateur tout en
+ * conservant une copie des réglages normaux pour pouvoir les restaurer exactement.
+ *
+ * Utilisation : ControleurAccess appelle executer(); l'état persistant du profil est
+ * sauvegardé après la transition sans confondre réglages temporaires et préférences.
+ */
 import { access } from "../../Configuration/accessibilite.js";
 import { constantesApparence } from "../../Configuration/constantesApparence.js";
 import { ParametresInterface } from "../../Domain/interface/ParametresInterface.js";
@@ -26,6 +35,11 @@ export class ToggleAccessUC {
         this.sauvegarderProfilLocalUC = sauvegarderProfilLocalUC;
     }
 
+    /**
+     * Bascule le mode Accessibilité tout en préservant les réglages standard.
+     *
+     * @returns {Object} État résultant et informations utiles à la synchronisation GUI.
+     */
     executer(options = {}) {
         const resultat = this.etatApplication.accessibilite?.actif
             ? this.desactiver(options)
@@ -388,11 +402,9 @@ export class ToggleAccessUC {
         if (c.BdTaiBouValTxt) c.BdTaiBouValTxt.text = String(Math.round(interf.tailleBorduresBoutons));
 
         if (c.BdSzMenuSlider) {
-            c.BdSzMenuSlider.minimum = -10;
-            c.BdSzMenuSlider.maximum = this.etatApplication.accessibilite?.actif === true
-                ? 5
-                : 3;
-            c.BdSzMenuSlider.step = 1;
+            // Les bornes du slider sont pilotées par ControleurInterface :
+            // minimum issu de la GUI, maximum calculé selon la police et les
+            // contenants. Le mode Accessibilité ne doit jamais les écraser.
             c.BdSzMenuSlider.value = interf.taillePolice;
         }
 
@@ -405,8 +417,8 @@ export class ToggleAccessUC {
         if (c.ThmSlider && fondScene) {
             const valeurFond = Math.round((1 - fondScene.r) * 100);
             c.ThmSlider.value = valeurFond;
-            if (c.RegThmValTxt) {
-                c.RegThmValTxt.text = valeurFond <= 33 ? "Clair" : valeurFond >= 67 ? "Sombre" : "Gris";
+            if (c.ConfThmValTxt) {
+                c.ConfThmValTxt.text = valeurFond <= 33 ? "Clair" : valeurFond >= 67 ? "Sombre" : "Gris";
             }
         }
 
@@ -420,6 +432,8 @@ export class ToggleAccessUC {
         texte.metadata = texte.metadata || {};
         texte.metadata.texteDynamique = true;
         texte.text = signe && pourcentage > 0 ? `+${pourcentage}%` : `${pourcentage}%`;
+        texte.metadata.responsiveTexteOriginal = texte.text;
+        delete texte.metadata.dernierTexteAutoFit;
         texte._markAsDirty?.();
     }
 

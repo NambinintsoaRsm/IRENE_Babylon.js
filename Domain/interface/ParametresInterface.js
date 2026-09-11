@@ -1,9 +1,18 @@
+/**
+ * @file Objet de valeur des préférences de l'interface utilisateur.
+ *
+ * Rôle : regrouper police, taille, gras, thème, position du menu et épaisseurs de
+ * bordures sans dépendre de Babylon GUI.
+ *
+ * Utilisation : les Use Cases remplacent l'instance courante par copierAvec() ;
+ * ServiceTexteGUI et ServiceStyleInterfaceGUI traduisent ensuite ces paramètres.
+ */
 import { estPositionMenuValide } from "./PositionMenu.js";
 import { estThemeInterfaceValide } from "./ThemeInterface.js";
 
 export class ParametresInterface {
     constructor({
-        police = "OpenDyslexic",
+        police = "Luciole",
         taillePolice = 0,
         gras = false,
         theme = "blanc",

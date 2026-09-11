@@ -1,3 +1,15 @@
+/**
+ * @file Choix automatique de la couleur de la silhouette à partir du rendu courant.
+ *
+ * Rôle : analyser localement les pixels des deux côtés de la silhouette puis choisir
+ * une couleur présentant un contraste suffisant avec l'objet et le fond.
+ *
+ * Utilisation : ChoisirCouleurContourAdaptativeUC appelle choisir(etatApplication)
+ * lorsque le mode automatique est actif ou doit être recalculé.
+ *
+ * Attention : ce service appartient bien à la V1. Il ne correspond pas à l'ancien
+ * « contour couleur » qui détectait les arêtes à partir des gradients de texture.
+ */
 import { constantesContours } from "../../Configuration/constantesContours.js";
 import {
     contrasteLuminance,
@@ -17,6 +29,12 @@ import {
  * - la couleur peut être générée et n'est pas limitée aux couleurs du GUI.
  */
 export class ServiceCouleurContourAdaptativeBabylon {
+    /**
+     * Calcule une couleur de silhouette adaptée au rendu visible actuel.
+     *
+     * @param {Object} etatApplication État donnant accès à la scène, la caméra et aux contours.
+     * @returns {Promise<Object>} Couleur retenue et métriques ayant conduit au choix.
+     */
     async choisir(etatApplication) {
         const config = constantesContours.couleurOptimaleSilhouette;
         const scene = etatApplication?.scenes?.scene3D;

@@ -1,3 +1,12 @@
+/**
+ * @file Objet de valeur des réglages d'apparence du rendu 3D.
+ *
+ * Rôle : regrouper et valider netteté, contraste, luminosité, saturation, fond de
+ * scène et texture. Cette classe ne manipule jamais directement Babylon.js.
+ *
+ * Utilisation : les Use Cases créent une nouvelle instance via copierAvec(), puis
+ * les post-traitements lisent les valeurs présentes dans etatApplication.
+ */
 export class ParametresApparence {
     constructor({
                     contraste = 1,

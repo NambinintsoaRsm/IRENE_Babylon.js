@@ -1,3 +1,11 @@
+/**
+ * @file Lecture et mémorisation des dimensions de contrôles Babylon GUI.
+ *
+ * Rôle : convertir les valeurs CSS/GUI en nombres exploitables par les animations.
+ *
+ * Utilisation : ServiceAnimationGUI s'appuie sur ce service pour déplacer le menu
+ * sans coder en dur ses dimensions.
+ */
 import {
     lireNombreDepuisValeurCss,
     estValeurPourcentage,
@@ -50,23 +58,6 @@ export class ServiceDimensionsGUI {
         };
     }
 
-    memoriserDimensionSection(etatApplication, nomSection, controleSection) {
-        if (!etatApplication?.gui?.dimensionsInitiales?.sections) {
-            throw new Error("Zone des dimensions initiales introuvable.");
-        }
-
-        const hauteur = this.lireHauteur(controleSection);
-
-        etatApplication.gui.dimensionsInitiales.sections[nomSection] = {
-            hauteur: hauteur.brute,
-            hauteurValeur: hauteur.valeur,
-            estPourcentage: hauteur.estPourcentage,
-            estPixel: hauteur.estPixel
-        };
-
-        return etatApplication.gui.dimensionsInitiales.sections[nomSection];
-    }
-
     memoriserMenu(etatApplication, menuControle, flecheControle) {
         if (!etatApplication?.gui?.dimensionsInitiales) {
             throw new Error("Dimensions initiales GUI introuvables.");
@@ -93,21 +84,4 @@ export class ServiceDimensionsGUI {
         return etatApplication.gui.dimensionsInitiales;
     }
 
-    fermerVisuellementSection(controleSection) {
-        if (!controleSection) {
-            return;
-        }
-
-        controleSection.height = "0px";
-        controleSection.isVisible = false;
-    }
-
-    ouvrirVisuellementSection(controleSection, hauteurInitiale) {
-        if (!controleSection) {
-            return;
-        }
-
-        controleSection.height = hauteurInitiale;
-        controleSection.isVisible = true;
-    }
 }

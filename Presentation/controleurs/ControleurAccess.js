@@ -1,3 +1,12 @@
+/**
+ * @file Contrôleur de présentation du panneau Accessibilité.
+ *
+ * Rôle : relier le bouton flottant, la fenêtre et la case d'activation au Use Case
+ * ToggleAccessUC, puis synchroniser immédiatement l'état visuel de la GUI.
+ *
+ * Utilisation : main.js appelle brancherDepuisNomsGUI() après le chargement complet
+ * de la GUI. Les préférences elles-mêmes restent gérées dans ToggleAccessUC.
+ */
 import { obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
 
 /**
@@ -27,14 +36,10 @@ export class ControleurAccess {
 
     brancherDepuisNomsGUI(noms = {}) {
         this.bouton = this.obtenir(noms.bouton)
-            ?? this.obtenir("AccesBtn")
-            ?? this.obtenir("AccessBtn")
-            ?? this.obtenir("AccBtn");
+            ?? this.obtenir("AccesBtn");
 
         this.texteBouton = this.obtenir(noms.texte)
             ?? this.obtenir("AccesBtnTxt")
-            ?? this.obtenir("AccessBtnTxt")
-            ?? this.obtenir("AccBtnTxt")
             ?? this.trouverPremierTextBlock(this.bouton);
 
         this.panneau = this.obtenir(noms.panneau) ?? this.obtenir("AccesRect");
@@ -422,66 +427,7 @@ export class ControleurAccess {
 
     planifierAjustementTitre() {
         if (!this.titre) return;
-
-        const ajuster = () => this.ajusterTitreAccessibilite();
-
-        requestAnimationFrame(ajuster);
-        setTimeout(ajuster, 40);
-        setTimeout(ajuster, 120);
-        setTimeout(ajuster, 260);
-    }
-
-    ajusterTitreAccessibilite() {
-        if (!this.titre) return false;
-
-        const mesure = this.titre._currentMeasure;
-        const largeur = Number(mesure?.width ?? 0);
-        const hauteur = Number(mesure?.height ?? 0);
-
-        this.titre.text = this.titre.metadata?.texteOriginal ?? "Accessibilité";
-        this.titre.resizeToFit = false;
-        this.titre.textWrapping = false;
-        this.titre.clipContent = true;
-        this.titre.lineSpacing = "0px";
-        this.titre.characterSpacing = 0;
-
-        if (!largeur || largeur <= 8 || !globalThis.document?.createElement) {
-            this.titre._markAsDirty?.();
-            this.etatApplication.gui?.advancedTexture?.markAsDirty?.();
-            return false;
-        }
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return false;
-
-        const texte = this.titre.metadata?.texteOriginal ?? "Accessibilité";
-        const famille = this.titre.fontFamily || this.etatApplication?.interface?.parametres?.police || "OpenDyslexic";
-        const poids = this.titre.fontWeight || "700";
-        const tailleCourante = Number(this.titre.fontSizeInPixels ?? parseFloat(this.titre.fontSize) ?? 28);
-        const tailleMaxLisible = hauteur > 0 ? Math.max(16, hauteur * 0.72) : 46;
-        const tailleDepart = Math.max(14, Math.min(tailleCourante || 28, tailleMaxLisible));
-        const largeurDisponible = Math.max(24, largeur - 18);
-        let taille = tailleDepart;
-
-        for (; taille >= 14; taille -= 1) {
-            const police = famille?.includes?.(" ") ? `"${famille}"` : famille;
-            ctx.font = `${poids} ${Math.round(taille)}px ${police || "sans-serif"}`;
-            if (ctx.measureText(texte).width <= largeurDisponible) break;
-        }
-
-        this.titre.text = texte;
-        this.titre.fontSize = `${Math.max(14, Math.round(taille))}px`;
-        this.titre.metadata = {
-            ...(this.titre.metadata ?? {}),
-            responsiveFontSizeBasePx: Math.max(14, Math.round(taille)),
-            tailleMinAutoFitPx: 14,
-            facteurMinAutoFit: 0.45,
-            lignesMaxAutoFit: 1
-        };
-        this.titre._markAsDirty?.();
-        this.etatApplication.gui?.advancedTexture?.markAsDirty?.();
-        return true;
+        this.etatApplication?.services?.texteResponsive?.planifierAjustement?.(40);
     }
 
     preparerCaseActivation() {
@@ -665,10 +611,7 @@ export class ControleurAccess {
         const serviceResponsive = this.etatApplication?.services?.texteResponsive;
 
         serviceTexte?.appliquerParametresTexte?.(this.etatApplication);
-        serviceResponsive?.ajuster?.();
-        serviceResponsive?.planifierAjustement?.(30);
-        setTimeout(() => serviceResponsive?.ajuster?.(), 80);
-        setTimeout(() => serviceResponsive?.planifierAjustement?.(120), 120);
+        serviceResponsive?.planifierAjustement?.(40);
 
         this.etatApplication.gui?.advancedTexture?.markAsDirty?.();
     }

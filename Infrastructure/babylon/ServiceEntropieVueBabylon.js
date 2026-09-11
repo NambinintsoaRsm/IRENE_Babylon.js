@@ -1,3 +1,13 @@
+/**
+ * @file Moteur générique de parcours de points de vue autour d'un modèle.
+ *
+ * Rôle : fournir la mécanique commune de génération de vues sphériques, rendu,
+ * lecture des pixels, gestion de caméra d'analyse et sélection du meilleur score.
+ *
+ * Utilisation : la fonction Entropie n'est pas exposée dans l'interface V1, mais
+ * ServiceSaillanceVueBabylon hérite de cette classe pour réutiliser ce pipeline.
+ * Ce fichier ne doit donc pas être supprimé tant que Saillance en dépend.
+ */
 import { constantesEntropie } from "../../Configuration/constantesEntropie.js";
 
 /**
@@ -91,6 +101,11 @@ export class ServiceEntropieVueBabylon {
                 : null;
 
             for (let index = 0; index < vues.length; index++) {
+                // Le parcours peut durer plusieurs secondes. Céder régulièrement
+                // la main permet aux événements souris/clavier de l'interface GUI
+                // d'être traités pendant l'analyse hors écran.
+                await this.cederAuNavigateur();
+
                 if (!analyseToujoursValide()) {
                     return null;
                 }
@@ -120,6 +135,7 @@ export class ServiceEntropieVueBabylon {
                 }
 
                 const score = await this.calculerScoreImage(scene, configuration.analyseImage, contexteCameraAnalyse);
+                await this.cederAuNavigateur();
 
                 if (!analyseToujoursValide()) {
                     return null;
@@ -139,7 +155,7 @@ export class ServiceEntropieVueBabylon {
 
                 vuesAnalysees.push(resultatVue);
 
-                if (this.estMeilleureVue(resultatVue, meilleureVue)) {
+                if (this.estMeilleureVue(resultatVue, meilleureVue, configuration)) {
                     meilleureVue = resultatVue;
                 }
             }
@@ -209,19 +225,36 @@ export class ServiceEntropieVueBabylon {
         }
     }
 
-    estMeilleureVue(candidate, current) {
+    estMeilleureVue(candidate, current, configuration = {}) {
         if (!current) return true;
 
         const scoreCandidate = Number(candidate?.scoreGlobal ?? 0);
         const scoreCurrent = Number(current?.scoreGlobal ?? 0);
-        const epsilon = 1e-7;
+        const stabilite = configuration?.selectionVue ?? {};
+        const toleranceRelative = Math.max(
+            0,
+            Number(stabilite.toleranceRelativeScore ?? 0) || 0
+        );
+        const toleranceAbsolue = Math.max(
+            0,
+            Number(stabilite.toleranceAbsolueScore ?? 1e-8) || 0
+        );
+        const echelle = Math.max(
+            Math.abs(scoreCandidate),
+            Math.abs(scoreCurrent),
+            1e-12
+        );
+        const tolerance = Math.max(
+            toleranceAbsolue,
+            echelle * toleranceRelative
+        );
 
-        if (scoreCandidate > scoreCurrent + epsilon) return true;
-        if (scoreCandidate < scoreCurrent - epsilon) return false;
+        if (scoreCandidate > scoreCurrent + tolerance) return true;
+        if (scoreCandidate < scoreCurrent - tolerance) return false;
 
-        // Si deux scores sont quasiment identiques, on garde la première vue rencontrée.
-        // Cela évite les changements d'angle visibles dus à de très petites variations
-        // de readPixels entre deux rendus.
+        // Égalité volontaire : le parcours des vues est déterministe, donc on
+        // garde la première vue rencontrée. Une variation minime de readPixels
+        // ne peut plus faire basculer la caméra vers une autre orientation.
         return false;
     }
 
@@ -240,7 +273,7 @@ export class ServiceEntropieVueBabylon {
             };
         }
 
-        const cameraClone = camera.clone(`${camera.name || "Camera"}_analyse_saotra`);
+        const cameraClone = camera.clone(`${camera.name || "Camera"}_analyse_anna`);
 
         if (camera.target?.clone && typeof cameraClone.setTarget === "function") {
             cameraClone.setTarget(camera.target.clone());
@@ -265,18 +298,43 @@ export class ServiceEntropieVueBabylon {
         cameraClone.layerMask = layerMaskAffichage | masqueModeleChargement;
 
         const engine = scene.getEngine?.();
-        const tailleMax = Number(configuration?.analyseImage?.resolutionRenduHorsEcran ?? 512);
-        const largeurCanvas = Math.max(64, Number(engine?.getRenderWidth?.(true)) || 512);
-        const hauteurCanvas = Math.max(64, Number(engine?.getRenderHeight?.(true)) || 512);
-        const facteur = Math.min(1, tailleMax / Math.max(largeurCanvas, hauteurCanvas));
-        const largeur = Math.max(64, Math.round(largeurCanvas * facteur));
-        const hauteur = Math.max(64, Math.round(hauteurCanvas * facteur));
+        const tailleFixe = Number(
+            configuration?.analyseImage?.resolutionRenduHorsEcranFixe
+        );
+        let largeur;
+        let hauteur;
+
+        if (Number.isFinite(tailleFixe) && tailleFixe >= 64) {
+            // Analyse stable : la texture hors écran ne dépend plus du canvas
+            // visible ni du fait que l'application soit lancée localement ou
+            // servie par Apache/PHP.
+            largeur = Math.round(tailleFixe);
+            hauteur = Math.round(tailleFixe);
+        } else {
+            const tailleMax = Number(
+                configuration?.analyseImage?.resolutionRenduHorsEcran ?? 512
+            );
+            const largeurCanvas = Math.max(
+                64,
+                Number(engine?.getRenderWidth?.(true)) || 512
+            );
+            const hauteurCanvas = Math.max(
+                64,
+                Number(engine?.getRenderHeight?.(true)) || 512
+            );
+            const facteur = Math.min(
+                1,
+                tailleMax / Math.max(largeurCanvas, hauteurCanvas)
+            );
+            largeur = Math.max(64, Math.round(largeurCanvas * facteur));
+            hauteur = Math.max(64, Math.round(hauteurCanvas * facteur));
+        }
 
         let renderTarget = null;
 
         if (typeof BABYLON !== "undefined" && BABYLON.RenderTargetTexture) {
             renderTarget = new BABYLON.RenderTargetTexture(
-                "SaotraAnalyseSaillanceRTT",
+                "ANNAAnalyseSaillanceRTT",
                 { width: largeur, height: hauteur },
                 scene,
                 false,
@@ -510,6 +568,14 @@ export class ServiceEntropieVueBabylon {
         // perpendiculaire sans provoquer de blocage de caméra.
         const marge = 0.0001;
         return Math.max(marge, Math.min(Math.PI - marge, beta));
+    }
+
+    cederAuNavigateur() {
+        if (globalThis.scheduler?.yield) {
+            return globalThis.scheduler.yield();
+        }
+
+        return new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     rendreEtAttendre(scene, contexteCameraAnalyse = null) {

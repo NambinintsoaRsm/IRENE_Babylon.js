@@ -1,54 +1,30 @@
+/**
+ * @file Chemins applicatifs réellement consommés par le JavaScript ANNA.
+ *
+ * Ce fichier sert de point unique pour les ressources chargées dynamiquement.
+ * Pour remplacer une interface Babylon GUI, modifier uniquement les deux lignes
+ * `gui.principale` et `gui.accueil` ci-dessous.
+ */
 export const chemins = Object.freeze({
-    // Destination utilisée par le bouton « Fermer » de la fenêtre de confirmation.
-    // Remplacer simplement "#" par l'URL de la page à ouvrir.
+    /** Destination du bouton de fermeture après confirmation. */
     navigation: Object.freeze({
-        fermetureApplication: "#"
+        fermetureApplication: "https://www.u-picardie.fr/phileas/"
     }),
 
+    /**
+     * === INTERFACES ANNA ===
+     * Ces deux chemins sont les seuls à modifier pour remplacer les JSON GUI.
+     */
     gui: Object.freeze({
-        fichier: "assets/gui/guiTexture.json"
+        /** Interface principale utilisée après l'écran d'accueil. */
+        principale: "assets/gui/guiTexture.json",
+
+        /** Écran d'accueil affiché avant l'interface principale. */
+        accueil: "assets/gui/guiTexture_acc.json"
     }),
 
+    /** Racine parcourue par le mécanisme de détection des modèles 3D. */
     modeles: Object.freeze({
         dossier: "assets/modeles/"
-    }),
-
-    images: Object.freeze({
-        dossier: "assets/images/",
-        pierre: "assets/images/pierre.png",
-        point: "assets/images/point.png"
-    }),
-
-    polices: Object.freeze({
-        dossier: "assets/fonts/",
-
-        luciole: Object.freeze({
-            dossier: "assets/fonts/Luciole/",
-            regular: "assets/fonts/Luciole/Luciole-Regular.woff2",
-            bold: "assets/fonts/Luciole/Luciole-Bold.woff2",
-            italic: "assets/fonts/Luciole/Luciole-Italic.woff2",
-            boldItalic: "assets/fonts/Luciole/Luciole-BoldItalic.woff2"
-        }),
-
-        openDyslexic: Object.freeze({
-            dossier: "assets/fonts/OpenDyslexic/",
-            regular: "assets/fonts/OpenDyslexic/OpenDyslexic-Regular.woff2",
-            bold: "assets/fonts/OpenDyslexic/OpenDyslexic-Bold.woff2",
-            italic: "assets/fonts/OpenDyslexic/OpenDyslexic-Italic.woff2",
-            boldItalic: "assets/fonts/OpenDyslexic/OpenDyslexic-Bold-Italic.woff2"
-        }),
-
-        tiresias: Object.freeze({
-            dossier: "assets/fonts/Tiresias-Infofont/",
-            regular: "assets/fonts/Tiresias-Infofont/Tiresias_Infofont.ttf",
-            italic: "assets/fonts/Tiresias-Infofont/Tiresias_Infofont_Italic.ttf"
-        }),
-
-        liberation: Object.freeze({
-            dossier: "assets/fonts/Liberation/",
-            regular: "assets/fonts/Liberation/liberationsans-regular-webfont.woff2",
-            bold: "assets/fonts/Liberation/liberationsans-bold-webfont.woff2",
-            italic: "assets/fonts/Liberation/liberationsans-italic-webfont.woff2"
-        })
     })
 });

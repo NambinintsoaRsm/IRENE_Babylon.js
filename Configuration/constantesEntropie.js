@@ -1,10 +1,12 @@
 /**
- * Paramètres de test pour la recherche de vue par entropie.
+ * @file Paramètres du service générique de parcours de vues par entropie.
  *
- * Objectif du test : comparer les vues en conservant l'état visuel courant
- * de la scène. Les post-traitements et les textures actuellement appliqués
- * ne sont pas désactivés automatiquement ; ils peuvent être modifiés
- * manuellement pour réaliser plusieurs séries de tests comparables.
+ * L'entropie n'est pas exposée comme bouton dans la V1, mais
+ * ServiceSaillanceVueBabylon hérite de ServiceEntropieVueBabylon pour réutiliser
+ * le parcours sphérique, le rendu hors écran et les utilitaires de caméra. Ce
+ * fichier reste donc nécessaire au service de base.
+ *
+ * Les valeurs ci-dessous servent si le service d'entropie est appelé directement.
  */
 export const constantesEntropie = Object.freeze({
     parcoursSpherique: Object.freeze({
@@ -40,12 +42,6 @@ export const constantesEntropie = Object.freeze({
     modeAnalyse: Object.freeze({
         // Par défaut, on conserve l'état courant de la scène.
         // Pour un test strictement sur l'objet brut, ces deux valeurs peuvent être passées à true.
-        desactiverPostTraitements: false,
-        restaurerMateriauxOriginauxPendantAnalyse: false
-    }),
-
-    // Alias conservé pour compatibilité avec le service si une ancienne version l'utilise.
-    modeObjetBase: Object.freeze({
         desactiverPostTraitements: false,
         restaurerMateriauxOriginauxPendantAnalyse: false
     }),

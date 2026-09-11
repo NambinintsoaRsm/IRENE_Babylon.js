@@ -1,5 +1,14 @@
+/**
+ * @file État partagé de l'application ANNA.
+ *
+ * Ce module assemble les objets métier qui décrivent l'état courant de la GUI,
+ * de la scène 3D, du profil et des traitements visuels. Les contrôleurs modifient
+ * cet objet ; les services Babylon/GUI lisent ensuite les valeurs nécessaires.
+ *
+ * Il ne doit pas contenir de logique métier : les règles de modification restent
+ * dans les Use Cases et les contrôleurs.
+ */
 import { EtatMenuLateral } from "../Domain/animationInterface/EtatMenuLateral.js";
-import { EtatPanneauDeroulant } from "../Domain/animationInterface/EtatPanneauDeroulant.js";
 import { ParametresAnimation } from "../Domain/animationInterface/ParametresAnimation.js";
 
 import { EtatModele3D } from "../Domain/modele3d/EtatModele3D.js";
@@ -7,47 +16,6 @@ import { EtatModele3D } from "../Domain/modele3d/EtatModele3D.js";
 import { constantesAnimation } from "../Configuration/constantesAnimation.js";
 import { catalogueModeles3D } from "../Configuration/catalogueModeles3D.js";
 import { profilParDefaut } from "../Configuration/profilParDefaut.js";
-import { constantesContours } from "../Configuration/constantesContours.js";
-
-function creerSectionsAnimation() {
-    return {
-        configurations: new EtatPanneauDeroulant({
-            nom: "configurations"
-        }),
-
-        police: new EtatPanneauDeroulant({
-            nom: "police"
-        }),
-
-        menu: new EtatPanneauDeroulant({
-            nom: "menu"
-        }),
-
-        theme: new EtatPanneauDeroulant({
-            nom: "theme"
-        }),
-
-        reglages: new EtatPanneauDeroulant({
-            nom: "reglages"
-        }),
-
-        apparence: new EtatPanneauDeroulant({
-            nom: "apparence"
-        }),
-
-        visualisation: new EtatPanneauDeroulant({
-            nom: "visualisation"
-        }),
-
-        contours: new EtatPanneauDeroulant({
-            nom: "contours"
-        }),
-
-        modele3d: new EtatPanneauDeroulant({
-            nom: "modele3d"
-        })
-    };
-}
 
 export const etatApplication = {
     canvas: null,
@@ -55,35 +23,31 @@ export const etatApplication = {
 
     scenes: {
         scene3D: null,
-        sceneGUI: null,
-        sceneContoursCouleur: null
+        sceneGUI: null
     },
 
     gui: {
+        /** Interface principale ANNA. */
         advancedTexture: null,
+
+        /** Interface d'accueil temporaire, distincte de l'interface principale. */
+        advancedTextureAccueil: null,
 
         controles: {},
 
         dimensionsInitiales: {
             menu: null,
-            flecheMenu: null,
-            sections: {}
+            flecheMenu: null
         }
     },
 
     animation: {
         parametres: new ParametresAnimation({
             dureeMenuLateral: constantesAnimation.dureeMenuLateral,
-            dureePanneauDeroulant: constantesAnimation.dureePanneauDeroulant,
-            largeurMenu: constantesAnimation.largeurMenu,
-            largeurPanneauSecondaire: constantesAnimation.largeurPanneauSecondaire
+            dureePanneauDeroulant: constantesAnimation.dureePanneauDeroulant
         }),
 
-        menuLateral: new EtatMenuLateral(),
-
-        sections: creerSectionsAnimation(),
-
-        sectionActive: null
+        menuLateral: new EtatMenuLateral()
     },
 
     interface: {
@@ -99,23 +63,7 @@ export const etatApplication = {
 
     contours: {
         parametres: profilParDefaut.contours,
-        parametresMiseLumiere: {
-            frequenceClignotement: constantesContours.miseLumiereGradients.animation.frequence?.defaut ?? 3,
-            intervalleClignotement: constantesContours.miseLumiereGradients.animation.intervalleSecondes.defaut,
-            luminanceSliderValeur: constantesContours.miseLumiereGradients.animation.luminancePourcentage.defaut,
-            luminanceDelta: constantesContours.miseLumiereGradients.animation.luminancePourcentage.deltaDefaut,
-            sensLuminance: constantesContours.miseLumiereGradients.animation.sensLuminance?.defaut ?? 1,
-            largeur: constantesContours.miseLumiereGradients.animation.largeur.defaut,
-            presetActif: null
-        },
-
-        postTraitContProfNorm: null,
-        postTraitementContoursCouleur: null,
-
-        miseLumiereNormalesActif: false,
-        miseLumiereCouleursActif: false,
-        postTraitMiseLumiereNormales: null,
-        postTraitMiseLumiereCouleurs: null
+        postTraitementSilhouette: null
     },
 
     camera: {

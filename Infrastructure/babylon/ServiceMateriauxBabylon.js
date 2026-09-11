@@ -1,3 +1,12 @@
+/**
+ * @file Gestion des matériaux et textures alternatives des modèles 3D.
+ *
+ * Rôle : mémoriser les matériaux d'origine puis appliquer/restaurer les textures
+ * procédurales de la V1 (damiers et rayures) sans perdre l'état initial du modèle.
+ *
+ * Utilisation : ControleurApparence et ControleurProfil appellent ce service lors
+ * d'un changement de texture ou de la restauration d'un profil.
+ */
 import { constantesApparence } from "../../Configuration/constantesApparence.js";
 
 /**
@@ -70,36 +79,32 @@ export class ServiceMateriauxBabylon {
     }
 
     appliquerDamier(mesh, decalageMotif = 0) {
-        const material = new BABYLON.StandardMaterial(`${mesh.name}_damier`, mesh.getScene());
-        const texture = new BABYLON.DynamicTexture(
-            `${mesh.name}_texture_damier`,
-            {
-                width: constantesApparence.textureMotif.texture.largeur,
-                height: constantesApparence.textureMotif.texture.hauteur
-            },
-            mesh.getScene(),
-            false
-        );
+        if (!mesh || !mesh.material) return;
 
-        const context = texture.getContext();
-        const largeurTexture = constantesApparence.textureMotif.texture.largeur;
-        const hauteurTexture = constantesApparence.textureMotif.texture.hauteur;
-        const tailleCase = this.calculerTailleDamier(decalageMotif);
+        const modifierMateriau = (material) => {
+            if (!material) return;
 
-        for (let y = 0; y < hauteurTexture; y += tailleCase) {
-            for (let x = 0; x < largeurTexture; x += tailleCase) {
-                const pair = (Math.floor(x / tailleCase) + Math.floor(y / tailleCase)) % 2 === 0;
-                context.fillStyle = pair ? "white" : "black";
-                context.fillRect(x, y, tailleCase, tailleCase);
+            // PBR
+            if (material.albedoTexture) {
+                material.albedoTexture = null;
+                material.albedoColor = new BABYLON.Color3(0.5, 0.5, 0.5);
             }
+
+            // StandardMaterial
+           else if (material.diffuseTexture) {
+                material.diffuseTexture = null;
+                material.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+            }
+
+            material.backFaceCulling = false;
+        };
+
+        if (mesh.material.subMaterials) {
+            mesh.material.subMaterials.forEach(modifierMateriau);
+        } else {
+            modifierMateriau(mesh.material);
         }
-
-        texture.update();
-        material.diffuseTexture = texture;
-        material.backFaceCulling = false;
-        mesh.material = material;
     }
-
     appliquerRayures(mesh, decalageMotif = 0) {
         const material = new BABYLON.StandardMaterial(`${mesh.name}_rayures`, mesh.getScene());
         const texture = new BABYLON.DynamicTexture(

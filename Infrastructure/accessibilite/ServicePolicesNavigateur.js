@@ -57,9 +57,26 @@ export class ServicePolicesNavigateur {
         const resultats = {};
 
         for (const police of polices) {
-            resultats[police] = await this.chargerPolice({
-                nomPolice: police
+            // Babylon GUI dessine le texte dans un canvas. Si une variante
+            // (notamment 700) n'est chargée qu'au premier affichage d'un label
+            // très court comme l'indicateur de chargement, le premier rendu peut
+            // être vide. On précharge donc explicitement les deux graisses
+            // réellement utilisées par ANNA.
+            const regular = await this.chargerPolice({
+                nomPolice: police,
+                poids: "400"
             });
+            const bold = await this.chargerPolice({
+                nomPolice: police,
+                poids: "700"
+            });
+
+            resultats[police] = {
+                ...regular,
+                regular,
+                bold,
+                chargee: regular.chargee || bold.chargee
+            };
         }
 
         return resultats;

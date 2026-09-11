@@ -1,3 +1,9 @@
+/**
+ * @file Cas d'utilisation fournissant le catalogue de modèles visible par la GUI.
+ *
+ * Rôle : combiner la détection automatique et le catalogue de secours, conserver un
+ * ordre stable et réconcilier le modèle sélectionné avec la liste actualisée.
+ */
 export class ListerModelesUC {
     constructor(etatApplication, { serviceDetectionModeles3D = null } = {}) {
         this.etatApplication = etatApplication;

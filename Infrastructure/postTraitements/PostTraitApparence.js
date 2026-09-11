@@ -1,3 +1,12 @@
+/**
+ * @file Post-traitement Babylon de contraste, luminosité et saturation.
+ *
+ * Rôle : créer une seule instance de PostProcess puis mettre ses uniforms à jour à
+ * partir de ParametresApparence.
+ *
+ * Utilisation : ControleurApparence applique ce traitement après chaque changement
+ * et ControleurProfil le réapplique après restauration d'une sauvegarde.
+ */
 import {
     creerShaderApparenceSiNecessaire
 } from "../shaders/ShaderApparence.js";

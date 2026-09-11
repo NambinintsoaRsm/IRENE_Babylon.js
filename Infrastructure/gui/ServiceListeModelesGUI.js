@@ -1,3 +1,12 @@
+/**
+ * @file Construction et mise à jour de la liste des modèles dans Babylon GUI.
+ *
+ * Rôle : créer les boutons dynamiques, gérer le scroll, l'état actif et l'auto-fit
+ * du texte en respectant les préférences d'accessibilité.
+ *
+ * Utilisation : ControleurModele3D lui fournit la liste métier et le callback de
+ * sélection ; ce service ne charge jamais lui-même les fichiers 3D.
+ */
 import {
     constantesInterface,
     obtenirThemeInterface
@@ -53,11 +62,16 @@ export class ServiceListeModelesGUI {
                     await callbackSelection(modele);
                 }
 
-                this.marquerModeleActif({
-                    conteneurListe,
-                    idModeleActif: modele.id,
-                    etatApplication
-                });
+                // Si l'utilisateur a sélectionné un autre modèle pendant le
+                // chargement, l'ancien chargement ne doit pas reprendre le focus
+                // visuel dans la liste lorsqu'il se termine.
+                if (this.estModeleActif(modele, etatApplication)) {
+                    this.marquerModeleActif({
+                        conteneurListe,
+                        idModeleActif: modele.id,
+                        etatApplication
+                    });
+                }
             });
 
             conteneurListe.addControl(bouton);
@@ -258,7 +272,7 @@ export class ServiceListeModelesGUI {
                                  etatApplication = null
                              }) {
         const texteOriginal = String(texte ?? textBlock.text ?? "");
-        const police = parametresInterface?.police || "OpenDyslexic";
+        const police = parametresInterface?.police || constantesInterface.policeDefaut;
         const gras = parametresInterface?.gras === true;
         const variationPolice = Number.isFinite(parametresInterface?.taillePolice)
             ? parametresInterface.taillePolice
@@ -270,6 +284,15 @@ export class ServiceListeModelesGUI {
             texteOriginal: texteOriginal,
             boutonModeleAutoFit: true,
             estLabelBoutonModele: true,
+            // Les libellés des modèles sont dynamiques, mais ils font bien partie
+            // des textes pilotés par Police / Taille / Gras. Ce marqueur évite de
+            // les confondre avec les valeurs dynamiques techniques (0 %, sliders…).
+            participeReglagePolice: true,
+            participeCalculMaximumTaillePolice: true,
+            // Référence 0 % explicite : elle reste indépendante de la variation
+            // active au moment où la liste de modèles est reconstruite.
+            fontSizeOriginal: textBlock.metadata?.fontSizeOriginal ?? style.fontSize,
+            fontWeightOriginal: textBlock.metadata?.fontWeightOriginal ?? (style.fontWeight ?? "500"),
             fontSizeModeleBase: style.fontSize,
             fontWeightModeleBase: style.fontWeight ?? "500",
             lignesMaxAutoFit: 1,

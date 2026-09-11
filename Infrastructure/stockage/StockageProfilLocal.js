@@ -1,8 +1,22 @@
+/**
+ * @file Sérialisation et persistance locale du profil utilisateur ANNA.
+ *
+ * Rôle : convertir ProfilUtilisateur en JSON versionné, l'enregistrer dans
+ * localStorage et reconstruire un profil au démarrage.
+ *
+ * Utilisation : sauvegarde manuelle et sauvegarde automatique utilisent toutes deux
+ * ce même stockage afin d'éviter deux sources de vérité concurrentes.
+ *
+ * Contrainte : lorsque l'accessibilité temporaire est active, la sauvegarde conserve
+ * les réglages normaux précédant son activation puis persiste séparément son état.
+ */
 import { ProfilUtilisateur } from "../../Domain/profil/ProfilUtilisateur.js";
+import { constantesSauvegarde } from "../../Configuration/constantesSauvegarde.js";
 
 import { ParametresInterface } from "../../Domain/interface/ParametresInterface.js";
 import { ParametresApparence } from "../../Domain/apparence/ParametresApparence.js";
 import { ParametresContours } from "../../Domain/contours/ParametresContours.js";
+import { TypeContour } from "../../Domain/contours/TypeContour.js";
 import { ParametresCamera } from "../../Domain/camera/ParametresCamera.js";
 
 /**
@@ -16,10 +30,13 @@ import { ParametresCamera } from "../../Domain/camera/ParametresCamera.js";
  * préférences navigateur.
  */
 export class StockageProfilLocal {
-    constructor(cleStockage = "saotra_reglages_utilisateur", ancienneCleStockage = "saotra_profil_utilisateur") {
+    constructor(
+        cleStockage = constantesSauvegarde.cleProfil,
+        ancienneCleStockage = constantesSauvegarde.ancienneCleProfil
+    ) {
         this.cleStockage = cleStockage;
         this.ancienneCleStockage = ancienneCleStockage;
-        this.version = 2;
+        this.version = 3;
     }
 
     localStorageDisponible() {
@@ -31,6 +48,13 @@ export class StockageProfilLocal {
         }
     }
 
+    /**
+     * Sérialise et écrit un profil validé dans localStorage.
+     *
+     * @param {ProfilUtilisateur} profil Profil métier à persister.
+     * @returns {Object} Représentation JSON-compatible réellement enregistrée.
+     * @throws {Error} Si le profil est invalide ou localStorage indisponible.
+     */
     sauvegarder(profil) {
         if (!(profil instanceof ProfilUtilisateur)) {
             throw new Error("Profil utilisateur invalide pour la sauvegarde.");
@@ -55,6 +79,11 @@ export class StockageProfilLocal {
         return this.sauvegarder(profil);
     }
 
+    /**
+     * Charge la sauvegarde courante, avec lecture de l'ancienne clé si nécessaire.
+     *
+     * @returns {ProfilUtilisateur|null} Profil reconstruit ou null en l'absence de sauvegarde valide.
+     */
     charger() {
         if (!this.localStorageDisponible()) {
             return null;
@@ -96,12 +125,11 @@ export class StockageProfilLocal {
 
     creerProfilDepuisEtat(etatApplication) {
         const sauvegardeAccessibilite = this.lireSauvegardeAvantAccessibilite(etatApplication);
-        const sauvegardeHighlight = this.lireSauvegardeAvantPresetHighlight(etatApplication);
         const camera = sauvegardeAccessibilite?.camera
             ? this.lireCameraDepuisSauvegarde(etatApplication, sauvegardeAccessibilite.camera)
             : this.lireCameraCourante(etatApplication);
 
-        const profil = new ProfilUtilisateur({
+        return new ProfilUtilisateur({
             // Si l'accessibilité est active, on sauvegarde les réglages normaux
             // d'avant activation, puis seulement le booléen accessibilite.actif.
             interfaceUtilisateur: sauvegardeAccessibilite?.interface
@@ -109,27 +137,20 @@ export class StockageProfilLocal {
                 : etatApplication.interface?.parametres,
             apparence: sauvegardeAccessibilite?.apparence
                 ? new ParametresApparence(sauvegardeAccessibilite.apparence)
-                : (sauvegardeHighlight?.apparence
-                    ? new ParametresApparence(sauvegardeHighlight.apparence)
-                    : etatApplication.apparence?.parametres),
+                : etatApplication.apparence?.parametres,
             contours: etatApplication.contours?.parametres,
             camera: camera ?? etatApplication.camera?.parametres,
             modele3DId: etatApplication.modele3d?.modeleActuel?.id
                 ?? etatApplication.modele3d?.modeleSelectionne?.id
                 ?? null,
             lumiere: this.lireLumiereCourante(etatApplication, sauvegardeAccessibilite),
-            miseLumiere: this.lireMiseLumiereCourante(etatApplication, sauvegardeHighlight),
             fondScene: sauvegardeAccessibilite?.fondScene
                 ? this.lireFondSceneDepuisSauvegarde(sauvegardeAccessibilite.fondScene)
-                : (sauvegardeHighlight?.fondScene
-                    ? this.lireFondSceneDepuisSauvegarde(sauvegardeHighlight.fondScene)
-                    : this.lireFondSceneCourant(etatApplication)),
+                : this.lireFondSceneCourant(etatApplication),
             accessibilite: this.lireAccessibiliteCourante(etatApplication),
             dateSauvegarde: new Date().toISOString(),
             versionSauvegarde: this.version
         });
-
-        return profil;
     }
 
     lireCameraCourante(etatApplication) {
@@ -171,15 +192,6 @@ export class StockageProfilLocal {
         return accessibilite.sauvegardeAvantActivation;
     }
 
-    lireSauvegardeAvantPresetHighlight(etatApplication) {
-        const contours = etatApplication.contours;
-
-        if (!contours?.sauvegardeAvantPresetHighlight) {
-            return null;
-        }
-
-        return contours.sauvegardeAvantPresetHighlight;
-    }
 
     lireCameraDepuisSauvegarde(etatApplication, sauvegardeCamera) {
         const parametres = etatApplication.camera?.parametres;
@@ -225,26 +237,6 @@ export class StockageProfilLocal {
         return etatApplication.lumiere?.parametres ?? null;
     }
 
-    lireMiseLumiereCourante(etatApplication, sauvegardeHighlight = null) {
-        if (sauvegardeHighlight) {
-            return {
-                normalesActif: Boolean(sauvegardeHighlight.miseLumiereNormalesActif),
-                couleursActif: Boolean(sauvegardeHighlight.miseLumiereCouleursActif),
-                parametres: {
-                    ...(sauvegardeHighlight.parametresMiseLumiere ?? {}),
-                    presetActif: null
-                }
-            };
-        }
-
-        return {
-            normalesActif: Boolean(etatApplication.contours?.miseLumiereNormalesActif),
-            couleursActif: Boolean(etatApplication.contours?.miseLumiereCouleursActif),
-            parametres: {
-                ...(etatApplication.contours?.parametresMiseLumiere ?? {})
-            }
-        };
-    }
 
     lireFondSceneCourant(etatApplication) {
         const scene = etatApplication.scenes?.scene3D;
@@ -308,8 +300,7 @@ export class StockageProfilLocal {
                     couleurAutomatiqueActive: profil.contours.couleurAutomatiqueActive,
                     couleurManuelleChoisie: profil.contours.couleurManuelleChoisie,
                     couleurAutomatiqueCalculee: profil.contours.couleurAutomatiqueCalculee,
-                    signatureCouleurAutomatique: profil.contours.signatureCouleurAutomatique,
-                    longueurChaineNormales: profil.contours.longueurChaineNormales
+                    signatureCouleurAutomatique: profil.contours.signatureCouleurAutomatique
                 },
 
                 camera: {
@@ -326,7 +317,6 @@ export class StockageProfilLocal {
                 },
 
                 lumiere: profil.lumiere ?? null,
-                miseLumiere: profil.miseLumiere ?? null,
                 accessibilite: profil.accessibilite ?? null,
                 modele3DId: profil.modele3DId
             }
@@ -374,8 +364,7 @@ export class StockageProfilLocal {
                 couleurAutomatiqueActive: contoursSauvegardes.couleurAutomatiqueActive ?? true,
                 couleurManuelleChoisie: contoursSauvegardes.couleurManuelleChoisie ?? false,
                 couleurAutomatiqueCalculee: contoursSauvegardes.couleurAutomatiqueCalculee ?? null,
-                signatureCouleurAutomatique: contoursSauvegardes.signatureCouleurAutomatique ?? null,
-                longueurChaineNormales: contoursSauvegardes.longueurChaineNormales
+                signatureCouleurAutomatique: contoursSauvegardes.signatureCouleurAutomatique ?? null
             }),
 
             camera: new ParametresCamera({
@@ -393,7 +382,6 @@ export class StockageProfilLocal {
 
             modele3DId: reglages.modele3DId ?? null,
             lumiere: reglages.lumiere ?? null,
-            miseLumiere: reglages.miseLumiere ?? null,
             fondScene: reglages.apparence?.fondScene ?? reglages.fondScene ?? 0,
             accessibilite: reglages.accessibilite ?? null,
             dateSauvegarde: donnees.dateSauvegarde ?? null,
@@ -411,19 +399,26 @@ export class StockageProfilLocal {
     }
 
     normaliserContoursSauvegardes(contours) {
-        const typesActifs = Array.isArray(contours?.typesActifs)
-            ? [...new Set(contours.typesActifs)].filter((type) => type !== null)
+        // Compatibilité descendante : un profil V2 peut contenir relief/couleur.
+        // En V1 ces types sont simplement ignorés, sans casser le chargement.
+        const candidats = Array.isArray(contours?.typesActifs)
+            ? contours.typesActifs
             : (contours?.typeActif ? [contours.typeActif] : []);
 
-        const actif = typesActifs.length > 0;
+        const typesActifs = [...new Set(candidats)]
+            .filter((type) => type === TypeContour.SILHOUETTE);
+        const actif = Boolean(contours?.actif) && typesActifs.length > 0;
 
         return {
             ...contours,
             actif,
             typesActifs: actif ? typesActifs : [],
-            typeActif: actif ? typesActifs[typesActifs.length - 1] : null,
-            epaisseur: actif ? contours?.epaisseur : 1
+            typeActif: actif ? TypeContour.SILHOUETTE : null,
+            epaisseur: Number.isFinite(Number(contours?.epaisseur))
+                ? Number(contours.epaisseur)
+                : 1
         };
     }
+
 
 }

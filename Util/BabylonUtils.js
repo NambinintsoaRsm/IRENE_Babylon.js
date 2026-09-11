@@ -85,7 +85,7 @@ export function supprimerMeshes(meshes = []) {
             return;
         }
 
-        const racine = trouverRacineModeleSaotra(mesh);
+        const racine = trouverRacineModeleANNA(mesh);
 
         if (racine) {
             racinesModele.add(racine);
@@ -109,11 +109,11 @@ export function supprimerMeshes(meshes = []) {
     });
 }
 
-export function trouverRacineModeleSaotra(noeud) {
+export function trouverRacineModeleANNA(noeud) {
     let courant = noeud;
 
     while (courant) {
-        if (courant.metadata?.saotraRacineModele === true) {
+        if (courant.metadata?.annaRacineModele === true) {
             return courant;
         }
 
@@ -124,8 +124,8 @@ export function trouverRacineModeleSaotra(noeud) {
 }
 
 
-export function creerOuTrouverRacineModeleSaotra(noeuds = [], options = {}) {
-    const nom = options.nom ?? "SaotraModeleRacine";
+export function creerOuTrouverRacineModeleANNA(noeuds = [], options = {}) {
+    const nom = options.nom ?? "ANNAModeleRacine";
 
     if (!Array.isArray(noeuds) || noeuds.length === 0) {
         return null;
@@ -136,7 +136,7 @@ export function creerOuTrouverRacineModeleSaotra(noeuds = [], options = {}) {
     if (racineExistante) {
         racineExistante.metadata = {
             ...(racineExistante.metadata ?? {}),
-            saotraRacineModele: true
+            annaRacineModele: true
         };
 
         return racineExistante;
@@ -153,7 +153,7 @@ export function creerOuTrouverRacineModeleSaotra(noeuds = [], options = {}) {
 
     racine.metadata = {
         ...(racine.metadata ?? {}),
-        saotraRacineModele: true
+        annaRacineModele: true
     };
 
     racine.position = BABYLON.Vector3.Zero();
@@ -184,10 +184,10 @@ export function creerOuTrouverRacineModeleSaotra(noeuds = [], options = {}) {
 
 function trouverRacineExistanteDansListe(noeuds = []) {
     for (const noeud of noeuds) {
-        const racineSaotra = trouverRacineModeleSaotra(noeud);
+        const racineANNA = trouverRacineModeleANNA(noeud);
 
-        if (racineSaotra) {
-            return racineSaotra;
+        if (racineANNA) {
+            return racineANNA;
         }
     }
 

@@ -1,8 +1,20 @@
+/**
+ * @file Configuration visuelle de l'interface Babylon GUI d'ANNA.
+ *
+ * Ce fichier centralise uniquement les valeurs réellement lues par la V1 :
+ * profil par défaut, palettes de thèmes, flèches et styles des composants créés
+ * dynamiquement. Les dimensions déjà définies dans guiTexture.json ne sont pas
+ * dupliquées ici sauf lorsqu'un composant est ajusté par le code.
+ *
+ * Les couleurs utilisent le format Babylon #RRGGBBAA. Pour ajouter un thème,
+ * compléter ThemeInterface puis ajouter sa palette dans `themes`.
+ */
 import { ThemeInterface } from "../Domain/interface/ThemeInterface.js";
 import { PositionMenu } from "../Domain/interface/PositionMenu.js";
 
 export const constantesInterface = Object.freeze({
-    policeDefaut: "Arial",
+    /** Valeurs chargées lorsqu'aucun profil utilisateur n'est disponible. */
+    policeDefaut: "Luciole",
     taillePoliceDefaut: 0,
     grasDefaut: false,
 
@@ -12,6 +24,65 @@ export const constantesInterface = Object.freeze({
     tailleBorduresMenuDefaut: 1,
     tailleBorduresBoutonsDefaut: 1,
 
+    /**
+     * Paramètres techniques du slider de taille de police.
+     * La borne maximale n'est volontairement pas configurée ici : elle est
+     * calculée à partir de l'espace réellement disponible dans la GUI et de la
+     * police active.
+     */
+    sliderTaillePolice: Object.freeze({
+        pasPourcentage: 1,
+        delaiRecalculMs: 80,
+
+        // Babylon GUI ne dessine plus correctement le thumb lorsque minimum === maximum.
+        // Cette plage n'est utilisée que pour le rendu : la borne fonctionnelle
+        // reste conservée séparément dans les metadata du slider.
+        plageVisuelleMinimale: 1,
+
+        // Diagnostics temporaires pour stabiliser le comportement du slider.
+        // Ils sont centralisés ici afin de pouvoir être coupés sans modifier
+        // les services GUI.
+        debugCalculMaximum: true,
+        debugAutoFit: true
+    }),
+
+    /**
+     * Pictogrammes de navigation qui gardent leur police et leur taille propres.
+     * Le fichier GUI reste la source de vérité pour leurs dimensions et leur
+     * position de base. Le code ne fait qu'appliquer une compensation optique
+     * calculée à partir des métriques réelles du navigateur afin que le glyphe
+     * reste visuellement centré dans son espace sur Firefox, Chromium/Brave, etc.
+     */
+    flechesNavigation: Object.freeze({
+        police: "Arial",
+        debugCentrage: false,
+        noms: Object.freeze([
+            "FlecheMenuBtnTxt",
+            "FichDropBtnTxt",
+            "OuvBtnDropText",
+            "EnrBtnDropText",
+            "ConfDropBtnTxt",
+            "PolBtnDropText",
+            "MenuBtnDropText",
+            "OutiBtnDropText",
+            "RegBtnDropTxt",
+            "ContBtnDropText",
+            "TextuBtnDropTxt",
+            "LumBtnDropTxt",
+            "PlcDropBtnIcoTxt",
+            "LumDropBtnIcoTxt"
+        ]),
+        // La grande flèche latérale est volontairement laissée exactement comme
+        // dans guiTexture.json.
+        exclusCentrageOptique: Object.freeze([
+            "FlecheMenuBtnTxt"
+        ])
+    }),
+
+    /**
+     * Liste volontairement limitée aux polices proposées par le menu Polices.
+     * Les fichiers correspondants sont déclarés dans index.html/CSS.
+     */
     policesDisponibles: Object.freeze([
         "Arial",
         "Liberation",
@@ -20,21 +91,12 @@ export const constantesInterface = Object.freeze({
         "Tiresias"
     ]),
 
-    themesDisponibles: Object.freeze([
-        ThemeInterface.BLANC,
-        ThemeInterface.GRIS_CLAIR,
-        ThemeInterface.GRIS_FONCE,
-        ThemeInterface.NOIR
-    ]),
-
-    positionsMenuDisponibles: Object.freeze([
-        PositionMenu.GAUCHE,
-        PositionMenu.DROITE
-    ]),
-
+    /**
+     * Palettes appliquées à la GUI et au questionnaire. Les contrastes sont
+     * volontairement francs pour rester cohérents avec les quatre thèmes de la V1.
+     */
     themes: Object.freeze({
         [ThemeInterface.BLANC]: Object.freeze({
-            nom: "Clair",
 
             fondPrincipal: "#FFFFFFFF",
             fondSecondaire: "#F5F5F5FF",
@@ -54,65 +116,69 @@ export const constantesInterface = Object.freeze({
             boutonActifBordure: "#000000FF",
 
             sliderFond: "#707070FF",
-            sliderBarre: "#D8D8D8FF",
-
-            ombre: "#000000FF"
+            sliderBarre: "#D8D8D8FF"
         }),
 
         [ThemeInterface.GRIS_CLAIR]: Object.freeze({
-            nom: "Gris clair",
 
-            fondPrincipal: "#EDEDEDFF",
-            fondSecondaire: "#DCDCDCFF",
-            fondSection: "#F7F7F7FF",
+            // Fonds
+            fondPrincipal: "#C8C9C8FF",   // couleur principale choisie
+            fondSecondaire: "#D8D9D8FF", // légèrement plus clair
+            fondSection: "#E7E8E7FF",    // sections / sous-zones encore plus claires
 
+            // Textes
             textePrincipal: "#000000FF",
             texteSecondaire: "#333333FF",
 
+            // Bordure générale
             bordure: "#222222FF",
 
-            boutonFond: "#F5F5F5FF",
+            // Boutons
+            boutonFond: "#F4F4F4FF",
             boutonTexte: "#000000FF",
             boutonBordure: "#222222FF",
 
-            boutonActifFond: "#222222FF",
+            // Bouton sélectionné / actif
+            boutonActifFond: "#303030FF",
             boutonActifTexte: "#FFFFFFFF",
-            boutonActifBordure: "#222222FF",
+            boutonActifBordure: "#000000FF",
 
-            sliderFond: "#707070FF",
-            sliderBarre: "#D8D8D8FF",
-
-            ombre: "#000000FF"
+            // Sliders
+            sliderFond: "#777777FF",
+            sliderBarre: "#E8E8E8FF"
         }),
 
+
         [ThemeInterface.GRIS_FONCE]: Object.freeze({
-            nom: "Gris foncé",
 
-            fondPrincipal: "#2B2B2BFF",
-            fondSecondaire: "#3A3A3AFF",
-            fondSection: "#444444FF",
+            // Fonds
+            fondPrincipal: "#575657FF",   // couleur principale choisie
+            fondSecondaire: "#484748FF", // légèrement plus sombre
+            fondSection: "#666566FF",    // séparation visible sans sortir du gris
 
+            // Textes
             textePrincipal: "#FFFFFFFF",
-            texteSecondaire: "#E0E0E0FF",
+            texteSecondaire: "#E5E5E5FF",
 
+            // Bordure générale
             bordure: "#FFFFFFFF",
 
-            boutonFond: "#3A3A3AFF",
+            // Boutons
+            boutonFond: "#353535FF",
             boutonTexte: "#FFFFFFFF",
             boutonBordure: "#FFFFFFFF",
 
+            // Bouton sélectionné / actif
             boutonActifFond: "#FFFFFFFF",
             boutonActifTexte: "#000000FF",
             boutonActifBordure: "#FFFFFFFF",
 
-            sliderFond: "#555555FF",
-            sliderBarre: "#E0E0E0FF",
-
-            ombre: "#000000FF"
+            // Sliders
+            sliderFond: "#303030FF",
+            sliderBarre: "#DDDDDDFF"
         }),
 
         [ThemeInterface.NOIR]: Object.freeze({
-            nom: "Sombre",
 
             fondPrincipal: "#000000FF",
             fondSecondaire: "#1A1A1AFF",
@@ -132,12 +198,11 @@ export const constantesInterface = Object.freeze({
             boutonActifBordure: "#FFFFFFFF",
 
             sliderFond: "#444444FF",
-            sliderBarre: "#FFFFFFFF",
-
-            ombre: "#000000FF"
+            sliderBarre: "#FFFFFFFF"
         })
     }),
 
+    /** Sens de la flèche latérale selon le côté du menu et son état. */
     flechesMenu: Object.freeze({
         // Menu à droite : l'onglet est à gauche du menu.
         // Ouvert => la flèche indique le repli vers la droite.
@@ -156,28 +221,26 @@ export const constantesInterface = Object.freeze({
         })
     }),
 
+    /** Symboles des accordéons internes : ▼ ouvert, ▶ fermé. */
     flechesDropdown: Object.freeze({
         ouvert: "▼",
         ferme: "▶"
     }),
 
-    comportementMenu: Object.freeze({
-        masquerSectionsSuivantes: true,
-        fermerAutresSectionsPrincipales: true
-    }),
-
+    /**
+     * Styles des contrôles qui sont créés ou normalisés dynamiquement.
+     * Les autres composants gardent leurs dimensions définies dans la GUI JSON.
+     */
     stylesComposants: Object.freeze({
         // Bouton flottant permettant de demander la fermeture d’ANNA.
-        // Il reste volontairement plus grand et plus marqué que les autres
-        // boutons afin d’être facilement repérable, y compris en basse vision.
+        // Il reste volontairement plus marqué que les autres contrôles pour être
+        // repérable. Les pourcentages sont relatifs au conteneur Babylon parent,
+        // et non directement à la largeur de la fenêtre.
         boutonFermeture: Object.freeze({
-            // 60 px sur la maquette de référence 1280 px ≈ 4,69 %.
-            // La largeur pilote la taille et le ratio 1:1 calcule la hauteur,
-            // ce qui évite toute déformation sur une autre résolution.
             largeur: "14.7%",
             ratio: 1,
             largeurPiloteRatio: true,
-            // 38 / 60 ≈ 63,3 % : la croix garde les mêmes proportions.
+            // 75 % conserve la croix lisible sans toucher la bordure du bouton.
             tailleIcone: "75%",
             poidsIcone: "700",
             caractereIcone: "X",
@@ -211,26 +274,6 @@ export const constantesInterface = Object.freeze({
             couleurTexte: "#FFFFFFFF",
             couleurBordure: "#000000FF"
         }),
-
-        boutonRetour: Object.freeze({
-            largeur: "95%",
-            hauteur: "75px",
-            epaisseurBordure: 1,
-
-            couleurBordure: "#000000FF",
-            couleurFond: "#FFFFFFFF",
-            couleurTexte: "#000000FF",
-
-            alignementTexte: "centre",
-
-            fontSize: "40%",
-            fontWeight: "500"
-        }),
-
-        dropdown: Object.freeze({
-            symboleOuvert: "▼",
-            symboleFerme: "▶"
-        })
     })
 });
 

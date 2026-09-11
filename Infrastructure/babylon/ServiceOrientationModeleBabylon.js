@@ -1,7 +1,18 @@
+/**
+ * @file Correction prudente de l'orientation des modèles 3D importés.
+ *
+ * Rôle : comparer plusieurs orientations candidates à partir des dimensions et des
+ * sections du maillage, puis appliquer une rotation seulement lorsque le résultat
+ * est suffisamment dominant.
+ *
+ * Utilisation : ControleurModele3D appelle corrigerOrientation() juste après le
+ * chargement et avant la normalisation/cadrage. Une décision ambiguë conserve
+ * volontairement l'orientation importée afin d'éviter les faux redressements.
+ */
 import {
     filtrerMeshesValides,
     calculerBornesMeshes,
-    creerOuTrouverRacineModeleSaotra
+    creerOuTrouverRacineModeleANNA
 } from "../../Util/BabylonUtils.js";
 
 /**
@@ -53,8 +64,8 @@ export class ServiceOrientationModeleBabylon {
             return null;
         }
 
-        const racine = creerOuTrouverRacineModeleSaotra(meshes, {
-            nom: "SaotraModeleRacine"
+        const racine = creerOuTrouverRacineModeleANNA(meshes, {
+            nom: "ANNAModeleRacine"
         });
 
         if (!racine) {

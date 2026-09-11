@@ -1,3 +1,16 @@
+/**
+ * @file Gestion des animations et de la disposition dynamique de Babylon GUI.
+ *
+ * Rôle : piloter le menu latéral, les trois accordéons principaux, Réglages et les
+ * panneaux secondaires tout en maintenant les flèches et hauteurs cohérentes.
+ *
+ * Utilisation : ControleurAnimationInterface initialise ce service puis les autres
+ * contrôleurs lui demandent d'ouvrir/fermer leurs panneaux. L'état visuel des
+ * accordéons est mémorisé dans metadata.estOuvert des contrôles GUI.
+ *
+ * Contrainte : la taille/position de Réinitialiser vient de guiTexture.json et ne
+ * doit pas être recalculée arbitrairement par ce service.
+ */
 import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
 import { lireNombreDepuisValeurCss } from "../../Util/ValeurCssUtils.js";
@@ -42,6 +55,11 @@ export class ServiceAnimationGUI {
         }
 
         this.appliquerPositionMenu({ etatApplication, menuRect, flecheRect, flecheText });
+
+        // La pile principale commence réellement sous le bouton de fermeture et
+        // sa hauteur est recalculée d'après la fenêtre courante.
+        this.ajusterDispositionMenuPrincipal();
+        this.brancherRedimensionnementDisposition();
     }
 
     basculerMenu({ etatApplication, menuRect, flecheRect, flecheText }) {
@@ -50,6 +68,12 @@ export class ServiceAnimationGUI {
         this.appliquerPositionMenu({ etatApplication, menuRect, flecheRect, flecheText, animer: true });
     }
 
+    /**
+     * Positionne le menu et sa flèche pour le côté gauche ou droit.
+     *
+     * La flèche est recalculée dans la même opération afin d'éviter le décalage
+     * d'un clic observé lorsque position et symbole étaient mis à jour séparément.
+     */
     appliquerPositionMenu({ etatApplication, menuRect, flecheRect, flecheText, animer = false }) {
         if (!menuRect || !flecheRect) return;
 
@@ -153,7 +177,10 @@ export class ServiceAnimationGUI {
 
             rect.metadata = rect.metadata || {};
             rect.metadata.estOuvert = false;
-            rect.metadata.hauteurOuverte = hauteur ?? lireNombreDepuisValeurCss(rect.height, 0);
+
+            const hauteurNaturelle = hauteur ?? lireNombreDepuisValeurCss(rect.height, 0);
+            rect.metadata.hauteurNaturelle = hauteurNaturelle;
+            rect.metadata.hauteurOuverte = hauteurNaturelle;
             rect.metadata.hauteurActuelle = 0;
 
             rect.height = "0px";
@@ -192,12 +219,33 @@ export class ServiceAnimationGUI {
     ouvrirAccordeon(rect, fleche, hauteurOuverte = null) {
         if (!rect) return;
 
-        const hauteur = hauteurOuverte ?? rect.metadata?.hauteurOuverte ?? lireNombreDepuisValeurCss(rect.height, 0);
+        if (rect.name === "RegOptnRect") {
+            // Quand Réglages est ouvert, les trois autres entrées d'Outils sont
+            // temporairement masquées pour donner toute la hauteur disponible aux sliders.
+            this.afficherBoutonsOutilsSecondaires(false);
+            this.ajusterLargeurPanneauReglages();
+            this.restaurerPositionBoutonReinitialiserReglages();
+
+            // Le panneau peut avoir subi un auto-fit pendant sa fermeture.
+            // On resynchronise donc systématiquement les sliders ET leurs labels
+            // depuis l'état métier courant avant de le réafficher.
+            this.synchroniserReglagesApparenceDepuisEtat();
+        }
+
+        // Pour Outils et Réglages, la hauteur dépend de la taille de la fenêtre
+        // et des enfants réellement affichés. Pour les autres accordéons on
+        // conserve la hauteur naturelle issue du GUI.
+        const hauteurDemandee = hauteurOuverte
+            ?? rect.metadata?.hauteurNaturelle
+            ?? rect.metadata?.hauteurOuverte
+            ?? lireNombreDepuisValeurCss(rect.height, 0);
+        const hauteur = this.calculerHauteurAccordeon(rect, hauteurDemandee);
         const duree = this.obtenirDureePanneau();
 
         rect.isVisible = true;
         rect.metadata = rect.metadata || {};
         rect.metadata.estOuvert = true;
+        rect.metadata.hauteurOuverte = hauteur;
 
         const departHauteur = rect.metadata.hauteurActuelle || lireNombreDepuisValeurCss(rect.height, 0) || 0;
         const departAlpha = Number.isFinite(rect.alpha) ? rect.alpha : 0;
@@ -223,6 +271,10 @@ export class ServiceAnimationGUI {
 
     fermerAccordeon(rect, fleche) {
         if (!rect) return;
+
+        if (rect.name === "RegOptnRect") {
+            this.afficherBoutonsOutilsSecondaires(true);
+        }
 
         rect.metadata = rect.metadata || {};
         rect.metadata.estOuvert = false;
@@ -341,32 +393,333 @@ export class ServiceAnimationGUI {
         }
     }
 
+
+    obtenirControle(nom) {
+        if (!nom) return null;
+
+        return this.etatApplication?.gui?.controles?.[nom]
+            ?? this.etatApplication?.gui?.advancedTexture?.getControlByName?.(nom)
+            ?? null;
+    }
+
+    obtenirHauteurViewport() {
+        const texture = this.etatApplication?.gui?.advancedTexture;
+        const tailleTexture = texture?.getSize?.();
+        const hauteurTexture = Number(tailleTexture?.height);
+        if (Number.isFinite(hauteurTexture) && hauteurTexture > 0) return hauteurTexture;
+
+        const canvas = this.etatApplication?.canvas;
+        const hauteurCanvas = Number(canvas?.clientHeight ?? canvas?.height);
+        if (Number.isFinite(hauteurCanvas) && hauteurCanvas > 0) return hauteurCanvas;
+
+        const hauteurFenetre = typeof window !== "undefined" ? Number(window.innerHeight) : 0;
+        return Number.isFinite(hauteurFenetre) && hauteurFenetre > 0 ? hauteurFenetre : 900;
+    }
+
+    obtenirHauteurControle(controle, fallback = 0) {
+        if (!controle) return fallback;
+
+        const mesure = Number(controle?._currentMeasure?.height);
+        if (Number.isFinite(mesure) && mesure > 0) return mesure;
+
+        const hauteurCss = lireNombreDepuisValeurCss(controle.height, NaN);
+        if (Number.isFinite(hauteurCss) && hauteurCss > 0) return hauteurCss;
+
+        return fallback;
+    }
+
+    obtenirEspacementPile(pile, fallback = 12) {
+        const valeur = Number(pile?.spacing);
+        return Number.isFinite(valeur) && valeur >= 0 ? valeur : fallback;
+    }
+
+    /**
+     * Positionne la pile principale sous le bouton de fermeture.
+     * On utilise des pixels pour que le décalage reste correct quelle que soit
+     * la hauteur du navigateur ou le niveau de zoom.
+     */
+    ajusterDispositionMenuPrincipal() {
+        const pile = this.obtenirControle("MainStaPan");
+        const boutonFermer = this.obtenirControle("FermBtn");
+        if (!pile || !boutonFermer) return;
+
+        // On laisse une vraie respiration visuelle sous le bouton X.
+        // La marge est ajoutée à sa hauteur réelle afin de rester correcte si
+        // le bouton change de taille avec le zoom ou la résolution.
+        const margeHaut = 20;
+        const margeBas = 8;
+        const hauteurFermeture = this.obtenirHauteurControle(boutonFermer, 45);
+        const hauteurViewport = this.obtenirHauteurViewport();
+        const top = Math.max(68, Math.round(hauteurFermeture + margeHaut));
+        const hauteurDisponible = Math.max(120, Math.floor(hauteurViewport - top - margeBas));
+
+        pile.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        pile.top = `${top}px`;
+        pile.height = `${hauteurDisponible}px`;
+        pile._markAsDirty?.();
+
+        this.ajusterLargeurPanneauReglages();
+        this.restaurerPositionBoutonReinitialiserReglages();
+
+        // Si un volet dynamique est déjà ouvert lors d'un resize, on le remet
+        // immédiatement à une hauteur compatible avec la nouvelle fenêtre.
+        this.rafraichirHauteursDynamiques({ animer: false });
+    }
+
+    brancherRedimensionnementDisposition() {
+        if (this._redimensionnementDispositionBranche || typeof window === "undefined") return;
+        this._redimensionnementDispositionBranche = true;
+
+        let timer = null;
+        window.addEventListener("resize", () => {
+            if (timer !== null) clearTimeout(timer);
+            timer = setTimeout(() => {
+                timer = null;
+                this.ajusterDispositionMenuPrincipal();
+                this.relancerAutoFitApresDisposition({ delais: [0, 80], attendrePolice: false });
+            }, 60);
+        }, { passive: true });
+    }
+
+    obtenirHauteurMaxVoletPrincipal() {
+        const pile = this.obtenirControle("MainStaPan");
+        const hauteurPile = this.obtenirHauteurControle(pile, this.obtenirHauteurViewport());
+        const espacement = this.obtenirEspacementPile(pile, 12);
+
+        const boutons = ["FichBtn", "ConfBtn", "OutiBtn"]
+            .map((nom) => this.obtenirControle(nom))
+            .filter(Boolean);
+        const hauteurBoutons = boutons.reduce(
+            (somme, bouton) => somme + this.obtenirHauteurControle(bouton, 80),
+            0
+        );
+
+        // Quand un accordéon principal est ouvert, quatre éléments sont visibles
+        // dans la pile : les 3 boutons principaux + le panneau courant.
+        const nbEspacements = boutons.length;
+        return Math.max(0, hauteurPile - hauteurBoutons - espacement * nbEspacements);
+    }
+
+    obtenirHauteurNaturelleReglages() {
+        const rect = this.obtenirControle("RegOptnRect");
+        const naturelle = Number(rect?.metadata?.hauteurNaturelle);
+        if (Number.isFinite(naturelle) && naturelle > 0) return naturelle;
+        return lireNombreDepuisValeurCss(rect?.height, 600);
+    }
+
+    ajusterLargeurPanneauReglages() {
+        const rect = this.obtenirControle("RegOptnRect");
+        const grille = this.obtenirControle("RegGrid");
+
+        if (rect) {
+            // Réglages doit utiliser toute la largeur disponible du volet Outils.
+            rect.width = "100%";
+            rect.left = "0px";
+            rect._markAsDirty?.();
+        }
+
+        if (grille) {
+            grille.width = "100%";
+            grille.left = "0px";
+            grille._markAsDirty?.();
+        }
+    }
+
+    restaurerPositionBoutonReinitialiserReglages({ forcerCellule = false } = {}) {
+        const grille = this.obtenirControle("RegGrid");
+        const bouton = this.obtenirControle("RegReintBtn");
+        if (!grille || !bouton) return;
+
+        bouton.metadata = bouton.metadata || {};
+
+        // Dans guiTexture(8), Réinitialiser appartient à la 5e ligne de RegGrid
+        // (ligne 4, colonne 0). On rétablit cette cellule uniquement si nécessaire.
+        // Cela évite qu'il soit mesuré comme un enfant libre et qu'il recouvre les sliders.
+        const cellule = bouton.metadata?._cellInfo;
+        const ligneCorrecte = Number(cellule?.row) === 4 && Number(cellule?.column) === 0;
+        const parentCorrect = bouton.parent === grille;
+
+        if (forcerCellule || !parentCorrect || !ligneCorrecte) {
+            try {
+                bouton.parent?.removeControl?.(bouton);
+                grille.addControl?.(bouton, 4, 0);
+            } catch (erreur) {
+                console.warn("[GUI] Impossible de replacer RegReintBtn dans RegGrid", erreur);
+            }
+        }
+
+        // Valeurs EXACTES du GUI : aucune adaptation responsive de la géométrie du bouton.
+        bouton.width = "95%";
+        bouton.height = "90%";
+        bouton.left = "0px";
+        bouton.top = "0px";
+        bouton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        bouton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        bouton.zIndex = 0;
+        bouton.isVisible = true;
+        bouton.alpha = 1;
+        bouton.isEnabled = true;
+        bouton.isHitTestVisible = true;
+        bouton.isPointerBlocker = true;
+
+        bouton.metadata._cellInfo = { row: "4", column: "0" };
+        bouton._markAsDirty?.();
+        grille._markAsDirty?.();
+    }
+
+    synchroniserReglagesApparenceDepuisEtat() {
+        const apparence = this.etatApplication?.apparence?.parametres;
+        if (!apparence) return;
+
+        const configs = [
+            ["NetteteSlider", "RegNetValTxt", apparence.nettete, false],
+            ["ContrasteSlider", "RegConValTxt", apparence.contraste, false],
+            ["LuminositeSlider", "RegLumValTxt", apparence.luminosite, true],
+            ["SaturationSlider", "RegLumSatTxt", apparence.saturation, false]
+        ];
+
+        configs.forEach(([nomSlider, nomTexte, valeurBrute, afficherSigne]) => {
+            const valeur = Number(valeurBrute);
+            if (!Number.isFinite(valeur)) return;
+
+            const slider = this.obtenirControle(nomSlider);
+            const texte = this.obtenirControle(nomTexte);
+
+            if (slider) {
+                slider.value = valeur;
+                slider._markAsDirty?.();
+            }
+
+            if (texte) {
+                const pourcentage = Math.round(valeur * 100);
+                texte.metadata = texte.metadata || {};
+                texte.metadata.texteDynamique = true;
+                texte.text = afficherSigne && pourcentage > 0
+                    ? `+${pourcentage}%`
+                    : `${pourcentage}%`;
+                texte.metadata.responsiveTexteOriginal = texte.text;
+                delete texte.metadata.dernierTexteAutoFit;
+                texte._markAsDirty?.();
+            }
+        });
+
+        this.etatApplication?.gui?.advancedTexture?.markAsDirty?.();
+    }
+
+    afficherBoutonsOutilsSecondaires(afficher = true) {
+        ["ContBtn", "TextuBtn", "LumBtn"].forEach((nom) => {
+            const bouton = this.obtenirControle(nom);
+            if (!bouton) return;
+            bouton.isVisible = Boolean(afficher);
+            bouton.isEnabled = Boolean(afficher);
+            bouton.isHitTestVisible = Boolean(afficher);
+            bouton._markAsDirty?.();
+        });
+    }
+
+    obtenirHauteurBaseOutils({ inclureEspaceReglages = false } = {}) {
+        const pile = this.obtenirControle("BotBtnStaPAn");
+        const espacement = this.obtenirEspacementPile(pile, 12);
+
+        // On part réellement des enfants de la pile afin que le rectangle Outils
+        // suive les futures modifications de hauteur des boutons dans le GUI.
+        const enfants = Array.isArray(pile?.children) ? pile.children : [];
+        const enfantsFixes = enfants.filter((enfant) => {
+            return enfant?.name !== "RegOptnRect" && enfant?.isVisible !== false;
+        });
+        const hauteurEnfants = enfantsFixes.reduce((somme, enfant) => {
+            return somme + this.obtenirHauteurControle(enfant, 80);
+        }, 0);
+
+        const nbElements = enfantsFixes.length + (inclureEspaceReglages ? 1 : 0);
+        const nbEspaces = Math.max(0, nbElements - 1);
+        return hauteurEnfants + espacement * nbEspaces;
+    }
+
+    calculerHauteurReglagesDisponible() {
+        const hauteurMaxOutils = this.obtenirHauteurMaxVoletPrincipal();
+        const baseOutilsAvecReglages = this.obtenirHauteurBaseOutils({ inclureEspaceReglages: true });
+        const disponible = Math.max(0, hauteurMaxOutils - baseOutilsAvecReglages);
+        const naturelle = this.obtenirHauteurNaturelleReglages();
+
+        // Ne jamais dépasser la hauteur naturelle du panneau. Si l'écran est
+        // plus petit, les lignes du Grid se répartissent automatiquement dans
+        // l'espace restant et l'auto-fit texte réduit seulement si nécessaire.
+        return Math.max(0, Math.min(naturelle, disponible));
+    }
+
+    calculerHauteurOutils() {
+        const reglages = this.obtenirControle("RegOptnRect");
+        const reglagesOuverts = reglages?.metadata?.estOuvert === true;
+        const base = this.obtenirHauteurBaseOutils({ inclureEspaceReglages: reglagesOuverts });
+        const hauteurReglages = reglagesOuverts ? this.calculerHauteurReglagesDisponible() : 0;
+        const max = this.obtenirHauteurMaxVoletPrincipal();
+        return Math.max(0, Math.min(max, base + hauteurReglages));
+    }
+
+    calculerHauteurAccordeon(rect, hauteurDemandee = 0) {
+        if (!rect) return Math.max(0, Number(hauteurDemandee) || 0);
+
+        if (rect.name === "RegOptnRect") {
+            this.ajusterLargeurPanneauReglages();
+            return this.calculerHauteurReglagesDisponible();
+        }
+
+        if (rect.name === "OutiRect") {
+            return this.calculerHauteurOutils();
+        }
+
+        const hauteur = Number(hauteurDemandee);
+        return Number.isFinite(hauteur) && hauteur > 0
+            ? hauteur
+            : lireNombreDepuisValeurCss(rect.height, 0);
+    }
+
+    synchroniserHauteurOutils({ animer = true } = {}) {
+        const outils = this.obtenirControle("OutiRect");
+        if (!outils?.metadata?.estOuvert) return;
+
+        const cible = this.calculerHauteurOutils();
+        const depart = outils.metadata.hauteurActuelle
+            || lireNombreDepuisValeurCss(outils.height, 0)
+            || 0;
+
+        outils.metadata.hauteurOuverte = cible;
+        outils.metadata.hauteurActuelle = cible;
+
+        if (animer) {
+            this.animerHauteurRect(outils, depart, cible, this.obtenirDureePanneau(), () => {
+                outils.height = `${cible}px`;
+                outils._markAsDirty?.();
+            });
+        } else {
+            outils.height = `${cible}px`;
+            outils._markAsDirty?.();
+        }
+    }
+
+    rafraichirHauteursDynamiques({ animer = false } = {}) {
+        const reglages = this.obtenirControle("RegOptnRect");
+        this.afficherBoutonsOutilsSecondaires(!(reglages?.metadata?.estOuvert === true));
+        this.ajusterLargeurPanneauReglages();
+        this.restaurerPositionBoutonReinitialiserReglages();
+
+        if (reglages?.metadata?.estOuvert) {
+            const cibleReglages = this.calculerHauteurReglagesDisponible();
+            reglages.metadata.hauteurOuverte = cibleReglages;
+            reglages.metadata.hauteurActuelle = cibleReglages;
+            reglages.height = `${cibleReglages}px`;
+            reglages._markAsDirty?.();
+        }
+
+        this.synchroniserHauteurOutils({ animer });
+    }
+
     mettreAJourFlecheDropdown(texteFleche, estOuvert) {
         if (!texteFleche) return;
         texteFleche.text = estOuvert
             ? constantesInterface.flechesDropdown.ouvert
             : constantesInterface.flechesDropdown.ferme;
-    }
-
-    basculerSection({ section, controleSection, texteFleche, hauteurInitiale }) {
-        if (!section || !controleSection) return;
-        if (section.estOuvert) {
-            this.ouvrirAccordeon(controleSection, texteFleche, lireNombreDepuisValeurCss(hauteurInitiale, hauteurInitiale));
-        } else {
-            this.fermerAccordeon(controleSection, texteFleche);
-        }
-    }
-
-    masquerSectionsSuivantes() {
-        // Conservé pour compatibilité avec le contrôleur existant.
-    }
-
-    afficherToutesLesSections() {
-        // Conservé pour compatibilité avec le contrôleur existant.
-    }
-
-    fermerSectionGUI(controleSection, texteFleche = null) {
-        this.fermerAccordeon(controleSection, texteFleche);
     }
 
     fermerTousPanneauxSecondaires(panneaux = []) {
@@ -416,7 +769,7 @@ export class ServiceAnimationGUI {
         });
 
         if (attendrePolice && typeof document !== "undefined" && document.fonts) {
-            const police = this.etatApplication?.interface?.parametres?.police ?? "OpenDyslexic";
+            const police = this.etatApplication?.interface?.parametres?.police ?? constantesInterface.policeDefaut;
             const promesses = [];
 
             if (typeof document.fonts.load === "function") {

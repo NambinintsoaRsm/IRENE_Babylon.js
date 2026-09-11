@@ -6,7 +6,7 @@
  * 3D n'affectent jamais les menus.
  */
 export class BoucleRenduBabylon {
-    lancer(moteur, scene3D, sceneGUI = null, sceneContoursCouleur = null, doitRendreContoursCouleur = null) {
+    lancer(moteur, scene3D, sceneGUI = null) {
         if (!moteur) {
             throw new Error("Moteur Babylon introuvable pour lancer la boucle de rendu.");
         }
@@ -18,9 +18,6 @@ export class BoucleRenduBabylon {
         moteur.runRenderLoop(() => {
             scene3D.render();
 
-            if (sceneContoursCouleur && typeof doitRendreContoursCouleur === "function" && doitRendreContoursCouleur()) {
-                sceneContoursCouleur.render();
-            }
 
             if (sceneGUI) {
                 sceneGUI.render();

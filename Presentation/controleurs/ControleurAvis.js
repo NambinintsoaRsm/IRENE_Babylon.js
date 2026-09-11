@@ -1,3 +1,9 @@
+/**
+ * @file Contrôleur du bouton Avis et du questionnaire de satisfaction.
+ *
+ * Rôle : ouvrir le formulaire configuré, lui fournir l'apparence courante et assurer
+ * son nettoyage lorsque l'application est détruite.
+ */
 export class ControleurAvis {
     constructor({
         etatApplication,

@@ -1,7 +1,8 @@
+import { constantesCamera } from "../../Configuration/constantesCamera.js";
 import {
     filtrerMeshesValides,
     calculerBornesMeshes,
-    creerOuTrouverRacineModeleSaotra
+    creerOuTrouverRacineModeleANNA
 } from "../../Util/BabylonUtils.js";
 
 /**
@@ -10,9 +11,12 @@ import {
  * Pour les OBJ composés de plusieurs meshes, la normalisation doit être
  * appliquée à une racine commune. Cela évite de déplacer/scaler les morceaux
  * séparément, ce qui peut éclater le modèle.
+ *
+ * La taille cible est définie dans constantesCamera afin que tous les modèles
+ * utilisent la même échelle de référence.
  */
 export class ServiceNormalisationModeleBabylon {
-    normaliser(meshes, tailleCible = 2) {
+    normaliser(meshes, tailleCible = constantesCamera.tailleModeleNormalise) {
         const meshesValides = filtrerMeshesValides(meshes);
 
         if (meshesValides.length === 0) {
@@ -40,8 +44,8 @@ export class ServiceNormalisationModeleBabylon {
         }
 
         const facteur = tailleCible / tailleMax;
-        const racine = creerOuTrouverRacineModeleSaotra(meshes, {
-            nom: "SaotraModeleRacine"
+        const racine = creerOuTrouverRacineModeleANNA(meshes, {
+            nom: "ANNAModeleRacine"
         });
 
         if (!racine) {

@@ -1,3 +1,6 @@
+import { constantesInterface } from "../../Configuration/constantesInterface.js";
+import { constantesLumiere } from "../../Configuration/constantesLumiere.js";
+
 /**
  * Contrôleur des réglages de lumière.
  *
@@ -9,8 +12,13 @@ export class ControleurLumiere {
     constructor({ etatApplication, serviceLumiereBabylon }) {
         this.etatApplication = etatApplication;
         this.serviceLumiereBabylon = serviceLumiereBabylon;
-        this.optionCourante = { type: "principale", libelle: "Principale" };
+        this.optionCourante = { type: "principale", libelle: "Uniforme" };
         this.optionsBoutons = [];
+
+        // Etat purement UI : fermer l'aide centrale ne coupe ni la lumière
+        // tournante ni le raccourci Espace. L'aide réapparaît seulement lors
+        // d'une nouvelle sélection explicite de la lumière tournante.
+        this.aideEspaceFermeeParUtilisateur = false;
     }
 
     brancherDepuisNomsGUI() {
@@ -33,13 +41,14 @@ export class ControleurLumiere {
             iconeDropdown: this.obtenir("LumDropBtnIcoTxt"),
             liste: this.obtenir("LumTypScroll"),
             options: [
-                { bouton: this.obtenir("LumTypBtn0"), type: "haut", libelle: "Haut" },
-                { bouton: this.obtenir("LumTypBtn1"), type: "bas", libelle: "Bas" },
-                { bouton: this.obtenir("LumTypBtn2"), type: "tournante", libelle: "Tournante" }
+                { bouton: this.obtenir("LumTypBtn0"), type: "haut", libelle: "Spot haut" },
+                { bouton: this.obtenir("LumTypBtn1"), type: "bas", libelle: "Spot bas" },
+                { bouton: this.obtenir("LumTypBtn2"), type: "tournante", libelle: "Balayage" }
             ]
         });
 
         this.brancherReinitialisation(this.obtenir("LumReintBtn"));
+        this.brancherFermetureAideEspace(this.obtenir("FermEspBtn"));
 
         // Pause / reprise de la lumière tournante avec la touche espace.
         this.brancherPauseLumiereTournanteParEspace();
@@ -48,10 +57,10 @@ export class ControleurLumiere {
     brancherIntensite({ slider, texteValeur }) {
         if (!slider) return;
 
-        slider.minimum = 0.2;
-        slider.maximum = 2.5;
-        slider.step = 0.1;
-        slider.value = 1.2;
+        slider.minimum = constantesLumiere.intensite.minimum;
+        slider.maximum = constantesLumiere.intensite.maximum;
+        slider.step = constantesLumiere.intensite.pas;
+        slider.value = constantesLumiere.intensite.defaut;
         slider.isPointerBlocker = true;
 
         this.serviceLumiereBabylon.appliquerIntensite(this.etatApplication.scenes.scene3D, slider.value);
@@ -65,10 +74,10 @@ export class ControleurLumiere {
     brancherTemperature({ slider, texteValeur }) {
         if (!slider) return;
 
-        slider.minimum = 0;
-        slider.maximum = 100;
-        slider.step = 1;
-        slider.value = 50;
+        slider.minimum = constantesLumiere.temperature.minimum;
+        slider.maximum = constantesLumiere.temperature.maximum;
+        slider.step = constantesLumiere.temperature.pas;
+        slider.value = constantesLumiere.temperature.defaut;
         slider.displayValueBar = false;
         slider.color = "#00000000";
         slider.isPointerBlocker = true;
@@ -156,7 +165,7 @@ export class ControleurLumiere {
         liste.isVisible = false;
         liste.height = "0px";
 
-        this.optionCourante = { type: "principale", libelle: "Principale" };
+        this.optionCourante = { type: "principale", libelle: "Uniforme" };
         this.mettreAJourVisibiliteAideEspace(false);
         this.optionsBoutons = options.filter((option) => option.bouton);
 
@@ -203,6 +212,13 @@ export class ControleurLumiere {
 
                 this.optionCourante = nouvelleOption;
                 bouton.metadata.optionLumiere = ancienneOption;
+
+                // Une nouvelle sélection explicite de la lumière tournante rend
+                // de nouveau l'aide disponible, même si elle avait été fermée lors
+                // de l'utilisation précédente.
+                if (nouvelleOption.type === "tournante") {
+                    this.aideEspaceFermeeParUtilisateur = false;
+                }
 
                 // Le service enlève la lumière précédente et applique uniquement le type choisi.
                 this.serviceLumiereBabylon.appliquerType(
@@ -255,6 +271,7 @@ export class ControleurLumiere {
         const optionsListe = toutesOptions.filter((option) => option.type !== optionActuelle.type);
 
         this.optionCourante = optionActuelle;
+        this.aideEspaceFermeeParUtilisateur = false;
 
         const texteSelection = this.obtenir("LumDropBtnTxt");
         if (texteSelection) {
@@ -279,10 +296,10 @@ export class ControleurLumiere {
     }
 
     creerOptionDepuisType(type) {
-        if (type === "haut") return { type: "haut", libelle: "Haut" };
-        if (type === "bas") return { type: "bas", libelle: "Bas" };
-        if (type === "tournante") return { type: "tournante", libelle: "Tournante" };
-        return { type: "principale", libelle: "Principale" };
+        if (type === "haut") return { type: "haut", libelle: "Spot haut" };
+        if (type === "bas") return { type: "bas", libelle: "Spot bas" };
+        if (type === "tournante") return { type: "tournante", libelle: "Balayage" };
+        return { type: "principale", libelle: "Uniforme" };
     }
 
     mettreAJourTexteBoutonOption(bouton, libelle) {
@@ -320,21 +337,57 @@ export class ControleurLumiere {
         const estListeOuverte = typeof listeOuverte === "boolean"
             ? listeOuverte
             : Boolean(liste?.isVisible);
-        const afficher = this.optionCourante?.type === "tournante" && !estListeOuverte;
+        const afficher = this.optionCourante?.type === "tournante"
+            && !estListeOuverte
+            && !this.aideEspaceFermeeParUtilisateur;
 
         aide.isVisible = afficher;
         aide.notRenderable = !afficher;
         aide.isEnabled = afficher;
-        aide.isHitTestVisible = false;
+
+        // Le panneau doit rester pickable lorsqu'il est visible pour que son
+        // bouton FermEspBtn puisse recevoir le clic. Le rectangle parent ne
+        // bloque pas les autres contrôles : seul le bouton est PointerBlocker.
+        aide.isHitTestVisible = afficher;
         aide.isPointerBlocker = false;
         aide._markAsDirty?.();
         this.etatApplication.gui.advancedTexture?.markAsDirty?.();
 
         if (afficher) {
-            // Le contrôle était masqué lors du layout initial : on recalcule
-            // son auto-fit uniquement au moment où le message devient visible.
             this.etatApplication.services?.texteResponsive?.planifierAjustement?.(0);
         }
+    }
+
+    brancherFermetureAideEspace(bouton) {
+        if (!bouton) return;
+
+        const texteCroix = bouton.textBlock
+            || bouton.children?.find?.((enfant) => enfant instanceof BABYLON.GUI.TextBlock);
+        const styleFermeture = constantesInterface.stylesComposants?.boutonFermeture;
+
+        if (texteCroix && styleFermeture) {
+            // Le JSON garde la géométrie du bouton. On renseigne seulement le
+            // pictogramme depuis la configuration commune des fermetures.
+            texteCroix.text = styleFermeture.caractereIcone;
+            texteCroix.fontFamily = constantesInterface.flechesNavigation?.police || "Arial";
+            texteCroix.fontWeight = styleFermeture.poidsIcone;
+            texteCroix.fontSize = styleFermeture.tailleIcone;
+            texteCroix.metadata = texteCroix.metadata || {};
+            texteCroix.metadata.nePasModifierTailleTexte = true;
+            texteCroix.metadata.texteOriginal = styleFermeture.caractereIcone;
+            texteCroix._markAsDirty?.();
+        }
+
+        bouton.isVisible = true;
+        bouton.isEnabled = true;
+        bouton.isHitTestVisible = true;
+        bouton.isPointerBlocker = true;
+
+        bouton.onPointerClickObservable.clear();
+        bouton.onPointerClickObservable.add(() => {
+            this.aideEspaceFermeeParUtilisateur = true;
+            this.mettreAJourVisibiliteAideEspace(false);
+        });
     }
 
     brancherPauseLumiereTournanteParEspace() {
@@ -422,7 +475,8 @@ export class ControleurLumiere {
         const liste = this.obtenir("LumTypScroll");
         const icone = this.obtenir("LumDropBtnIcoTxt");
 
-        this.optionCourante = { type: "principale", libelle: "Principale" };
+        this.optionCourante = { type: "principale", libelle: "Uniforme" };
+        this.aideEspaceFermeeParUtilisateur = false;
 
         const optionsInitiales = [
             { bouton: this.obtenir("LumTypBtn0"), type: "haut", libelle: "Haut" },
@@ -440,12 +494,12 @@ export class ControleurLumiere {
             this.mettreAJourTexteBoutonOption(option.bouton, option.libelle);
         });
 
-        if (intensite) intensite.value = 1.2;
+        if (intensite) intensite.value = constantesLumiere.intensite.defaut;
         if (temperature) {
-            temperature.value = 50;
+            temperature.value = constantesLumiere.temperature.defaut;
             this.appliquerFondTemperatureSliderApresRendu(temperature);
         }
-        if (texteSelection) this.mettreAJourTexteDynamique(texteSelection, "Principale");
+        if (texteSelection) this.mettreAJourTexteDynamique(texteSelection, "Uniforme");
         if (liste) {
             liste.isVisible = false;
             liste.height = "0px";
