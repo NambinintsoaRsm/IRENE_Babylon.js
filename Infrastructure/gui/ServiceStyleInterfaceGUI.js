@@ -204,20 +204,152 @@ export class ServiceStyleInterfaceGUI {
 
             const texteFermeture = controles.FermBtnTxt ?? boutonFermeture.textBlock ?? null;
             if (texteFermeture) {
-                texteFermeture.fontFamily = String(
-                    etatApplication?.interface?.parametres?.police
-                    || constantesInterface.policeDefaut
-                    || "Arial"
-                );
-                texteFermeture.text = style.caractereIcone ?? "X";
-                texteFermeture.fontSize = style.tailleIcone ?? "80%";
-                texteFermeture.fontWeight = style.poidsIcone ?? "700";
                 texteFermeture.color = theme.boutonTexte;
-                texteFermeture.outlineWidth = Number(style.epaisseurVisuelleIcone) || 0;
                 texteFermeture.outlineColor = theme.boutonTexte;
-                texteFermeture._markAsDirty?.();
+                this.ajusterIconeFermeture(boutonFermeture, texteFermeture);
             }
         }
+    }
+
+    /**
+     * Ajuste la croix de fermeture à la taille réellement disponible dans son
+     * bouton sans déplacer ni redimensionner le bouton lui-même.
+     *
+     * La méthode est commune aux trois croix de la V1 : accueil, fermeture
+     * principale et aide de la lumière tournante. Elle peut être appelée même
+     * avant le premier layout Babylon : quelques frames de rattrapage sont
+     * planifiées jusqu'à ce qu'une mesure exploitable soit disponible.
+     */
+    ajusterIconeFermeture(bouton, texte, { reessais = 8 } = {}) {
+        if (!bouton || !texte || !globalThis.BABYLON?.GUI) {
+            return false;
+        }
+
+        const style = constantesInterface.stylesComposants?.boutonFermeture ?? {};
+        const caractere = String(style.caractereIcone ?? "X");
+        const police = String(style.policeIcone ?? constantesInterface.flechesNavigation?.police ?? "Arial");
+        const poids = String(style.poidsIcone ?? "700");
+        const epaisseurContour = Math.max(0, Number(style.epaisseurVisuelleIcone) || 0);
+        const margeRatio = Math.max(0, Math.min(0.35, Number(style.margeInterieureRatio) || 0));
+        const tailleMinimum = Math.max(1, Number(style.tailleIconeMinimumPx) || 1);
+
+        texte.metadata = texte.metadata || {};
+        texte.metadata.nePasModifierTailleTexte = true;
+        texte.metadata.nePasAccessibilite = true;
+        texte.metadata.nePasAutoFit = true;
+        texte.metadata.texteDynamique = false;
+        texte.metadata.texteOriginal = caractere;
+
+        texte.text = caractere;
+        texte.fontFamily = police;
+        texte.fontWeight = poids;
+        texte.resizeToFit = false;
+        texte.textWrapping = BABYLON.GUI.TextWrapping?.Clip ?? texte.textWrapping;
+        texte.width = "100%";
+        texte.height = "100%";
+        texte.left = "0px";
+        texte.top = "0px";
+        texte.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        texte.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        texte.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        texte.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        texte.outlineWidth = epaisseurContour;
+
+        const appliquer = () => {
+            const mesure = bouton._currentMeasure;
+            const largeur = Number(mesure?.width) || 0;
+            const hauteur = Number(mesure?.height) || 0;
+
+            if (largeur <= 0 || hauteur <= 0) {
+                texte.fontSize = style.tailleIconeFallback ?? "75%";
+                texte._markAsDirty?.();
+                return false;
+            }
+
+            const largeurDisponible = Math.max(1, largeur * (1 - (2 * margeRatio)) - (2 * epaisseurContour));
+            const hauteurDisponible = Math.max(1, hauteur * (1 - (2 * margeRatio)) - (2 * epaisseurContour));
+            const tailleCalculee = this.calculerTailleIconeFermeturePx({
+                caractere,
+                police,
+                poids,
+                largeurDisponible,
+                hauteurDisponible
+            });
+
+            texte.fontSize = Math.max(tailleMinimum, Math.floor(tailleCalculee));
+            texte._markAsDirty?.();
+            bouton._markAsDirty?.();
+            return true;
+        };
+
+        const reessayer = (reste) => {
+            if (appliquer() || reste <= 0) {
+                return;
+            }
+            requestAnimationFrame(() => reessayer(reste - 1));
+        };
+
+        reessayer(Math.max(0, Number(reessais) || 0));
+        this.brancherRecalculIconeFermetureAuResize(bouton, texte);
+        return true;
+    }
+
+    calculerTailleIconeFermeturePx({ caractere, police, poids, largeurDisponible, hauteurDisponible }) {
+        const tailleReference = 100;
+        let largeurGlyphe = tailleReference * 0.7;
+        let hauteurGlyphe = tailleReference;
+
+        try {
+            const canvasMesure = document.createElement("canvas");
+            const contexte = canvasMesure.getContext("2d");
+            if (contexte) {
+                contexte.font = `${poids} ${tailleReference}px "${police}"`;
+                const metriques = contexte.measureText(caractere);
+                const largeurBoite = Number(metriques.actualBoundingBoxLeft) + Number(metriques.actualBoundingBoxRight);
+                const hauteurBoite = Number(metriques.actualBoundingBoxAscent) + Number(metriques.actualBoundingBoxDescent);
+
+                largeurGlyphe = largeurBoite > 0 ? largeurBoite : Math.max(1, Number(metriques.width) || largeurGlyphe);
+                hauteurGlyphe = hauteurBoite > 0 ? hauteurBoite : hauteurGlyphe;
+            }
+        } catch {
+            // Les valeurs de secours gardent la croix utilisable même si le
+            // navigateur ne fournit pas les métriques avancées du canvas.
+        }
+
+        const facteurLargeur = largeurDisponible / Math.max(1, largeurGlyphe);
+        const facteurHauteur = hauteurDisponible / Math.max(1, hauteurGlyphe);
+        return tailleReference * Math.min(facteurLargeur, facteurHauteur);
+    }
+
+    brancherRecalculIconeFermetureAuResize(bouton, texte) {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        bouton.metadata = bouton.metadata || {};
+        if (bouton.metadata.recalculIconeFermetureResizeBranche) {
+            return;
+        }
+
+        bouton.metadata.recalculIconeFermetureResizeBranche = true;
+        let minuterie = null;
+
+        const recalculer = () => {
+            if (minuterie) {
+                clearTimeout(minuterie);
+            }
+            minuterie = setTimeout(() => {
+                requestAnimationFrame(() => this.ajusterIconeFermeture(bouton, texte, { reessais: 3 }));
+            }, 80);
+        };
+
+        window.addEventListener("resize", recalculer, { passive: true });
+        bouton.metadata.detacherRecalculIconeFermetureResize = () => {
+            window.removeEventListener("resize", recalculer);
+            if (minuterie) {
+                clearTimeout(minuterie);
+            }
+        };
     }
 
     estBoutonAvecCouleurPropre(bouton) {

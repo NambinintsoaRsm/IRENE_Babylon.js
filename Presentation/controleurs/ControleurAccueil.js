@@ -1,5 +1,6 @@
 import { constantesAccueil } from "../../Configuration/constantesAccueil.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
+import { ServiceStyleInterfaceGUI } from "../../Infrastructure/gui/ServiceStyleInterfaceGUI.js";
 
 /**
  * Gère l'écran d'accueil ANNA chargé depuis guiTexture_acc.json.
@@ -31,6 +32,7 @@ export class ControleurAccueil {
         this.estOuvert = false;
         this.gestionnaireClavier = null;
         this.detruit = false;
+        this.serviceStyleInterfaceGUI = new ServiceStyleInterfaceGUI();
     }
 
     /**
@@ -137,27 +139,15 @@ export class ControleurAccueil {
         const texte = this.obtenir("AccFermBtnTxt");
         if (!bouton || !texte) return;
 
-        // Le bouton d'accueil est maintenant autonome : son apparence vient du
-        // guiTexture_acc.json et non plus du bouton FermBtn de guiTexture.json.
+        // Le JSON garde la géométrie du bouton. Le service commun calcule la
+        // plus grande taille de croix qui tient réellement dans l'espace disponible.
         texte.isVisible = true;
         texte.isHitTestVisible = false;
         texte.isPointerBlocker = false;
-        texte.text = "X";
-        texte.fontWeight = "700";
-        texte.fontSize = "63%";
         texte.color = bouton.color || "#000000";
-        texte.outlineWidth = Math.max(Number(texte.outlineWidth) || 0, 1);
         texte.outlineColor = texte.color;
-        texte.metadata = {
-            ...(texte.metadata ?? {}),
-            texteDynamique: false,
-            nePasModifierTailleTexte: true,
-            nePasAccessibilite: true,
-            nePasAutoFit: true
-        };
 
-        texte._markAsDirty?.();
-        bouton._markAsDirty?.();
+        this.serviceStyleInterfaceGUI.ajusterIconeFermeture(bouton, texte);
     }
 
     injecterIcones() {

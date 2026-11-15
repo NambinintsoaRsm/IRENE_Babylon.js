@@ -231,9 +231,34 @@ export class ServiceListeModelesGUI {
                 theme,
                 parametresInterface,
                 estActif,
-                etatApplication
+                etatApplication,
+                referenceRetour: this.obtenirReferenceTexteRetourModele(etatApplication, style)
             });
         }
+    }
+
+    /**
+     * Le bouton Retour du panneau Modèles est la référence typographique des
+     * boutons créés dynamiquement. On privilégie la taille demandée avant
+     * auto-fit, puis la taille 0 % mémorisée par ServiceTexteGUI.
+     */
+    obtenirReferenceTexteRetourModele(etatApplication, style) {
+        const controles = etatApplication?.gui?.controles ?? {};
+        const advancedTexture = etatApplication?.gui?.advancedTexture;
+        const boutonRetour = controles.ModelRetourBtn
+            ?? advancedTexture?.getControlByName?.("ModelRetourBtn")
+            ?? null;
+        const texteRetour = boutonRetour?.textBlock
+            ?? boutonRetour?.children?.find?.((enfant) => enfant instanceof BABYLON.GUI.TextBlock)
+            ?? advancedTexture?.getControlByName?.("ModelRetourBtnTxt")
+            ?? null;
+
+        const metadata = texteRetour?.metadata ?? {};
+        return {
+            tailleBase: metadata.fontSizeOriginal ?? texteRetour?.fontSize ?? style.fontSize,
+            tailleDemandee: metadata.fontSizeDemandeeAutoFit ?? texteRetour?.fontSize ?? null,
+            poidsBase: metadata.fontWeightOriginal ?? texteRetour?.fontWeight ?? style.fontWeight ?? "500"
+        };
     }
 
     formaterNomAffiche(nom) {
@@ -269,7 +294,8 @@ export class ServiceListeModelesGUI {
                                  theme,
                                  parametresInterface,
                                  estActif,
-                                 etatApplication = null
+                                 etatApplication = null,
+                                 referenceRetour = null
                              }) {
         const texteOriginal = String(texte ?? textBlock.text ?? "");
         const police = parametresInterface?.police || constantesInterface.policeDefaut;
@@ -277,6 +303,8 @@ export class ServiceListeModelesGUI {
         const variationPolice = Number.isFinite(parametresInterface?.taillePolice)
             ? parametresInterface.taillePolice
             : 0;
+        const tailleReferenceRetour = referenceRetour?.tailleBase ?? style.fontSize;
+        const tailleDemandeeRetour = referenceRetour?.tailleDemandee ?? null;
 
         textBlock.metadata = {
             ...(textBlock.metadata ?? {}),
@@ -291,9 +319,9 @@ export class ServiceListeModelesGUI {
             participeCalculMaximumTaillePolice: true,
             // Référence 0 % explicite : elle reste indépendante de la variation
             // active au moment où la liste de modèles est reconstruite.
-            fontSizeOriginal: textBlock.metadata?.fontSizeOriginal ?? style.fontSize,
+            fontSizeOriginal: textBlock.metadata?.fontSizeOriginal ?? tailleReferenceRetour,
             fontWeightOriginal: textBlock.metadata?.fontWeightOriginal ?? (style.fontWeight ?? "500"),
-            fontSizeModeleBase: style.fontSize,
+            fontSizeModeleBase: tailleReferenceRetour,
             fontWeightModeleBase: style.fontWeight ?? "500",
             lignesMaxAutoFit: 1,
             facteurMinAutoFit: 0.45
@@ -315,17 +343,20 @@ export class ServiceListeModelesGUI {
 
         textBlock.fontFamily = police;
         textBlock.fontWeight = gras ? "700" : (style.fontWeight ?? "500");
-        textBlock.fontSize = accessActif && Number.isFinite(remPx) && remPx > 0
-            ? this.calculerFontSizeModeleAccessibilite({
-                texte: texteOriginal,
-                remPx,
-                variationPolice
-            })
-            : this.calculerFontSizeAutoFit({
-                texte: texteOriginal,
-                fontSizeBase: style.fontSize,
-                variationPolice
-            });
+        // Le texte du modèle part exactement de la même taille demandée que
+        // « Retour ». L'auto-fit ne réduit ensuite que les noms trop longs.
+        textBlock.fontSize = tailleDemandeeRetour
+            ?? (accessActif && Number.isFinite(remPx) && remPx > 0
+                ? this.calculerFontSizeModeleAccessibilite({
+                    texte: texteOriginal,
+                    remPx,
+                    variationPolice
+                })
+                : this.calculerFontSizeAutoFit({
+                    texte: texteOriginal,
+                    fontSizeBase: tailleReferenceRetour,
+                    variationPolice
+                }));
         textBlock.metadata.fontSizeDemandeeAutoFit = textBlock.fontSize;
 
         if (accessActif && Number.isFinite(remPx) && remPx > 0) {

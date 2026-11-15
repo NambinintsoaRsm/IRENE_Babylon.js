@@ -47,6 +47,15 @@ export const constantesInterface = Object.freeze({
     }),
 
     /**
+     * Petite sécurité appliquée uniquement lorsqu'un texte a réellement dû
+     * être réduit par l'auto-fit. Elle évite qu'un glyphe touche exactement
+     * la limite du TextBlock puis soit rogné différemment selon le navigateur.
+     */
+    autoFitTexte: Object.freeze({
+        reductionSecuritePx: 1
+    }),
+
+    /**
      * Pictogrammes de navigation qui gardent leur police et leur taille propres.
      * Le fichier GUI reste la source de vérité pour leurs dimensions et leur
      * position de base. Le code ne fait qu'appliquer une compensation optique
@@ -240,11 +249,25 @@ export const constantesInterface = Object.freeze({
             largeur: "14.7%",
             ratio: 1,
             largeurPiloteRatio: true,
-            // 75 % conserve la croix lisible sans toucher la bordure du bouton.
-            tailleIcone: "75%",
-            poidsIcone: "700",
+
+            // Le JSON reste la source de vérité pour la taille et la position
+            // des boutons. La taille de la croix est calculée au runtime à
+            // partir de l'espace réellement disponible dans le bouton.
             caractereIcone: "X",
+            policeIcone: "Arial",
+            poidsIcone: "700",
             epaisseurVisuelleIcone: 1,
+            margeInterieureRatio: 0.12,
+            tailleIconeMinimumPx: 12,
+            // Fallback uniquement si Babylon n'a pas encore calculé la mesure
+            // réelle du bouton au moment du premier passage.
+            tailleIconeFallback: "75%",
+            nomsTextesIcones: Object.freeze([
+                "FermBtnTxt",
+                "FermEspBtnTxt",
+                "AccFermBtnTxt"
+            ]),
+
             epaisseurBordureMinimum: 4,
             rayonCoin: 10,
             zIndex: 100

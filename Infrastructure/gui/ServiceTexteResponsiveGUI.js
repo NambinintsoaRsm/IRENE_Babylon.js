@@ -795,7 +795,15 @@ export class ServiceTexteResponsiveGUI {
             });
 
         const texteFinal = resultat.texte;
-        const fontSizeFinal = `${Math.max(1, Math.round(resultat.taille))}px`;
+        const reductionAvantSecurite = Math.max(0, Number(tailleBase) - Number(resultat.taille));
+        const securitePx = reductionAvantSecurite > 0.5
+            ? Math.max(0, Number(constantesInterface.autoFitTexte?.reductionSecuritePx ?? 0))
+            : 0;
+        const tailleFinale = Math.max(
+            tailleMin,
+            Number(resultat.taille) - securitePx
+        );
+        const fontSizeFinal = `${Math.max(1, Math.round(tailleFinale))}px`;
         const textWrappingFinal = utiliserEspacesCompacts
             ? false
             : (conserverRetoursLigne
@@ -833,7 +841,7 @@ export class ServiceTexteResponsiveGUI {
             const variationDemandee = Number(
                 this.etatApplication?.interface?.parametres?.taillePolice ?? 0
             );
-            const reduction = Math.max(0, Number(tailleBase) - Number(resultat.taille));
+            const reduction = Math.max(0, Number(tailleBase) - Number(tailleFinale));
 
             // Log uniquement lorsqu'un auto-fit a effectivement réduit la taille
             // ou modifié le texte. On distingue ainsi clairement le choix global
@@ -846,7 +854,8 @@ export class ServiceTexteResponsiveGUI {
                     gras: String(poids) === "700" || String(poids).toLowerCase() === "bold",
                     sliderDemande: `${Math.round(variationDemandee)}%`,
                     tailleDemandeePx: Math.round(Number(tailleBase) * 100) / 100,
-                    tailleAppliqueePx: Math.round(Number(resultat.taille) * 100) / 100,
+                    tailleAppliqueePx: Math.round(Number(tailleFinale) * 100) / 100,
+                    securiteAutoFitPx: securitePx,
                     reductionPx: Math.round(reduction * 100) / 100,
                     largeurDisponible: Math.round(largeurDisponible),
                     hauteurDisponible: Math.round(hauteurDisponible),

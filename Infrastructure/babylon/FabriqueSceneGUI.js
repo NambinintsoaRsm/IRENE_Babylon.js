@@ -25,13 +25,13 @@ export class FabriqueSceneGUI {
         return scene;
     }
 
-    creerTexture(sceneGUI) {
+    creerTexture(sceneGUI, nom = "InterfaceUtilisateur") {
         if (!sceneGUI) {
             throw new Error("Scène GUI introuvable pour créer l'interface.");
         }
 
         return BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI(
-            "InterfaceUtilisateur",
+            nom,
             true,
             sceneGUI
         );

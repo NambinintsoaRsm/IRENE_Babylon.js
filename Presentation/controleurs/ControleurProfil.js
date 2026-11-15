@@ -1,3 +1,4 @@
+import { constantesLumiere } from "../../Configuration/constantesLumiere.js";
 /**
  * @file Orchestration du chargement et des sauvegardes du profil utilisateur.
  *
@@ -516,9 +517,8 @@ export class ControleurProfil {
     }
 
     libelleLumiere(type) {
-        if (type === "haut") return "Haut";
-        if (type === "bas") return "Bas";
-        if (type === "tournante") return "Tournante";
-        return "Principale";
+        return constantesLumiere.libelles?.[type]
+            ?? constantesLumiere.libelles?.[constantesLumiere.typeDefaut]
+            ?? "Uniforme";
     }
 }

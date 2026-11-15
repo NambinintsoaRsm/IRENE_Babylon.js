@@ -7,6 +7,18 @@
 export const constantesLumiere = Object.freeze({
     typeDefaut: "principale",
 
+    /** Une seule source de vérité pour tous les libellés affichés dans la GUI. */
+    libelles: Object.freeze({
+        principale: "Uniforme",
+        haut: "Spot haut",
+        bas: "Spot bas",
+        tournante: "Balayage"
+    }),
+
+    diagnostics: Object.freeze({
+        etat: true
+    }),
+
     intensite: Object.freeze({
         minimum: 0.2,
         maximum: 2.5,

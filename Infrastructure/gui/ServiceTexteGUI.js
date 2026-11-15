@@ -159,20 +159,23 @@ export class ServiceTexteGUI {
     appliquerSurTextBlock(textBlock, parametres) {
         if (!textBlock) return;
 
-        // L'icône de fermeture conserve une taille proportionnelle au bouton,
-        // mais sa famille de police doit suivre la police choisie dans l'interface.
-        // On synchronise donc uniquement la famille et le gras avant d'exclure
-        // cette icône des changements globaux de taille/accessibilité.
-        if (String(textBlock.name ?? "") === "FermBtnTxt") {
-            textBlock.fontFamily = parametres.police || "OpenDyslexic";
-            textBlock.fontWeight = "700";
-            // Le caractère ASCII X existe dans toutes les polices proposées.
-            // Contrairement au symbole Unicode ✕, il ne déclenche donc pas
-            // une police de secours qui masquerait le changement de famille.
-            textBlock.text = "X";
-            textBlock.outlineWidth = Math.max(Number(textBlock.outlineWidth) || 0, 2);
-            textBlock.outlineColor = textBlock.color;
+        // Les croix de fermeture sont des pictogrammes d'interface : elles
+        // gardent leur police propre et leur taille calculée selon leur bouton.
+        // Elles ne doivent donc jamais être réécrites par Police/Taille/Gras.
+        const styleFermeture = constantesInterface.stylesComposants?.boutonFermeture ?? {};
+        const nomsCroix = styleFermeture.nomsTextesIcones ?? [];
+        if (nomsCroix.includes(String(textBlock.name ?? ""))) {
+            textBlock.fontFamily = styleFermeture.policeIcone
+                ?? constantesInterface.flechesNavigation?.police
+                ?? "Arial";
+            textBlock.fontWeight = styleFermeture.poidsIcone ?? "700";
+            textBlock.text = styleFermeture.caractereIcone ?? "X";
+            textBlock.metadata = textBlock.metadata || {};
+            textBlock.metadata.nePasModifierTailleTexte = true;
+            textBlock.metadata.nePasAccessibilite = true;
+            textBlock.metadata.nePasAutoFit = true;
             textBlock._markAsDirty?.();
+            return;
         }
 
         if (this.estTexteExcluTaille(textBlock)) return;
@@ -781,7 +784,10 @@ export class ServiceTexteGUI {
         }
 
         if (this.estBoutonModele(textBlock)) {
-            return 1.18;
+            // Les boutons de modèles doivent avoir la même taille de départ
+            // que le bouton Retour du panneau Modèles, y compris en mode
+            // accessibilité. L'auto-fit reste seul responsable des noms longs.
+            return 1;
         }
 
         return 1;

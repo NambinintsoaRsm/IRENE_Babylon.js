@@ -1,5 +1,6 @@
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
 import { constantesLumiere } from "../../Configuration/constantesLumiere.js";
+import { ServiceStyleInterfaceGUI } from "../../Infrastructure/gui/ServiceStyleInterfaceGUI.js";
 
 /**
  * Contrôleur des réglages de lumière.
@@ -12,13 +13,14 @@ export class ControleurLumiere {
     constructor({ etatApplication, serviceLumiereBabylon }) {
         this.etatApplication = etatApplication;
         this.serviceLumiereBabylon = serviceLumiereBabylon;
-        this.optionCourante = { type: "principale", libelle: "Uniforme" };
+        this.optionCourante = this.creerOptionDepuisType(constantesLumiere.typeDefaut);
         this.optionsBoutons = [];
 
         // Etat purement UI : fermer l'aide centrale ne coupe ni la lumière
         // tournante ni le raccourci Espace. L'aide réapparaît seulement lors
         // d'une nouvelle sélection explicite de la lumière tournante.
         this.aideEspaceFermeeParUtilisateur = false;
+        this.serviceStyleInterfaceGUI = new ServiceStyleInterfaceGUI();
     }
 
     brancherDepuisNomsGUI() {
@@ -41,9 +43,9 @@ export class ControleurLumiere {
             iconeDropdown: this.obtenir("LumDropBtnIcoTxt"),
             liste: this.obtenir("LumTypScroll"),
             options: [
-                { bouton: this.obtenir("LumTypBtn0"), type: "haut", libelle: "Spot haut" },
-                { bouton: this.obtenir("LumTypBtn1"), type: "bas", libelle: "Spot bas" },
-                { bouton: this.obtenir("LumTypBtn2"), type: "tournante", libelle: "Balayage" }
+                { bouton: this.obtenir("LumTypBtn0"), ...this.creerOptionDepuisType("haut") },
+                { bouton: this.obtenir("LumTypBtn1"), ...this.creerOptionDepuisType("bas") },
+                { bouton: this.obtenir("LumTypBtn2"), ...this.creerOptionDepuisType("tournante") }
             ]
         });
 
@@ -165,7 +167,7 @@ export class ControleurLumiere {
         liste.isVisible = false;
         liste.height = "0px";
 
-        this.optionCourante = { type: "principale", libelle: "Uniforme" };
+        this.optionCourante = this.creerOptionDepuisType(constantesLumiere.typeDefaut);
         this.mettreAJourVisibiliteAideEspace(false);
         this.optionsBoutons = options.filter((option) => option.bouton);
 
@@ -296,10 +298,13 @@ export class ControleurLumiere {
     }
 
     creerOptionDepuisType(type) {
-        if (type === "haut") return { type: "haut", libelle: "Spot haut" };
-        if (type === "bas") return { type: "bas", libelle: "Spot bas" };
-        if (type === "tournante") return { type: "tournante", libelle: "Balayage" };
-        return { type: "principale", libelle: "Uniforme" };
+        const typeNormalise = constantesLumiere.libelles?.[type]
+            ? type
+            : constantesLumiere.typeDefaut;
+        return {
+            type: typeNormalise,
+            libelle: constantesLumiere.libelles?.[typeNormalise] ?? typeNormalise
+        };
     }
 
     mettreAJourTexteBoutonOption(bouton, libelle) {
@@ -363,19 +368,11 @@ export class ControleurLumiere {
 
         const texteCroix = bouton.textBlock
             || bouton.children?.find?.((enfant) => enfant instanceof BABYLON.GUI.TextBlock);
-        const styleFermeture = constantesInterface.stylesComposants?.boutonFermeture;
 
-        if (texteCroix && styleFermeture) {
-            // Le JSON garde la géométrie du bouton. On renseigne seulement le
-            // pictogramme depuis la configuration commune des fermetures.
-            texteCroix.text = styleFermeture.caractereIcone;
-            texteCroix.fontFamily = constantesInterface.flechesNavigation?.police || "Arial";
-            texteCroix.fontWeight = styleFermeture.poidsIcone;
-            texteCroix.fontSize = styleFermeture.tailleIcone;
-            texteCroix.metadata = texteCroix.metadata || {};
-            texteCroix.metadata.nePasModifierTailleTexte = true;
-            texteCroix.metadata.texteOriginal = styleFermeture.caractereIcone;
-            texteCroix._markAsDirty?.();
+        if (texteCroix) {
+            // Le JSON garde la géométrie du bouton ; la croix est dimensionnée
+            // dynamiquement selon l'espace réellement disponible dans FermEspBtn.
+            this.serviceStyleInterfaceGUI.ajusterIconeFermeture(bouton, texteCroix);
         }
 
         bouton.isVisible = true;
@@ -454,7 +451,9 @@ export class ControleurLumiere {
 
         this.mettreAJourTexteDynamique(
             texteSelection,
-            estEnPause ? "Tournante (pause)" : "Tournante"
+            estEnPause
+                ? `${constantesLumiere.libelles.tournante} (pause)`
+                : constantesLumiere.libelles.tournante
         );
     }
 
@@ -475,13 +474,13 @@ export class ControleurLumiere {
         const liste = this.obtenir("LumTypScroll");
         const icone = this.obtenir("LumDropBtnIcoTxt");
 
-        this.optionCourante = { type: "principale", libelle: "Uniforme" };
+        this.optionCourante = this.creerOptionDepuisType(constantesLumiere.typeDefaut);
         this.aideEspaceFermeeParUtilisateur = false;
 
         const optionsInitiales = [
-            { bouton: this.obtenir("LumTypBtn0"), type: "haut", libelle: "Haut" },
-            { bouton: this.obtenir("LumTypBtn1"), type: "bas", libelle: "Bas" },
-            { bouton: this.obtenir("LumTypBtn2"), type: "tournante", libelle: "Tournante" }
+            { bouton: this.obtenir("LumTypBtn0"), ...this.creerOptionDepuisType("haut") },
+            { bouton: this.obtenir("LumTypBtn1"), ...this.creerOptionDepuisType("bas") },
+            { bouton: this.obtenir("LumTypBtn2"), ...this.creerOptionDepuisType("tournante") }
         ];
 
         optionsInitiales.forEach((option) => {
@@ -499,7 +498,9 @@ export class ControleurLumiere {
             temperature.value = constantesLumiere.temperature.defaut;
             this.appliquerFondTemperatureSliderApresRendu(temperature);
         }
-        if (texteSelection) this.mettreAJourTexteDynamique(texteSelection, "Uniforme");
+        if (texteSelection) {
+            this.mettreAJourTexteDynamique(texteSelection, this.optionCourante.libelle);
+        }
         if (liste) {
             liste.isVisible = false;
             liste.height = "0px";

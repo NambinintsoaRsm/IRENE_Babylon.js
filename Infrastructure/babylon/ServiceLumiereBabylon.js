@@ -51,6 +51,7 @@ export class ServiceLumiereBabylon {
         );
         this.intensiteActuelle = intensite;
         this.appliquerType(scene, this.typeActif, { garderRotation: true });
+        this.journaliserEtat(scene, "intensite");
     }
 
     appliquerTemperature(scene, valeur) {
@@ -80,9 +81,9 @@ export class ServiceLumiereBabylon {
         if (lumieres.lumierePrincipale) {
             lumieres.lumierePrincipale.diffuse = couleur;
             lumieres.lumierePrincipale.groundColor = new BABYLON.Color3(
-                couleur.r * 0.55,
-                couleur.g * 0.55,
-                couleur.b * 0.55
+                couleur.r * 0.5,
+                couleur.g * 0.5,
+                couleur.b * 0.5
             );
         }
 
@@ -131,6 +132,7 @@ export class ServiceLumiereBabylon {
             } else {
                 this.mettreAJourDirectionSelonCamera(scene, { forcer: true });
             }
+            this.journaliserEtat(scene, "type");
             return;
         }
 
@@ -148,11 +150,13 @@ export class ServiceLumiereBabylon {
                 this.demarrerRotation(scene);
             }
 
+            this.journaliserEtat(scene, "type");
             return;
         }
 
         this.arreterSuiviOrientationCamera(scene);
         this.activerPrincipale(lumieres);
+        this.journaliserEtat(scene, "type");
     }
 
     creerVecteur(valeur = {}) {
@@ -530,10 +534,33 @@ export class ServiceLumiereBabylon {
     }
 
     libelleType(type) {
-        if (type === "haut") return "Haut";
-        if (type === "bas") return "Bas";
-        if (type === "tournante") return "Tournante";
-        return "Uniforme";
+        return constantesLumiere.libelles?.[type]
+            ?? constantesLumiere.libelles?.[constantesLumiere.typeDefaut]
+            ?? "Uniforme";
+    }
+
+    journaliserEtat(scene, raison = "etat") {
+        if (constantesLumiere.diagnostics?.etat !== true) return;
+
+        const lumieres = this.garantirLumieres(scene);
+        const direction = lumieres?.lumiereDirectionnelle?.direction ?? null;
+        console.debug("[ANNA][Lumiere][Etat]", {
+            raison,
+            type: this.typeActif,
+            libelle: this.libelleType(this.typeActif),
+            intensiteDemandee: this.intensiteActuelle,
+            intensitePrincipale: lumieres?.lumierePrincipale?.intensity ?? null,
+            intensiteDirectionnelle: lumieres?.lumiereDirectionnelle?.intensity ?? null,
+            facteurAmbiantAvecSpot: constantesLumiere.principale.facteurAmbiantAvecSpot,
+            temperature: this.temperatureActuelle,
+            directionEffective: direction
+                ? {
+                    x: Number(direction.x?.toFixed?.(4) ?? direction.x ?? 0),
+                    y: Number(direction.y?.toFixed?.(4) ?? direction.y ?? 0),
+                    z: Number(direction.z?.toFixed?.(4) ?? direction.z ?? 0)
+                }
+                : null
+        });
     }
 
     garantirLumieres(scene) {
