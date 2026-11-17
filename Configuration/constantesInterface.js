@@ -15,7 +15,7 @@ import { PositionMenu } from "../Domain/interface/PositionMenu.js";
 export const constantesInterface = Object.freeze({
     /** Valeurs chargées lorsqu'aucun profil utilisateur n'est disponible. */
     policeDefaut: "Luciole",
-    taillePoliceDefaut: 0,
+    taillePoliceDefaut: 1,
     grasDefaut: false,
 
     themeDefaut: ThemeInterface.BLANC,
@@ -31,36 +31,23 @@ export const constantesInterface = Object.freeze({
     sliderBordures: Object.freeze({
         boutons: Object.freeze({
             minimum: 1,
-            maximum: 5,
+            maximum: 8,
             step: 1
         }),
         menus: Object.freeze({
             minimum: 1,
-            maximum: 7,
+            maximum: 8,
             step: 1
         })
     }),
 
-    /**
-     * Paramètres techniques du slider de taille de police.
-     * La borne maximale n'est volontairement pas configurée ici : elle est
-     * calculée à partir de l'espace réellement disponible dans la GUI et de la
-     * police active.
-     */
+    /** Réglage additif : niveau 1 = taille JSON, niveau 6 = +5 px. */
     sliderTaillePolice: Object.freeze({
-        pasPourcentage: 1,
-        delaiRecalculMs: 80,
-
-        // Babylon GUI ne dessine plus correctement le thumb lorsque minimum === maximum.
-        // Cette plage n'est utilisée que pour le rendu : la borne fonctionnelle
-        // reste conservée séparément dans les metadata du slider.
-        plageVisuelleMinimale: 1,
-
-        // Diagnostics temporaires pour stabiliser le comportement du slider.
-        // Ils sont centralisés ici afin de pouvoir être coupés sans modifier
-        // les services GUI.
-        debugCalculMaximum: true,
-        debugAutoFit: true
+        minimum: 1,
+        maximum: 6,
+        step: 1,
+        augmentationParNiveauPx: 1,
+        debugAutoFit: false
     }),
 
     /**

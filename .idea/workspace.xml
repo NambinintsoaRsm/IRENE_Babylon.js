@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="maj 15 nov">
-      <change afterPath="$PROJECT_DIR$/Configuration/configurationBorduresGUI.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Configuration/configurationResolutionGUI.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Domain/interface/PolitiqueBordures.js" afterDir="false" />
+    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="feat(gui): centraliser la configuration responsive et des bordures&#10;&#10;Ajouter une configuration des exclusions individuelles de boutons&#10;&#10;Séparer les règles d'exclusion de l'implémentation Babylon.js&#10;&#10;Préserver les bordures d'origine des boutons exclus&#10;&#10;Configurer la résolution idéale de l'interface en 1920x1080&#10;&#10;Activer useSmallestIdeal pour améliorer l'adaptation responsive&#10;&#10;Centraliser les intervalles des sliders de bordures dans constantesInterface&#10;&#10;Supprimer les valeurs d'intervalles codées en dur dans ControleurInterface&#10;&#10;Conserver la compatibilité avec les thèmes et les réglages existants&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/FabriqueSceneGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/FabriqueSceneGUI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Configuration/constantesInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesInterface.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Domain/interface/ParametresInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/interface/ParametresInterface.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteResponsiveGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteResponsiveGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurInterface.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/interfaceUseCases/ChangerTaillePoliceUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/interfaceUseCases/ChangerTaillePoliceUC.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture_back.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture_back.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.mtl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.obj" beforeDir="false" />
@@ -147,7 +148,7 @@
       <workItem from="1790682100631" duration="7000" />
       <workItem from="1790698207674" duration="1256000" />
       <workItem from="1793889546468" duration="920000" />
-      <workItem from="1794780287113" duration="11036000" />
+      <workItem from="1794780287113" duration="12764000" />
     </task>
     <task id="LOCAL-00001" summary="animIntUseCases interfaceUseCases apparenceUseCases">
       <option name="closed" value="true" />
@@ -413,7 +414,15 @@
       <option name="project" value="LOCAL" />
       <updated>1794780443840</updated>
     </task>
-    <option name="localTasksCounter" value="34" />
+    <task id="LOCAL-00034" summary="feat(gui): centraliser la configuration responsive et des bordures&#10;&#10;Ajouter une configuration des exclusions individuelles de boutons&#10;&#10;Séparer les règles d'exclusion de l'implémentation Babylon.js&#10;&#10;Préserver les bordures d'origine des boutons exclus&#10;&#10;Configurer la résolution idéale de l'interface en 1920x1080&#10;&#10;Activer useSmallestIdeal pour améliorer l'adaptation responsive&#10;&#10;Centraliser les intervalles des sliders de bordures dans constantesInterface&#10;&#10;Supprimer les valeurs d'intervalles codées en dur dans ControleurInterface&#10;&#10;Conserver la compatibilité avec les thèmes et les réglages existants&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture.">
+      <option name="closed" value="true" />
+      <created>1794909280528</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1794909280528</updated>
+    </task>
+    <option name="localTasksCounter" value="35" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -451,7 +460,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="test highlight , entropie + csv , correction bug background" />
     <MESSAGE value="ajout des fichiers non versionnés" />
     <MESSAGE value="mise à jours : 22juin" />
     <MESSAGE value="mise à jours : saillance" />
@@ -476,7 +484,8 @@
     <MESSAGE value="feat: integration du questionnaire avec enregistrement et envoie par mail" />
     <MESSAGE value="save 11 sept" />
     <MESSAGE value="maj 15 nov" />
-    <option name="LAST_COMMIT_MESSAGE" value="maj 15 nov" />
+    <MESSAGE value="feat(gui): centraliser la configuration responsive et des bordures&#10;&#10;Ajouter une configuration des exclusions individuelles de boutons&#10;&#10;Séparer les règles d'exclusion de l'implémentation Babylon.js&#10;&#10;Préserver les bordures d'origine des boutons exclus&#10;&#10;Configurer la résolution idéale de l'interface en 1920x1080&#10;&#10;Activer useSmallestIdeal pour améliorer l'adaptation responsive&#10;&#10;Centraliser les intervalles des sliders de bordures dans constantesInterface&#10;&#10;Supprimer les valeurs d'intervalles codées en dur dans ControleurInterface&#10;&#10;Conserver la compatibilité avec les thèmes et les réglages existants&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture." />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(gui): centraliser la configuration responsive et des bordures&#10;&#10;Ajouter une configuration des exclusions individuelles de boutons&#10;&#10;Séparer les règles d'exclusion de l'implémentation Babylon.js&#10;&#10;Préserver les bordures d'origine des boutons exclus&#10;&#10;Configurer la résolution idéale de l'interface en 1920x1080&#10;&#10;Activer useSmallestIdeal pour améliorer l'adaptation responsive&#10;&#10;Centraliser les intervalles des sliders de bordures dans constantesInterface&#10;&#10;Supprimer les valeurs d'intervalles codées en dur dans ControleurInterface&#10;&#10;Conserver la compatibilité avec les thèmes et les réglages existants&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture." />
     <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
   </component>
 </project>

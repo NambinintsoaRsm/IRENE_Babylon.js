@@ -350,7 +350,9 @@ export class ServiceTexteResponsiveGUI {
         const variation = Number.isFinite(Number(variationCourante))
             ? Number(variationCourante)
             : 0;
-        const facteurVariation = Math.max(0.1, 1 + variation / 100);
+        // Code de diagnostic historique conservé pour compatibilité ;
+        // le niveau 1..6 ne doit jamais être interprété comme un pourcentage.
+        const facteurVariation = 1;
 
         // En mode accessibilité, la taille navigateur constitue la référence
         // fonctionnelle du contrôle. On retire seulement la variation du slider.
@@ -852,7 +854,7 @@ export class ServiceTexteResponsiveGUI {
                     texte: source,
                     police: famille,
                     gras: String(poids) === "700" || String(poids).toLowerCase() === "bold",
-                    sliderDemande: `${Math.round(variationDemandee)}%`,
+                    sliderDemande: `Niveau ${Math.round(variationDemandee)}`,
                     tailleDemandeePx: Math.round(Number(tailleBase) * 100) / 100,
                     tailleAppliqueePx: Math.round(Number(tailleFinale) * 100) / 100,
                     securiteAutoFitPx: securitePx,

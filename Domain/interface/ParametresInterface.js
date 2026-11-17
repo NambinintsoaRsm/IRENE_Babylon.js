@@ -13,7 +13,7 @@ import { estThemeInterfaceValide } from "./ThemeInterface.js";
 export class ParametresInterface {
     constructor({
         police = "Luciole",
-        taillePolice = 0,
+        taillePolice = 1,
         gras = false,
         theme = "blanc",
         positionMenu = "droite",
@@ -36,10 +36,9 @@ export class ParametresInterface {
             throw new Error("La police d'interface est invalide.");
         }
 
-        // Variation relative en pourcentage autour du guiTexture.json.
-        // 0 = taille d'origine, -10 = -10 %, +2 = +2 %.
-        if (!Number.isFinite(this.taillePolice) || this.taillePolice < -100) {
-            throw new Error("La variation de taille de police est invalide.");
+        // Niveau entier 1 à 6, sans dépendance à Babylon.js.
+        if (!Number.isInteger(this.taillePolice) || this.taillePolice < 1 || this.taillePolice > 6) {
+            throw new Error("Le niveau de taille de police doit être compris entre 1 et 6.");
         }
 
         if (typeof this.gras !== "boolean") {

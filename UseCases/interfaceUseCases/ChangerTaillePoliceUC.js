@@ -6,7 +6,7 @@ export class ChangerTaillePoliceUC {
     }
 
     executer(taillePolice) {
-        if (!Number.isFinite(taillePolice) || taillePolice < -100) {
+        if (!Number.isInteger(taillePolice) || taillePolice < 1 || taillePolice > 6) {
             throw new Error("La taille de police demandée est invalide.");
         }
 

@@ -1,12 +1,14 @@
+import { calculerTaillePolicePx } from "../../Domain/interface/CalculTaillePolice.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
 
 /**
  * Service de gestion du texte de l'interface Babylon GUI.
  *
  * Règle importante :
- * - on ne convertit plus les tailles en pixels en mode standard ;
- * - on conserve l'unité définie dans guiTexture.json : %, px ou nombre ;
- * - taillePolice est une variation relative positive : 0 = taille originale, +2 = +2 % ;
+ * - la référence est la taille JSON mémorisée avant tout AutoFit ;
+ * - le niveau 1 à 6 ajoute de 0 à 5 px à cette référence ;
+ * - les anciens % sont convertis temporairement à la première lecture,
+ *   dans l'attente de leur conversion progressive en pixels dans les JSON ;
  * - en mode accessibilité, certains rôles ont une hiérarchie de taille :
  *   les titres restent plus grands que les textes courants.
  */
@@ -195,21 +197,15 @@ export class ServiceTexteGUI {
         }
 
         const police = parametres.police || "OpenDyslexic";
-        const variationPourcentage = Number.isFinite(parametres.taillePolice)
-            ? parametres.taillePolice
-            : 0;
-
+        const niveau = Number.isInteger(parametres.taillePolice)
+            ? parametres.taillePolice : constantesInterface.taillePoliceDefaut;
         textBlock.fontFamily = police;
-        textBlock.fontSize = estBoutonModeleAutoFit
-            ? this.calculerFontSizeModeleAutoFit(
-                textBlock.metadata.texteOriginal ?? textBlock.text,
-                textBlock.metadata.fontSizeModeleBase ?? textBlock.metadata.fontSizeOriginal,
-                variationPourcentage
-            )
-            : this.calculerFontSizeAvecVariation(
-                textBlock.metadata.fontSizeOriginal,
-                variationPourcentage
-            );
+        const tailleSource = estBoutonModeleAutoFit
+            ? (textBlock.metadata.fontSizeModeleBase ?? textBlock.metadata.fontSizeOriginal)
+            : textBlock.metadata.fontSizeOriginal;
+        textBlock.fontSize = this.calculerFontSizeAvecVariation(
+            tailleSource, niveau, textBlock
+        );
         // On mémorise la taille demandée séparément de la taille finale que
         // l'auto-fit pourra réduire. Ainsi une augmentation ultérieure repart
         // bien de la nouvelle taille et non de l'ancien résultat réduit.
@@ -496,15 +492,8 @@ export class ServiceTexteGUI {
         return textBlock?.metadata?.fontWeightOriginal ?? "400";
     }
 
-    calculerFontSizeModeleAutoFit(_texte, fontSizeBase, variationPourcentage = 0) {
-        const valeurBase = this.extraireNombre(fontSizeBase, 40);
-        const unite = String(fontSizeBase ?? "%").includes("px") ? "px" : "%";
-        const facteurVariation = Math.max(0.65, 1 + variationPourcentage / 100);
-
-        // On ne réduit plus selon le nombre de caractères. La taille demandée
-        // est d'abord appliquée, puis le service responsive mesure la largeur
-        // réelle avec la police active et conserve la plus grande taille qui tient.
-        return `${Math.max(1, valeurBase * facteurVariation)}${unite}`;
+    calculerFontSizeModeleAutoFit(_texte, fontSizeBase, niveau = 1, textBlock = null) {
+        return this.calculerFontSizeAvecVariation(fontSizeBase, niveau, textBlock);
     }
 
     extraireNombre(valeur, defaut = 0) {
@@ -524,29 +513,31 @@ export class ServiceTexteGUI {
         return `${nouvelleValeur}px`;
     }
 
-    calculerFontSizeAvecVariation(fontSizeOriginal, variationPourcentage) {
-        const facteur = Math.max(0.1, 1 + variationPourcentage / 100);
+    calculerFontSizeAvecVariation(fontSizeOriginal, niveau, textBlock = null) {
+        const valeur = Number.parseFloat(fontSizeOriginal);
+        if (!Number.isFinite(valeur) || valeur <= 0) return fontSizeOriginal;
 
-        if (typeof fontSizeOriginal === "number") {
-            return Math.max(1, fontSizeOriginal * facteur);
-        }
-
-        if (typeof fontSizeOriginal === "string") {
-            const valeur = parseFloat(fontSizeOriginal);
-            if (!Number.isFinite(valeur)) return fontSizeOriginal;
-
-            if (fontSizeOriginal.includes("%")) {
-                return `${Math.max(1, valeur * facteur)}%`;
+        const enPourcentage = String(fontSizeOriginal).includes("%");
+        let tailleBase = valeur;
+        if (enPourcentage) {
+            // Compatibilité temporaire des JSON non encore convertis en px.
+            // La première taille résolue est mémorisée une seule fois.
+            const metadata = textBlock?.metadata ?? {};
+            if (!Number.isFinite(metadata.fontSizeReferenceConvertiePx)) {
+                const mesure = Number(textBlock?.fontSizeInPixels);
+                const hauteur = Number(textBlock?._currentMeasure?.height);
+                metadata.fontSizeReferenceConvertiePx = Number.isFinite(mesure) && mesure > 0
+                    ? mesure : (Number.isFinite(hauteur) && hauteur > 0
+                        ? hauteur * valeur / 100 : NaN);
             }
-
-            if (fontSizeOriginal.includes("px")) {
-                return `${Math.max(1, valeur * facteur)}px`;
+            tailleBase = metadata.fontSizeReferenceConvertiePx;
+            if (!Number.isFinite(tailleBase) || tailleBase <= 0) {
+                // En l'absence de layout initial, préserver le pourcentage plutôt
+                // que de confondre une valeur de % avec un nombre de pixels.
+                return fontSizeOriginal;
             }
-
-            return `${Math.max(1, valeur * facteur)}px`;
         }
-
-        return fontSizeOriginal;
+        return `${calculerTaillePolicePx(tailleBase, niveau)}px`;
     }
 
     appliquerTailleNavigateurPx(etatApplication, taillePx) {
@@ -557,8 +548,8 @@ export class ServiceTexteGUI {
 
         const dejaTraites = new Set();
 
-        const variationPourcentage = Number(
-            etatApplication?.interface?.parametres?.taillePolice ?? 0
+        const niveauPolice = Number(
+            etatApplication?.interface?.parametres?.taillePolice ?? 1
         );
 
         advancedTexture.getDescendants().forEach((controle) => {
@@ -567,7 +558,7 @@ export class ServiceTexteGUI {
                 this.appliquerTailleNavigateurSurTextBlock(
                     controle,
                     valeur,
-                    variationPourcentage
+                    niveauPolice
                 );
             }
 
@@ -576,7 +567,7 @@ export class ServiceTexteGUI {
                 this.appliquerTailleNavigateurSurTextBlock(
                     controle.textBlock,
                     valeur,
-                    variationPourcentage
+                    niveauPolice
                 );
             }
         });
@@ -625,7 +616,7 @@ export class ServiceTexteGUI {
     appliquerTailleNavigateurSurTextBlock(
         textBlock,
         taillePx,
-        variationPourcentage = 0
+        niveau = 1
     ) {
         if (!textBlock || this.estTexteExcluTaille(textBlock)) return;
 
@@ -641,13 +632,12 @@ export class ServiceTexteGUI {
         }
 
         const facteur = this.facteurAccessibiliteTextBlock(textBlock);
-        const variation = Number.isFinite(Number(variationPourcentage))
-            ? Number(variationPourcentage)
-            : 0;
-        const facteurVariation = Math.max(0.1, 1 + variation / 100);
+        // Accessibilité : une taille navigateur indépendante + le delta additif,
+        // sans réappliquer le facteur de variation en pourcentage historique.
+        const decalagePx = Math.max(0, Math.min(5, Math.round(Number(niveau) || 1) - 1));
         const tailleAppliquee = Math.max(
             10,
-            Math.round(taillePx * facteur * facteurVariation)
+            Math.round(taillePx * facteur) + decalagePx
         );
 
         textBlock.metadata.tailleAccessibiliteNavigateurPx = tailleAppliquee;

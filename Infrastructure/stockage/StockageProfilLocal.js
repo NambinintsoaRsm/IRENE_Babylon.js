@@ -272,6 +272,7 @@ export class StockageProfilLocal {
                 interfaceUtilisateur: {
                     police: profil.interfaceUtilisateur.police,
                     taillePolice: profil.interfaceUtilisateur.taillePolice,
+                    formatTaillePolice: "niveau-additif-v1",
                     gras: profil.interfaceUtilisateur.gras,
                     theme: profil.interfaceUtilisateur.theme,
                     positionMenu: profil.interfaceUtilisateur.positionMenu,
@@ -335,7 +336,11 @@ export class StockageProfilLocal {
         return new ProfilUtilisateur({
             interfaceUtilisateur: new ParametresInterface({
                 police: reglages.interfaceUtilisateur?.police,
-                taillePolice: reglages.interfaceUtilisateur?.taillePolice,
+                // Une ancienne variation (%) ne correspond pas à un niveau 1..6.
+                // En l'absence de marqueur explicite, restaurer le niveau 1.
+                taillePolice: reglages.interfaceUtilisateur?.formatTaillePolice === "niveau-additif-v1"
+                    ? reglages.interfaceUtilisateur.taillePolice
+                    : 1,
                 gras: reglages.interfaceUtilisateur?.gras,
                 theme: reglages.interfaceUtilisateur?.theme,
                 positionMenu: reglages.interfaceUtilisateur?.positionMenu,
