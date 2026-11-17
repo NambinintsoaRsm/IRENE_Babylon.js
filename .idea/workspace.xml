@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="feat(gui): implémenter la gestion additive des tailles de police&#10;&#10;- Remplacer l'ancien système de variation en pourcentage par 6 niveaux fixes&#10;- Appliquer une augmentation additive de 0 à 5 px selon le niveau&#10;- Conserver les tailles initiales du JSON comme références&#10;- Centraliser la configuration des niveaux dans constantesInterface&#10;- Ajouter une règle de calcul indépendante de Babylon.js dans le Domain&#10;- Adapter le Use Case et le contrôleur du slider&#10;- Préserver l'AutoFit pour gérer les débordements sans modifier les références&#10;- Assurer la compatibilité temporaire avec les tailles JSON encore en pourcentage&#10;- Adapter la sauvegarde des préférences et la gestion des anciens profils&#10;- Simplifier l'affichage du slider pour afficher uniquement le niveau numérique&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture.">
+    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="feat(gui): implémentation d'un mécanisme de centrage verticale de texte dans les boutons">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Configuration/constantesInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesInterface.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceCentreTxtBtnsGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceCentreTxtBtnsGUI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/UseCases/accessibiliteUseCases/ToggleAccessUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/accessibiliteUseCases/ToggleAccessUC.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.mtl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.obj" beforeDir="false" />
@@ -143,7 +143,7 @@
       <workItem from="1790682100631" duration="7000" />
       <workItem from="1790698207674" duration="1256000" />
       <workItem from="1793889546468" duration="920000" />
-      <workItem from="1794780287113" duration="13936000" />
+      <workItem from="1794780287113" duration="18021000" />
     </task>
     <task id="LOCAL-00001" summary="animIntUseCases interfaceUseCases apparenceUseCases">
       <option name="closed" value="true" />
@@ -425,7 +425,15 @@
       <option name="project" value="LOCAL" />
       <updated>1794912685343</updated>
     </task>
-    <option name="localTasksCounter" value="36" />
+    <task id="LOCAL-00036" summary="feat(gui): implémentation d'un mécanisme de centrage verticale de texte dans les boutons">
+      <option name="closed" value="true" />
+      <created>1794917845119</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1794917845119</updated>
+    </task>
+    <option name="localTasksCounter" value="37" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -463,7 +471,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="mise à jours : 22juin" />
     <MESSAGE value="mise à jours : saillance" />
     <MESSAGE value="ajout des modèles en glb" />
     <MESSAGE value="changement en glb" />
@@ -488,7 +495,8 @@
     <MESSAGE value="maj 15 nov" />
     <MESSAGE value="feat(gui): centraliser la configuration responsive et des bordures&#10;&#10;Ajouter une configuration des exclusions individuelles de boutons&#10;&#10;Séparer les règles d'exclusion de l'implémentation Babylon.js&#10;&#10;Préserver les bordures d'origine des boutons exclus&#10;&#10;Configurer la résolution idéale de l'interface en 1920x1080&#10;&#10;Activer useSmallestIdeal pour améliorer l'adaptation responsive&#10;&#10;Centraliser les intervalles des sliders de bordures dans constantesInterface&#10;&#10;Supprimer les valeurs d'intervalles codées en dur dans ControleurInterface&#10;&#10;Conserver la compatibilité avec les thèmes et les réglages existants&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture." />
     <MESSAGE value="feat(gui): implémenter la gestion additive des tailles de police&#10;&#10;- Remplacer l'ancien système de variation en pourcentage par 6 niveaux fixes&#10;- Appliquer une augmentation additive de 0 à 5 px selon le niveau&#10;- Conserver les tailles initiales du JSON comme références&#10;- Centraliser la configuration des niveaux dans constantesInterface&#10;- Ajouter une règle de calcul indépendante de Babylon.js dans le Domain&#10;- Adapter le Use Case et le contrôleur du slider&#10;- Préserver l'AutoFit pour gérer les débordements sans modifier les références&#10;- Assurer la compatibilité temporaire avec les tailles JSON encore en pourcentage&#10;- Adapter la sauvegarde des préférences et la gestion des anciens profils&#10;- Simplifier l'affichage du slider pour afficher uniquement le niveau numérique&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture." />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(gui): implémenter la gestion additive des tailles de police&#10;&#10;- Remplacer l'ancien système de variation en pourcentage par 6 niveaux fixes&#10;- Appliquer une augmentation additive de 0 à 5 px selon le niveau&#10;- Conserver les tailles initiales du JSON comme références&#10;- Centraliser la configuration des niveaux dans constantesInterface&#10;- Ajouter une règle de calcul indépendante de Babylon.js dans le Domain&#10;- Adapter le Use Case et le contrôleur du slider&#10;- Préserver l'AutoFit pour gérer les débordements sans modifier les références&#10;- Assurer la compatibilité temporaire avec les tailles JSON encore en pourcentage&#10;- Adapter la sauvegarde des préférences et la gestion des anciens profils&#10;- Simplifier l'affichage du slider pour afficher uniquement le niveau numérique&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture." />
+    <MESSAGE value="feat(gui): implémentation d'un mécanisme de centrage verticale de texte dans les boutons" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(gui): implémentation d'un mécanisme de centrage verticale de texte dans les boutons" />
     <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
   </component>
 </project>

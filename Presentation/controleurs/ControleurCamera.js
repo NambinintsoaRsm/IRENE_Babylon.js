@@ -1,3 +1,4 @@
+import { configurationIconesGUI } from "../../Configuration/configurationIconesGUI.js";
 /**
  * @file Contrôleur des interactions caméra exposées par l'interface.
  *
@@ -45,7 +46,7 @@ export class ControleurCamera {
         boutonReinitialiser.height = "0px";
 
         if (flecheZoom) {
-            flecheZoom.text = "▶";
+            flecheZoom.text = configurationIconesGUI.fleches.symboles.droite;
         }
 
         boutonZoom.onPointerClickObservable.clear();
@@ -56,7 +57,7 @@ export class ControleurCamera {
             boutonReinitialiser.height = doitOuvrir ? boutonReinitialiser.metadata.hauteurOuverte : "0px";
 
             if (flecheZoom) {
-                flecheZoom.text = doitOuvrir ? "▼" : "▶";
+                flecheZoom.text = doitOuvrir ? configurationIconesGUI.fleches.symboles.bas : configurationIconesGUI.fleches.symboles.droite;
             }
         });
 
@@ -90,7 +91,7 @@ export class ControleurCamera {
         }
 
         if (flecheZoom) {
-            flecheZoom.text = "▶";
+            flecheZoom.text = configurationIconesGUI.fleches.symboles.droite;
         }
     }
 

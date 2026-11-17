@@ -1,3 +1,4 @@
+import { ServiceIconesGUI } from "../../Infrastructure/gui/ServiceIconesGUI.js";
 import { constantesAccueil } from "../../Configuration/constantesAccueil.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
 import { ServiceStyleInterfaceGUI } from "../../Infrastructure/gui/ServiceStyleInterfaceGUI.js";
@@ -33,6 +34,7 @@ export class ControleurAccueil {
         this.gestionnaireClavier = null;
         this.detruit = false;
         this.serviceStyleInterfaceGUI = new ServiceStyleInterfaceGUI();
+        this.serviceIconesGUI = new ServiceIconesGUI();
     }
 
     /**
@@ -198,15 +200,7 @@ export class ControleurAccueil {
         const source = this.creerDataUriPng(type, couleur);
         if (!source) return null;
 
-        const image = new BABYLON.GUI.Image(nomIcone, source);
-        image.width = taille;
-        image.height = taille;
-        image.stretch = BABYLON.GUI.Image.STRETCH_UNIFORM;
-        image.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        image.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        image.isHitTestVisible = false;
-        image.isPointerBlocker = false;
-        image.zIndex = 20;
+        const image = this.serviceIconesGUI.creerImage(nomIcone, source, taille, { zIndex: 20 });
         image.metadata = {
             ...(image.metadata ?? {}),
             iconeAccueil: true,
@@ -513,121 +507,7 @@ export class ControleurAccueil {
     }
 
     creerDataUriPng(type, couleur = "#000000") {
-        if (!globalThis.document?.createElement) return null;
-
-        const canvas = document.createElement("canvas");
-        canvas.width = 128;
-        canvas.height = 128;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return null;
-
-        ctx.clearRect(0, 0, 128, 128);
-        ctx.strokeStyle = couleur;
-        ctx.fillStyle = couleur;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-
-        if (type === "document") this.dessinerDocument(ctx);
-        if (type === "engrenage") this.dessinerEngrenage(ctx);
-        if (type === "outil") this.dessinerOutil(ctx);
-        if (type === "coche") this.dessinerCoche(ctx);
-
-        return canvas.toDataURL("image/png");
-    }
-
-    dessinerDocument(ctx) {
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(34, 18);
-        ctx.lineTo(76, 18);
-        ctx.lineTo(98, 40);
-        ctx.lineTo(98, 110);
-        ctx.lineTo(34, 110);
-        ctx.closePath();
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(76, 18);
-        ctx.lineTo(76, 40);
-        ctx.lineTo(98, 40);
-        ctx.stroke();
-    }
-
-    dessinerEngrenage(ctx) {
-        const cx = 64;
-        const cy = 64;
-        const dents = 8;
-        const rayonCreux = 37;
-        const rayonDent = 52;
-        const demiDent = Math.PI / 18;
-
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.lineWidth = 7;
-
-        ctx.beginPath();
-        for (let i = 0; i < dents; i += 1) {
-            const centre = (Math.PI * 2 * i) / dents - Math.PI / 2;
-            const angles = [
-                centre - Math.PI / 8,
-                centre - demiDent,
-                centre + demiDent,
-                centre + Math.PI / 8
-            ];
-            const rayons = [rayonCreux, rayonDent, rayonDent, rayonCreux];
-
-            angles.forEach((angle, index) => {
-                const x = Math.cos(angle) * rayons[index];
-                const y = Math.sin(angle) * rayons[index];
-                if (i === 0 && index === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-        }
-        ctx.closePath();
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(0, 0, 15, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-    }
-
-    dessinerOutil(ctx) {
-        ctx.save();
-        ctx.lineWidth = 8;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-
-        ctx.beginPath();
-        ctx.moveTo(34, 99);
-        ctx.lineTo(76, 57);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(29, 104, 10, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(74, 58);
-        ctx.bezierCurveTo(68, 48, 70, 36, 78, 28);
-        ctx.bezierCurveTo(86, 20, 97, 18, 106, 23);
-        ctx.lineTo(92, 37);
-        ctx.lineTo(101, 46);
-        ctx.lineTo(115, 32);
-        ctx.bezierCurveTo(118, 43, 114, 55, 106, 63);
-        ctx.bezierCurveTo(97, 72, 84, 72, 74, 58);
-        ctx.stroke();
-
-        ctx.restore();
-    }
-
-    dessinerCoche(ctx) {
-        ctx.lineWidth = 12;
-        ctx.beginPath();
-        ctx.moveTo(25, 67);
-        ctx.lineTo(52, 92);
-        ctx.lineTo(103, 35);
-        ctx.stroke();
+        return this.serviceIconesGUI.creerDataUriPng(type, couleur);
     }
 
     marquerGUI() {

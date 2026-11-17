@@ -409,9 +409,9 @@ export class ToggleAccessUC {
         }
 
         if (c.PoliTailleValTxt) {
-            c.PoliTailleValTxt.text = interf.taillePolice > 0
-                ? `+${Math.round(interf.taillePolice)}%`
-                : `${Math.round(interf.taillePolice)}%`;
+            c.PoliTailleValTxt.text = String(
+                Math.round(interf.taillePolice)
+            );
         }
 
         if (c.ThmSlider && fondScene) {

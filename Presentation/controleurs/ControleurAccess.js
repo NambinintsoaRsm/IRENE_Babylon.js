@@ -1,3 +1,4 @@
+import { ServiceIconesGUI } from "../../Infrastructure/gui/ServiceIconesGUI.js";
 /**
  * @file Contrôleur de présentation du panneau Accessibilité.
  *
@@ -20,6 +21,7 @@ export class ControleurAccess {
     constructor({ etatApplication, toggleAccessUC }) {
         this.etatApplication = etatApplication;
         this.toggleAccessUC = toggleAccessUC;
+        this.serviceIconesGUI = new ServiceIconesGUI();
         this.bouton = null;
         this.panneau = null;
         this.boutonRetour = null;
@@ -129,25 +131,13 @@ export class ControleurAccess {
 
         this.couleurIconeCourante = this.couleurIconeAccessibilite();
 
-        const icone = new BABYLON.GUI.Image(
+        const icone = this.serviceIconesGUI.creerImage(
             "AccesBtnIcon",
-            this.creerDataUriIconeAccessibilite(this.couleurIconeCourante)
+            this.creerDataUriIconeAccessibilite(this.couleurIconeCourante),
+            undefined,
+            { categorie: "accessibilite" }
         );
 
-        // Taille du pictogramme dans le bouton.
-        // 85% garde le bonhomme grand sans couper les bras/jambes.
-        icone.width = "85%";
-        icone.height = "85%";
-        icone.paddingLeft = "0px";
-        icone.paddingRight = "0px";
-        icone.paddingTop = "0px";
-        icone.paddingBottom = "0px";
-        icone.stretch = BABYLON.GUI.Image.STRETCH_UNIFORM;
-        icone.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        icone.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        icone.isHitTestVisible = false;
-        icone.isPointerBlocker = false;
-        icone.zIndex = 10;
         icone.metadata = {
             sourceBibliotheque: "Google Material Icons",
             icone: "accessibility_new",
@@ -280,29 +270,9 @@ export class ControleurAccess {
     }
 
     creerDataUriIconeAccessibilite(couleur = "#000000") {
-        const couleurSvg = this.normaliserCouleurSvg(couleur) || "#000000";
-
-        // Icône Google Material Icons "accessibility_new".
-        // Le SVG ne contient pas de fond : le bouton garde son apparence du GUI.
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 24 24" role="img" aria-label="Accessibilite">
-<path fill="${couleurSvg}" d="M12 6c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm8.5 0c-2.76.8-5.69 1-8.5 1s-5.74-.2-8.5-1L3 8c2.04.59 4.16.91 6.31 1.06L9 22h2l.31-6h1.38L13 22h2l-.31-12.94C16.84 8.91 18.96 8.59 21 8l-.5-2z"/>
-</svg>`;
-
-        return `data:image/svg+xml;base64,${this.encoderBase64(svg)}`;
-    }
-
-    encoderBase64(texte) {
-        const propre = String(texte ?? "").replace(/\s{2,}/g, " ").trim();
-
-        if (typeof btoa === "function") {
-            return btoa(propre);
-        }
-
-        if (typeof Buffer !== "undefined") {
-            return Buffer.from(propre, "utf8").toString("base64");
-        }
-
-        return propre;
+        return this.serviceIconesGUI.creerDataUriAccessibilite(
+            this.normaliserCouleurSvg(couleur) || "#000000"
+        );
     }
 
     normaliserCouleurFondOpaque(couleur) {

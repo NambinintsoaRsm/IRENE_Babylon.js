@@ -1,3 +1,4 @@
+import { configurationIconesGUI } from "../../Configuration/configurationIconesGUI.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
 import { constantesLumiere } from "../../Configuration/constantesLumiere.js";
 import { ServiceStyleInterfaceGUI } from "../../Infrastructure/gui/ServiceStyleInterfaceGUI.js";
@@ -178,7 +179,7 @@ export class ControleurLumiere {
         if (iconeDropdown) {
             iconeDropdown.metadata = iconeDropdown.metadata || {};
             iconeDropdown.metadata.texteDynamique = true;
-            iconeDropdown.text = "▶";
+            iconeDropdown.text = configurationIconesGUI.fleches.symboles.droite;
         }
 
         this.optionsBoutons.forEach((option) => {
@@ -197,7 +198,7 @@ export class ControleurLumiere {
             const ouvrir = !liste.isVisible;
             liste.isVisible = ouvrir;
             liste.height = ouvrir ? liste.metadata.hauteurOuverte : "0px";
-            if (iconeDropdown) iconeDropdown.text = ouvrir ? "▼" : "▶";
+            if (iconeDropdown) iconeDropdown.text = ouvrir ? configurationIconesGUI.fleches.symboles.bas : configurationIconesGUI.fleches.symboles.droite;
 
             // Le texte d'aide ne doit jamais recouvrir la liste déroulante.
             // Il réapparaît à la fermeture uniquement si la lumière tournante est active.
@@ -238,7 +239,7 @@ export class ControleurLumiere {
 
                 liste.isVisible = false;
                 liste.height = "0px";
-                if (iconeDropdown) iconeDropdown.text = "▶";
+                if (iconeDropdown) iconeDropdown.text = configurationIconesGUI.fleches.symboles.droite;
 
                 this.mettreAJourVisibiliteAideEspace(false);
 
@@ -505,7 +506,7 @@ export class ControleurLumiere {
             liste.isVisible = false;
             liste.height = "0px";
         }
-        if (icone) icone.text = "▶";
+        if (icone) icone.text = configurationIconesGUI.fleches.symboles.droite;
 
         this.mettreAJourVisibiliteAideEspace(false);
     }

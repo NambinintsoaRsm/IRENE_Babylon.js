@@ -1,3 +1,4 @@
+import { configurationIconesGUI } from "../../Configuration/configurationIconesGUI.js";
 /**
  * @file Contrôleur des paramètres de configuration de l'interface.
  *
@@ -221,7 +222,7 @@ export class ControleurInterface {
         if (iconeDropdown) {
             iconeDropdown.metadata = iconeDropdown.metadata || {};
             iconeDropdown.metadata.texteDynamique = true;
-            iconeDropdown.text = "▶";
+            iconeDropdown.text = configurationIconesGUI.fleches.symboles.droite;
         }
 
         if (boutonDropdown) {
@@ -263,7 +264,7 @@ export class ControleurInterface {
         liste.height = doitOuvrir ? liste.metadata?.hauteurOuverte ?? "260px" : "0px";
 
         if (iconeDropdown) {
-            iconeDropdown.text = doitOuvrir ? "▼" : "▶";
+            iconeDropdown.text = doitOuvrir ? configurationIconesGUI.fleches.symboles.bas : configurationIconesGUI.fleches.symboles.droite;
         }
     }
 
@@ -308,7 +309,7 @@ export class ControleurInterface {
         }
 
         if (iconeDropdown) {
-            iconeDropdown.text = "▶";
+            iconeDropdown.text = configurationIconesGUI.fleches.symboles.droite;
         }
     }
 
