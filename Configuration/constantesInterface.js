@@ -66,6 +66,13 @@ export const constantesInterface = Object.freeze({
      * calculée à partir des métriques réelles du navigateur afin que le glyphe
      * reste visuellement centré dans son espace sur Firefox, Chromium/Brave, etc.
      */
+    /** Compensation optique verticale des libellés de boutons, après AutoFit. */
+    centrageOptiqueBoutons: Object.freeze({
+        actif: true,
+        decalageMaxPx: 8,
+        nomsExclus: Object.freeze([])
+    }),
+
     flechesNavigation: Object.freeze({
         police: "Arial",
         debugCentrage: false,

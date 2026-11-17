@@ -1,3 +1,4 @@
+import { ServiceCentreTxtBtnsGUI } from "./ServiceCentreTxtBtnsGUI.js";
 import { calculerTaillePolicePx } from "../../Domain/interface/CalculTaillePolice.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
 
@@ -15,6 +16,9 @@ import { constantesInterface } from "../../Configuration/constantesInterface.js"
 export class ServiceTexteGUI {
     constructor() {
         this.timersAutoFit = [];
+        this.centrageOptiqueBoutons = new ServiceCentreTxtBtnsGUI();
+        this.desabonnerCentrageBoutonsAutoFit = null;
+        this.serviceAutoFitObserve = null;
 
         this.nomsTextesIconesExclus = new Set([
             "LoupeBtnTxt",
@@ -138,6 +142,9 @@ export class ServiceTexteGUI {
             }
         });
 
+        // Le centrage des libellés intervient après le recalcul des dimensions et l’AutoFit.
+        this.installerCentrageOptiqueBoutons(etatApplication);
+
         // La police choisie reste appliquée normalement à tous les textes.
         // On ne corrige qu’ensuite les pictogrammes de flèche afin de les
         // remettre en Arial, sans toucher au mécanisme Tiresias/Liberation/etc.
@@ -156,6 +163,26 @@ export class ServiceTexteGUI {
         advancedTexture.markAsDirty();
         this.reappliquerAutoFitApresChangement(etatApplication);
         this.planifierCentrageOptiqueFleches(etatApplication);
+    }
+
+    installerCentrageOptiqueBoutons(etatApplication) {
+        const advancedTexture = etatApplication?.gui?.advancedTexture;
+        if (!advancedTexture) return;
+
+        this.centrageOptiqueBoutons.installer(advancedTexture);
+
+        const serviceAutoFit = etatApplication?.services?.texteResponsive;
+        if (serviceAutoFit === this.serviceAutoFitObserve) return;
+
+        this.desabonnerCentrageBoutonsAutoFit?.();
+        this.desabonnerCentrageBoutonsAutoFit = null;
+        this.serviceAutoFitObserve = serviceAutoFit ?? null;
+
+        if (typeof serviceAutoFit?.ajouterEcouteurApresAjustement === "function") {
+            this.desabonnerCentrageBoutonsAutoFit = serviceAutoFit.ajouterEcouteurApresAjustement(
+                () => this.centrageOptiqueBoutons.planifierCentrage()
+            );
+        }
     }
 
     appliquerSurTextBlock(textBlock, parametres) {
