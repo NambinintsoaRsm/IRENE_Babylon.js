@@ -20,20 +20,20 @@ import { constantesInterface } from "../../Configuration/constantesInterface.js"
  */
 export class ControleurInterface {
     constructor({
-        etatApplication,
-        changerPoliceUC,
-        changerTaillePoliceUC,
-        changerThemeInterfaceUC,
-        changerPositionMenuUC,
-        changerBordureMenuUC,
-        changerBordureBoutonUC,
-        changerGrasUC,
-        reinitialiserInterfaceUC,
-        serviceTexteGUI,
-        serviceStyleInterfaceGUI,
-        servicePolicesNavigateur = null,
-        serviceControlesSpeciauxGUI = null
-    }) {
+                    etatApplication,
+                    changerPoliceUC,
+                    changerTaillePoliceUC,
+                    changerThemeInterfaceUC,
+                    changerPositionMenuUC,
+                    changerBordureMenuUC,
+                    changerBordureBoutonUC,
+                    changerGrasUC,
+                    reinitialiserInterfaceUC,
+                    serviceTexteGUI,
+                    serviceStyleInterfaceGUI,
+                    servicePolicesNavigateur = null,
+                    serviceControlesSpeciauxGUI = null
+                }) {
         this.etatApplication = etatApplication;
 
         this.changerPoliceUC = changerPoliceUC;
@@ -695,7 +695,7 @@ export class ControleurInterface {
         textBlock.metadata.texteDynamique = true;
         textBlock.text = actif ? "✓" : "";
         textBlock.color = this.etatApplication.interface.parametres.theme === ThemeInterface.NOIR
-            || this.etatApplication.interface.parametres.theme === ThemeInterface.GRIS_FONCE
+        || this.etatApplication.interface.parametres.theme === ThemeInterface.GRIS_FONCE
             ? "#FFFFFFFF"
             : "#000000FF";
         textBlock.fontWeight = "700";
@@ -799,9 +799,10 @@ export class ControleurInterface {
             return;
         }
 
-        slider.minimum = 1;
-        slider.maximum = 8;
-        slider.step = 1;
+        const configuration = constantesInterface.sliderBordures.boutons;
+        slider.minimum = configuration.minimum;
+        slider.maximum = configuration.maximum;
+        slider.step = configuration.step;
         slider.value = this.etatApplication.interface.parametres.tailleBorduresBoutons || 1;
 
         if (texteValeur) {
@@ -829,9 +830,10 @@ export class ControleurInterface {
             return;
         }
 
-        slider.minimum = 1;
-        slider.maximum = 8;
-        slider.step = 1;
+        const configuration = constantesInterface.sliderBordures.menus;
+        slider.minimum = configuration.minimum;
+        slider.maximum = configuration.maximum;
+        slider.step = configuration.step;
         slider.value = this.etatApplication.interface.parametres.tailleBorduresMenu || 1;
 
         if (texteValeur) {

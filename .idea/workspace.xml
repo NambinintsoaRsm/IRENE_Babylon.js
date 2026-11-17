@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="save 11 sept">
+    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="maj 15 nov">
+      <change afterPath="$PROJECT_DIR$/Configuration/configurationBorduresGUI.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Configuration/configurationResolutionGUI.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Domain/interface/PolitiqueBordures.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Configuration/constantesInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesInterface.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Configuration/constantesLumiere.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesLumiere.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/FabriqueSceneGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/FabriqueSceneGUI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/babylon/ServiceLumiereBabylon.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/babylon/ServiceLumiereBabylon.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceListeModelesGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceListeModelesGUI.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteResponsiveGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteResponsiveGUI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurAccueil.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurAccueil.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurLumiere.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurLumiere.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture_back.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture_back.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.mtl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.obj" beforeDir="false" />
@@ -36,7 +32,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="contoTest" />
+        <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -91,7 +87,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "version-fluide",
     "javascript.preferred.runtime.type.id": "node",
     "last_opened_file_path": "/home/rasoamanana-nambinintsoa-saotra/WebstormProjects/ANNA_Babylon",
     "nodejs_package_manager_path": "npm",
@@ -151,6 +147,7 @@
       <workItem from="1790682100631" duration="7000" />
       <workItem from="1790698207674" duration="1256000" />
       <workItem from="1793889546468" duration="920000" />
+      <workItem from="1794780287113" duration="11036000" />
     </task>
     <task id="LOCAL-00001" summary="animIntUseCases interfaceUseCases apparenceUseCases">
       <option name="closed" value="true" />
@@ -408,7 +405,15 @@
       <option name="project" value="LOCAL" />
       <updated>1789127276874</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="maj 15 nov">
+      <option name="closed" value="true" />
+      <created>1794780443840</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1794780443840</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -446,7 +451,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="correction épaisseur des contours" />
     <MESSAGE value="test highlight , entropie + csv , correction bug background" />
     <MESSAGE value="ajout des fichiers non versionnés" />
     <MESSAGE value="mise à jours : 22juin" />
@@ -471,7 +475,8 @@
     <MESSAGE value="feat: integration du questionnaire" />
     <MESSAGE value="feat: integration du questionnaire avec enregistrement et envoie par mail" />
     <MESSAGE value="save 11 sept" />
-    <option name="LAST_COMMIT_MESSAGE" value="save 11 sept" />
+    <MESSAGE value="maj 15 nov" />
+    <option name="LAST_COMMIT_MESSAGE" value="maj 15 nov" />
     <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
   </component>
 </project>

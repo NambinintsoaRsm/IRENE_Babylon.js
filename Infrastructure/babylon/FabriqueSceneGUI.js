@@ -1,3 +1,5 @@
+import { configurationResolutionGUI } from "../../Configuration/configurationResolutionGUI.js";
+
 /**
  * Crée une scène Babylon séparée pour la GUI.
  *
@@ -30,11 +32,17 @@ export class FabriqueSceneGUI {
             throw new Error("Scène GUI introuvable pour créer l'interface.");
         }
 
-        return BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI(
+        const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI(
             nom,
             true,
             sceneGUI
         );
+
+        advancedTexture.idealWidth = configurationResolutionGUI.idealWidth;
+        advancedTexture.idealHeight = configurationResolutionGUI.idealHeight;
+        advancedTexture.useSmallestIdeal = configurationResolutionGUI.useSmallestIdeal;
+
+        return advancedTexture;
     }
 
     /**

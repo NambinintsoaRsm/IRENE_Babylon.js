@@ -25,6 +25,23 @@ export const constantesInterface = Object.freeze({
     tailleBorduresBoutonsDefaut: 1,
 
     /**
+     * Plages des curseurs d'épaisseur des bordures.
+     * Le contrôleur applique ces valeurs après le chargement de guiTexture.json.
+     */
+    sliderBordures: Object.freeze({
+        boutons: Object.freeze({
+            minimum: 1,
+            maximum: 5,
+            step: 1
+        }),
+        menus: Object.freeze({
+            minimum: 1,
+            maximum: 7,
+            step: 1
+        })
+    }),
+
+    /**
      * Paramètres techniques du slider de taille de police.
      * La borne maximale n'est volontairement pas configurée ici : elle est
      * calculée à partir de l'espace réellement disponible dans la GUI et de la

@@ -9,6 +9,8 @@
  */
 import { constantesInterface, obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
 import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
+import { configurationBorduresGUI } from "../../Configuration/configurationBorduresGUI.js";
+import { peutModifierBordureBouton } from "../../Domain/interface/PolitiqueBordures.js";
 
 /**
  * Applique les réglages visuels de l'interface :
@@ -77,6 +79,20 @@ export class ServiceStyleInterfaceGUI {
         controle.metadata.thicknessOriginal = controle.thickness;
     }
 
+    appliquerEpaisseurBordureBouton(bouton, taille) {
+        this.memoriserStyleOriginal(bouton);
+
+        if (!peutModifierBordureBouton(bouton.name, configurationBorduresGUI.boutonsExclus)) {
+            // Un bouton exclu conserve l'épaisseur définie avant l'application du thème.
+            if (bouton.metadata?.thicknessOriginal !== undefined) {
+                bouton.thickness = bouton.metadata.thicknessOriginal;
+            }
+            return;
+        }
+
+        bouton.thickness = taille;
+    }
+
     appliquerThemeBouton(bouton, theme, parametres) {
         if (this.estBoutonAvecCouleurPropre(bouton)) {
             // Exception importante : les boutons de couleurs de contours
@@ -91,13 +107,13 @@ export class ServiceStyleInterfaceGUI {
                 bouton.color = bouton.metadata.colorOriginal;
             }
 
-            bouton.thickness = parametres.tailleBorduresBoutons;
+            this.appliquerEpaisseurBordureBouton(bouton, parametres.tailleBorduresBoutons);
             return;
         }
 
         bouton.background = theme.boutonFond;
         bouton.color = theme.boutonBordure;
-        bouton.thickness = parametres.tailleBorduresBoutons;
+        this.appliquerEpaisseurBordureBouton(bouton, parametres.tailleBorduresBoutons);
 
         if (bouton.textBlock) {
             bouton.textBlock.color = theme.boutonTexte;
@@ -578,7 +594,7 @@ export class ServiceStyleInterfaceGUI {
 
         advancedTexture.getDescendants().forEach((controle) => {
             if (controle instanceof BABYLON.GUI.Button) {
-                controle.thickness = taille;
+                this.appliquerEpaisseurBordureBouton(controle, taille);
             }
         });
 
