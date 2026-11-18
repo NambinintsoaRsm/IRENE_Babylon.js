@@ -439,6 +439,8 @@ export class ControleurProfil {
             this.reglerSlider(c.BdSzMenuSlider, interfaceUtilisateur.taillePolice);
             this.reglerSlider(c.BdTaiBoutonSli, interfaceUtilisateur.tailleBorduresBoutons);
             this.reglerSlider(c.BdTaiMenuSli, interfaceUtilisateur.tailleBorduresMenu);
+            this.reglerTexte(c.BdTaiBouValTxt, Math.round(interfaceUtilisateur.tailleBorduresBoutons));
+            this.reglerTexte(c.BdTaiMenValTxt, Math.round(interfaceUtilisateur.tailleBorduresMenu));
             this.reglerTexte(c.PlcDropBtnTxt, this.libellePolice(interfaceUtilisateur.police));
             this.controleurInterface?.synchroniserDropdownPoliceDepuisEtat?.();
         }

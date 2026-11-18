@@ -1,4 +1,5 @@
 import { ParametresInterface } from "../../Domain/interface/ParametresInterface.js";
+import { estNiveauPoliceValide } from "../../Domain/interface/NiveauPolice.js";
 
 export class ChangerTaillePoliceUC {
     constructor(etatApplication) {
@@ -6,7 +7,7 @@ export class ChangerTaillePoliceUC {
     }
 
     executer(taillePolice) {
-        if (!Number.isInteger(taillePolice) || taillePolice < 1 || taillePolice > 6) {
+        if (!estNiveauPoliceValide(taillePolice)) {
             throw new Error("La taille de police demandée est invalide.");
         }
 

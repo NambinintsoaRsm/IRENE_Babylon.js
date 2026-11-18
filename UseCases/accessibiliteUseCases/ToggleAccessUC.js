@@ -385,6 +385,17 @@ export class ToggleAccessUC {
         }
     }
 
+    actualiserTexteValeurBordure(controle, valeur) {
+        const texte = String(Math.round(Number(valeur)));
+        controle.metadata = controle.metadata || {};
+        controle.metadata.texteDynamique = true;
+        controle.metadata.responsiveTexteOriginal = texte;
+        delete controle.metadata.texteOriginal;
+        delete controle.metadata.dernierTexteAutoFit;
+        controle.text = texte;
+        controle._markAsDirty?.();
+    }
+
     synchroniserGUIDepuisEtat() {
         const c = this.etatApplication.gui?.controles ?? {};
         const apparence = this.etatApplication.apparence.parametres;
@@ -397,21 +408,18 @@ export class ToggleAccessUC {
         this.reglerSliderEtTexte(c.SaturationSlider, c.RegLumSatTxt, apparence.saturation, false);
 
         if (c.BdTaiMenuSli) c.BdTaiMenuSli.value = interf.tailleBorduresMenu;
-        if (c.BdTaiMenValTxt) c.BdTaiMenValTxt.text = String(Math.round(interf.tailleBorduresMenu));
+        if (c.BdTaiMenValTxt) this.actualiserTexteValeurBordure(c.BdTaiMenValTxt, interf.tailleBorduresMenu);
         if (c.BdTaiBoutonSli) c.BdTaiBoutonSli.value = interf.tailleBorduresBoutons;
-        if (c.BdTaiBouValTxt) c.BdTaiBouValTxt.text = String(Math.round(interf.tailleBorduresBoutons));
+        if (c.BdTaiBouValTxt) this.actualiserTexteValeurBordure(c.BdTaiBouValTxt, interf.tailleBorduresBoutons);
 
         if (c.BdSzMenuSlider) {
-            // Les bornes du slider sont pilotées par ControleurInterface :
-            // minimum issu de la GUI, maximum calculé selon la police et les
-            // contenants. Le mode Accessibilité ne doit jamais les écraser.
+            // Les bornes fixes 1–6 sont pilotées par ControleurInterface.
+            // Le mode Accessibilité synchronise la valeur sans les modifier.
             c.BdSzMenuSlider.value = interf.taillePolice;
         }
 
         if (c.PoliTailleValTxt) {
-            c.PoliTailleValTxt.text = String(
-                Math.round(interf.taillePolice)
-            );
+            c.PoliTailleValTxt.text = String(Math.round(interf.taillePolice));
         }
 
         if (c.ThmSlider && fondScene) {

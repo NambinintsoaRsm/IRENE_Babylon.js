@@ -1,4 +1,3 @@
-import { configurationIconesGUI } from "./configurationIconesGUI.js";
 /**
  * @file Configuration visuelle de l'interface Babylon GUI d'ANNA.
  *
@@ -12,11 +11,12 @@ import { configurationIconesGUI } from "./configurationIconesGUI.js";
  */
 import { ThemeInterface } from "../Domain/interface/ThemeInterface.js";
 import { PositionMenu } from "../Domain/interface/PositionMenu.js";
+import { NIVEAU_POLICE_MIN, NIVEAU_POLICE_MAX } from "../Domain/interface/NiveauPolice.js";
 
 export const constantesInterface = Object.freeze({
     /** Valeurs chargées lorsqu'aucun profil utilisateur n'est disponible. */
     policeDefaut: "Luciole",
-    taillePoliceDefaut: 1,
+    taillePoliceDefaut: NIVEAU_POLICE_MIN,
     grasDefaut: false,
 
     themeDefaut: ThemeInterface.BLANC,
@@ -32,20 +32,20 @@ export const constantesInterface = Object.freeze({
     sliderBordures: Object.freeze({
         boutons: Object.freeze({
             minimum: 1,
-            maximum: 8,
+            maximum: 5,
             step: 1
         }),
         menus: Object.freeze({
             minimum: 1,
-            maximum: 8,
+            maximum: 7,
             step: 1
         })
     }),
 
-    /** Réglage additif : niveau 1 = taille JSON, niveau 6 = +5 px. */
+    /** Réglage additif : niveau 1 = taille JSON, niveau maximum = +5 px. */
     sliderTaillePolice: Object.freeze({
-        minimum: 1,
-        maximum: 6,
+        minimum: NIVEAU_POLICE_MIN,
+        maximum: NIVEAU_POLICE_MAX,
         step: 1,
         augmentationParNiveauPx: 1,
         debugAutoFit: false
@@ -74,7 +74,31 @@ export const constantesInterface = Object.freeze({
         nomsExclus: Object.freeze([])
     }),
 
-    flechesNavigation: configurationIconesGUI.fleches,
+    flechesNavigation: Object.freeze({
+        police: "Arial",
+        debugCentrage: false,
+        noms: Object.freeze([
+            "FlecheMenuBtnTxt",
+            "FichDropBtnTxt",
+            "OuvBtnDropText",
+            "EnrBtnDropText",
+            "ConfDropBtnTxt",
+            "PolBtnDropText",
+            "MenuBtnDropText",
+            "OutiBtnDropText",
+            "RegBtnDropTxt",
+            "ContBtnDropText",
+            "TextuBtnDropTxt",
+            "LumBtnDropTxt",
+            "PlcDropBtnIcoTxt",
+            "LumDropBtnIcoTxt"
+        ]),
+        // La grande flèche latérale est volontairement laissée exactement comme
+        // dans guiTexture.json.
+        exclusCentrageOptique: Object.freeze([
+            "FlecheMenuBtnTxt"
+        ])
+    }),
 
     /**
      * Liste volontairement limitée aux polices proposées par le menu Polices.
@@ -149,9 +173,9 @@ export const constantesInterface = Object.freeze({
         [ThemeInterface.GRIS_FONCE]: Object.freeze({
 
             // Fonds
-            fondPrincipal: "#575657FF",   // couleur principale choisie
-            fondSecondaire: "#484748FF", // légèrement plus sombre
-            fondSection: "#666566FF",    // séparation visible sans sortir du gris
+            fondPrincipal: "#5D5D5DFF", // gris anthracite uniforme du panneau de référence
+            fondSecondaire: "#575757FF",
+            fondSection: "#666666FF",
 
             // Textes
             textePrincipal: "#FFFFFFFF",
@@ -161,7 +185,7 @@ export const constantesInterface = Object.freeze({
             bordure: "#FFFFFFFF",
 
             // Boutons
-            boutonFond: "#353535FF",
+            boutonFond: "#000000FF",
             boutonTexte: "#FFFFFFFF",
             boutonBordure: "#FFFFFFFF",
 
@@ -201,18 +225,27 @@ export const constantesInterface = Object.freeze({
 
     /** Sens de la flèche latérale selon le côté du menu et son état. */
     flechesMenu: Object.freeze({
+        // Menu à droite : l'onglet est à gauche du menu.
+        // Ouvert => la flèche indique le repli vers la droite.
+        // Fermé  => la flèche indique l'ouverture vers la gauche.
         [PositionMenu.DROITE]: Object.freeze({
-            ouvert: configurationIconesGUI.fleches.symboles.droite,
-            ferme: configurationIconesGUI.fleches.symboles.gauche
+            ouvert: "▶",
+            ferme: "◀"
         }),
+
+        // Menu à gauche : l'onglet est à droite du menu.
+        // Ouvert => la flèche indique le repli vers la gauche.
+        // Fermé  => la flèche indique l'ouverture vers la droite.
         [PositionMenu.GAUCHE]: Object.freeze({
-            ouvert: configurationIconesGUI.fleches.symboles.gauche,
-            ferme: configurationIconesGUI.fleches.symboles.droite
+            ouvert: "◀",
+            ferme: "▶"
         })
     }),
+
+    /** Symboles des accordéons internes : ▼ ouvert, ▶ fermé. */
     flechesDropdown: Object.freeze({
-        ouvert: configurationIconesGUI.fleches.symboles.bas,
-        ferme: configurationIconesGUI.fleches.symboles.droite
+        ouvert: "▼",
+        ferme: "▶"
     }),
 
     /**
@@ -232,8 +265,8 @@ export const constantesInterface = Object.freeze({
             // Le JSON reste la source de vérité pour la taille et la position
             // des boutons. La taille de la croix est calculée au runtime à
             // partir de l'espace réellement disponible dans le bouton.
-            caractereIcone: configurationIconesGUI.fermeture.symbole,
-            policeIcone: configurationIconesGUI.fermeture.police,
+            caractereIcone: "X",
+            policeIcone: "Arial",
             poidsIcone: "700",
             epaisseurVisuelleIcone: 1,
             margeInterieureRatio: 0.12,

@@ -10,7 +10,9 @@
 import { constantesInterface, obtenirThemeInterface } from "../../Configuration/constantesInterface.js";
 import { PositionMenu } from "../../Domain/interface/PositionMenu.js";
 import { configurationBorduresGUI } from "../../Configuration/configurationBorduresGUI.js";
-import { peutModifierBordureBouton } from "../../Domain/interface/PolitiqueBordures.js";
+import { configurationDropdownGUI } from "../../Configuration/configurationDropdownGUI.js";
+import { doitAppliquerCouleursFixesDropdown } from "../../Domain/interface/PolitiqueCouleursDropdown.js";
+import { peutModifierBordureBouton, peutModifierBordureRectangle } from "../../Domain/interface/PolitiqueBordures.js";
 
 /**
  * Applique les réglages visuels de l'interface :
@@ -57,9 +59,61 @@ export class ServiceStyleInterfaceGUI {
         this.appliquerExceptions(etatApplication, theme);
         this.appliquerFondBoutonsOptionsSelonTheme(etatApplication, theme);
         this.corrigerContrasteBoutons(advancedTexture);
+        // Dernier passage : seules les listes configurées conservent leur palette.
+        this.appliquerPaletteListesDeroulees(advancedTexture);
         advancedTexture.markAsDirty();
 
         return theme;
+    }
+
+    /**
+     * Applique une palette fixe uniquement aux listes éligibles, jamais au bouton
+     * qui les ouvre. L'opération est répétée après chaque changement de thème.
+     * Les propriétés géométriques et les styles des autres dropdowns sont intacts.
+     */
+    appliquerPaletteListesDeroulees(advancedTexture) {
+        if (!advancedTexture) return;
+        const regle = configurationDropdownGUI.couleursFixes;
+        if (!regle?.actif) return;
+
+        // Liste des conteneurs potentiellement pris en charge. Elle comprend
+        // les inclusions explicites et les listes connues pour le mode exclusion.
+        const listesConnues = new Set([
+            ...regle.nomsInclus,
+            "PlcTyPoScrollV",
+            "LumTypScroll",
+            "ModelScroll"
+        ]);
+        for (const nom of listesConnues) {
+            if (!doitAppliquerCouleursFixesDropdown(nom, regle)) continue;
+            const liste = advancedTexture.getControlByName?.(nom);
+            if (!liste) continue;
+            const couleurs = regle.couleurs;
+            liste.background = couleurs.fondListe;
+            liste._markAsDirty?.();
+
+            const parcourir = (conteneur) => {
+                for (const enfant of conteneur.children ?? []) {
+                    if (enfant instanceof BABYLON.GUI.Button) {
+                        if (this.estBoutonAvecCouleurPropre(enfant)) continue;
+                        const actif = enfant.metadata?.estOptionActive === true
+                            || enfant.metadata?.estBoutonOptionActive === true
+                            || enfant.metadata?.estActif === true;
+                        enfant.background = actif
+                            ? couleurs.fondOptionSelectionnee
+                            : couleurs.fondOption;
+                        enfant.color = couleurs.bordureOption;
+                        this.appliquerCouleurTexteBouton(enfant, couleurs.texteOption);
+                        enfant._markAsDirty?.();
+                    } else if (enfant instanceof BABYLON.GUI.TextBlock) {
+                        enfant.color = couleurs.texteOption;
+                        enfant._markAsDirty?.();
+                    }
+                    parcourir(enfant);
+                }
+            };
+            parcourir(liste);
+        }
     }
 
     memoriserStyleOriginal(controle) {
@@ -130,15 +184,26 @@ export class ServiceStyleInterfaceGUI {
         }
     }
 
+    appliquerEpaisseurBordureRectangle(rectangle, taille) {
+        this.memoriserStyleOriginal(rectangle);
+        if (!peutModifierBordureRectangle(rectangle.name, configurationBorduresGUI.rectanglesExclus)) {
+            if (rectangle.metadata?.thicknessOriginal !== undefined) {
+                rectangle.thickness = rectangle.metadata.thicknessOriginal;
+            }
+            return;
+        }
+        rectangle.thickness = taille;
+    }
+
     appliquerThemeRectangle(rectangle, theme, parametres) {
         if (this.estRectangleAvecCouleurPropre(rectangle)) {
-            rectangle.thickness = parametres.tailleBorduresMenu;
+            this.appliquerEpaisseurBordureRectangle(rectangle, parametres.tailleBorduresMenu);
             return;
         }
 
         rectangle.background = theme.fondPrincipal;
         rectangle.color = theme.bordure;
-        rectangle.thickness = parametres.tailleBorduresMenu;
+        this.appliquerEpaisseurBordureRectangle(rectangle, parametres.tailleBorduresMenu);
     }
 
     appliquerThemeTexte(textBlock, theme) {
@@ -610,7 +675,7 @@ export class ServiceStyleInterfaceGUI {
 
         advancedTexture.getDescendants().forEach((controle) => {
             if (controle instanceof BABYLON.GUI.Rectangle && !(controle instanceof BABYLON.GUI.Button)) {
-                controle.thickness = taille;
+                this.appliquerEpaisseurBordureRectangle(controle, taille);
             }
         });
 

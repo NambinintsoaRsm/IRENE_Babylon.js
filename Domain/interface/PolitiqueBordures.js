@@ -5,3 +5,8 @@
 export function peutModifierBordureBouton(nomBouton, boutonsExclus) {
     return !boutonsExclus.includes(nomBouton);
 }
+
+/** Politique indépendante de Babylon.js pour les rectangles non-boutons. */
+export function peutModifierBordureRectangle(nomRectangle, rectanglesExclus) {
+    return !rectanglesExclus.includes(nomRectangle);
+}

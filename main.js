@@ -42,6 +42,7 @@ import { RechercheControleGUI } from "./Infrastructure/gui/RechercheControleGUI.
 import { ServiceDimensionsGUI } from "./Infrastructure/gui/ServiceDimensionsGUI.js";
 import { ServiceAnimationGUI } from "./Infrastructure/gui/ServiceAnimationGUI.js";
 import { ServiceStyleInterfaceGUI } from "./Infrastructure/gui/ServiceStyleInterfaceGUI.js";
+import { ServiceHoverGUI } from "./Infrastructure/gui/ServiceHoverGUI.js";
 import { ServiceTexteGUI } from "./Infrastructure/gui/ServiceTexteGUI.js";
 import { ServiceTexteResponsiveGUI } from "./Infrastructure/gui/ServiceTexteResponsiveGUI.js";
 import { ServiceBlocagePointeurGUI } from "./Infrastructure/gui/ServiceBlocagePointeurGUI.js";
@@ -906,6 +907,7 @@ async function main() {
     const serviceDimensionsGUI = new ServiceDimensionsGUI();
     const serviceAnimationGUI = new ServiceAnimationGUI(serviceDimensionsGUI, etatApplication.scenes.sceneGUI, etatApplication);
     const serviceStyleInterfaceGUI = new ServiceStyleInterfaceGUI();
+    const serviceHoverGUI = new ServiceHoverGUI(etatApplication, serviceStyleInterfaceGUI);
     const serviceTexteGUI = new ServiceTexteGUI();
     const serviceTexteResponsiveGUI = new ServiceTexteResponsiveGUI();
 
@@ -1045,7 +1047,8 @@ async function main() {
         serviceTexteGUI,
         serviceStyleInterfaceGUI,
         servicePolicesNavigateur,
-        serviceControlesSpeciauxGUI
+        serviceControlesSpeciauxGUI,
+        serviceHoverGUI
     });
 
     const controleurApparence = new ControleurApparence({
@@ -1141,6 +1144,7 @@ async function main() {
     const appliquerThemeInterfaceOriginal = serviceStyleInterfaceGUI.appliquerTheme.bind(serviceStyleInterfaceGUI);
     serviceStyleInterfaceGUI.appliquerTheme = (...args) => {
         const retour = appliquerThemeInterfaceOriginal(...args);
+        serviceHoverGUI.apresApplicationTheme();
         const synchroniserInterfaceSpeciale = () => {
             controleurAccess.synchroniserEtatVisuel?.();
             controleurContours.mettreAJourBoutonCouleurAdaptative?.();
@@ -1153,6 +1157,14 @@ async function main() {
     };
 
     brancherAnimationInterface(controleurAnimationInterface);
+    serviceHoverGUI.brancherDropdowns([
+        ...Object.values(NOMS_GUI.accordions),
+        ...Object.values(NOMS_GUI.accordionsImbriques),
+        ...Object.values(NOMS_GUI.panneaux).map((item) => ({ bouton: item.bouton, rect: item.panneau }))
+    ].map(({ bouton, rect }) => ({
+        bouton: obtenir(etatApplication.gui.controles, bouton),
+        rect: obtenir(etatApplication.gui.controles, rect)
+    })));
     controleurInterface.brancherDepuisNomsGUI(NOMS_GUI, serviceAnimationGUI);
     brancherFermetureApplication({
         etatApplication,

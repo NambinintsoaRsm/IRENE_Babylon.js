@@ -215,6 +215,13 @@ export class ServiceTexteGUI {
             textBlock.metadata.fontSizeOriginal = textBlock.fontSize;
         }
 
+        // Valeurs de bordures : elles sont pilotées par l'état, jamais par le "1" du JSON.
+        // La déclaration précède impérativement la mémorisation de texteOriginal.
+        if (textBlock.name === "BdTaiMenValTxt" || textBlock.name === "BdTaiBouValTxt") {
+            textBlock.metadata.texteDynamique = true;
+            textBlock.metadata.responsiveTexteOriginal = String(textBlock.text ?? "");
+            delete textBlock.metadata.texteOriginal;
+        }
         const estTexteDynamique = textBlock.metadata.texteDynamique === true;
         const estBoutonModeleAutoFit = textBlock.metadata.boutonModeleAutoFit === true;
         const estTexteMultiligne = this.estTexteMultiligne(textBlock);
@@ -368,6 +375,9 @@ export class ServiceTexteGUI {
             const nom = String(controle.name ?? "");
             if (!this.nomsFlechesPoliceFixeArial.has(nom)) return;
             if (this.nomsFlechesCentrageExclues.has(nom)) return;
+            // Le centrage sur les métriques d'un glyphe non tourné ne convient
+            // pas aux flèches normalisées par rotation du même symbole.
+            if (controle.metadata?.nePasCentrageOptiqueFleche === true) return;
 
             const symbole = String(controle.text ?? "").trim();
             if (!/^[▶▼▲◀]$/.test(symbole)) return;

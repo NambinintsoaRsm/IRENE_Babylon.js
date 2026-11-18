@@ -9,6 +9,7 @@
  */
 import { estPositionMenuValide } from "./PositionMenu.js";
 import { estThemeInterfaceValide } from "./ThemeInterface.js";
+import { estNiveauPoliceValide, NIVEAU_POLICE_MIN, NIVEAU_POLICE_MAX } from "./NiveauPolice.js";
 
 export class ParametresInterface {
     constructor({
@@ -36,9 +37,9 @@ export class ParametresInterface {
             throw new Error("La police d'interface est invalide.");
         }
 
-        // Niveau entier 1 à 6, sans dépendance à Babylon.js.
-        if (!Number.isInteger(this.taillePolice) || this.taillePolice < 1 || this.taillePolice > 6) {
-            throw new Error("Le niveau de taille de police doit être compris entre 1 et 6.");
+        // Niveau entier défini par la politique métier commune.
+        if (!estNiveauPoliceValide(this.taillePolice)) {
+            throw new Error(`Le niveau de taille de police doit être compris entre ${NIVEAU_POLICE_MIN} et ${NIVEAU_POLICE_MAX}.`);
         }
 
         if (typeof this.gras !== "boolean") {

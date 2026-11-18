@@ -12,6 +12,20 @@ export const configurationBorduresGUI = Object.freeze({
         "FntFmBtn3",
         "LumTypBtn0",
         "LumTypBtn1",
-        "LumTypBtn2"
+        "LumTypBtn2",
+        "OuvBtn",
+        "EnrBtn",
+        "PolBtn",
+        "MenuBtn",
+        "RegBtn",
+        "ContBtn",
+        "TextuBtn",
+        "LumBtn"
+    ]),
+    // Les rectangles listés ici conservent leur épaisseur issue du JSON.
+    rectanglesExclus: Object.freeze([
+        "FichOptnRect",
+        "ConfOptnRect",
+        "OutiRect"
     ])
 });

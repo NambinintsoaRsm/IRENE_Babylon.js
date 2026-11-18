@@ -11,6 +11,7 @@
  * les réglages normaux précédant son activation puis persiste séparément son état.
  */
 import { ProfilUtilisateur } from "../../Domain/profil/ProfilUtilisateur.js";
+import { normaliserNiveauPolice } from "../../Domain/interface/NiveauPolice.js";
 import { constantesSauvegarde } from "../../Configuration/constantesSauvegarde.js";
 
 import { ParametresInterface } from "../../Domain/interface/ParametresInterface.js";
@@ -133,7 +134,10 @@ export class StockageProfilLocal {
             // Si l'accessibilité est active, on sauvegarde les réglages normaux
             // d'avant activation, puis seulement le booléen accessibilite.actif.
             interfaceUtilisateur: sauvegardeAccessibilite?.interface
-                ? new ParametresInterface(sauvegardeAccessibilite.interface)
+                ? new ParametresInterface({
+                    ...sauvegardeAccessibilite.interface,
+                    taillePolice: normaliserNiveauPolice(sauvegardeAccessibilite.interface.taillePolice)
+                })
                 : etatApplication.interface?.parametres,
             apparence: sauvegardeAccessibilite?.apparence
                 ? new ParametresApparence(sauvegardeAccessibilite.apparence)
@@ -336,10 +340,10 @@ export class StockageProfilLocal {
         return new ProfilUtilisateur({
             interfaceUtilisateur: new ParametresInterface({
                 police: reglages.interfaceUtilisateur?.police,
-                // Une ancienne variation (%) ne correspond pas à un niveau 1..6.
+                // Une ancienne variation (%) ne correspond pas à un niveau additif.
                 // En l'absence de marqueur explicite, restaurer le niveau 1.
                 taillePolice: reglages.interfaceUtilisateur?.formatTaillePolice === "niveau-additif-v1"
-                    ? reglages.interfaceUtilisateur.taillePolice
+                    ? normaliserNiveauPolice(reglages.interfaceUtilisateur.taillePolice)
                     : 1,
                 gras: reglages.interfaceUtilisateur?.gras,
                 theme: reglages.interfaceUtilisateur?.theme,

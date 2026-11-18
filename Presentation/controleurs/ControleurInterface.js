@@ -1,4 +1,4 @@
-import { configurationIconesGUI } from "../../Configuration/configurationIconesGUI.js";
+import { ServiceIconesGUI } from "../../Infrastructure/gui/ServiceIconesGUI.js";
 /**
  * @file Contrôleur des paramètres de configuration de l'interface.
  *
@@ -33,7 +33,8 @@ export class ControleurInterface {
         serviceTexteGUI,
         serviceStyleInterfaceGUI,
         servicePolicesNavigateur = null,
-        serviceControlesSpeciauxGUI = null
+        serviceControlesSpeciauxGUI = null,
+        serviceHoverGUI = null
     }) {
         this.etatApplication = etatApplication;
 
@@ -50,6 +51,8 @@ export class ControleurInterface {
         this.serviceStyleInterfaceGUI = serviceStyleInterfaceGUI;
         this.servicePolicesNavigateur = servicePolicesNavigateur;
         this.serviceControlesSpeciauxGUI = serviceControlesSpeciauxGUI;
+        this.serviceIconesGUI = new ServiceIconesGUI();
+        this.serviceHoverGUI = serviceHoverGUI;
 
     }
 
@@ -102,6 +105,14 @@ export class ControleurInterface {
         ].filter(Boolean);
     }
 
+    /** Les options changent de texte, pas de palette ni de survol mémorisé. */
+    restaurerPaletteListePolice(liste) {
+        if (!liste) return;
+        this.serviceStyleInterfaceGUI.appliquerPaletteListesDeroulees?.(
+            this.etatApplication.gui?.advancedTexture
+        );
+    }
+
     synchroniserDropdownPoliceDepuisEtat() {
         const controles = this.etatApplication.gui?.controles ?? {};
         const nomsPolice = this.nomsGUI?.police;
@@ -111,6 +122,7 @@ export class ControleurInterface {
         const selection = this.trouverOptionPolice(policeCourante);
         const boutonsOptions = this.obtenirBoutonsOptionsPolice(controles);
         const optionsListe = this.obtenirOptionsPolicePourListe(selection, boutonsOptions.length);
+        this.serviceHoverGUI?.reinitialiserSurvolsDans(liste);
 
         this.selectionPoliceActuelle = {
             nomCourt: selection.nomCourt,
@@ -140,6 +152,7 @@ export class ControleurInterface {
         });
 
         this.reinitialiserScrollListePolice(liste);
+        this.restaurerPaletteListePolice(liste);
         this.etatApplication?.services?.texteResponsive?.planifierAjustement?.(60);
     }
 
@@ -220,9 +233,7 @@ export class ControleurInterface {
         }
 
         if (iconeDropdown) {
-            iconeDropdown.metadata = iconeDropdown.metadata || {};
-            iconeDropdown.metadata.texteDynamique = true;
-            iconeDropdown.text = configurationIconesGUI.fleches.symboles.droite;
+            this.serviceIconesGUI.mettreAJourFleche(iconeDropdown, false);
         }
 
         if (boutonDropdown) {
@@ -247,6 +258,7 @@ export class ControleurInterface {
         });
 
         this.synchroniserDropdownPoliceDepuisEtat();
+        boutonsOptions.forEach((bouton) => this.serviceHoverGUI?.brancherBouton(bouton));
 
         this.brancherSliderTaillePoliceDepuisNoms(controles, nomsPolice);
         this.brancherBoutonGrasDepuisNoms(controles, nomsPolice);
@@ -264,7 +276,7 @@ export class ControleurInterface {
         liste.height = doitOuvrir ? liste.metadata?.hauteurOuverte ?? "260px" : "0px";
 
         if (iconeDropdown) {
-            iconeDropdown.text = doitOuvrir ? configurationIconesGUI.fleches.symboles.bas : configurationIconesGUI.fleches.symboles.droite;
+            this.serviceIconesGUI.mettreAJourFleche(iconeDropdown, doitOuvrir);
         }
     }
 
@@ -297,7 +309,9 @@ export class ControleurInterface {
             );
         }
 
+        this.serviceHoverGUI?.reinitialiserSurvolsDans(liste);
         this.serviceTexteGUI.appliquerParametresTexte(this.etatApplication);
+        this.restaurerPaletteListePolice(liste);
         this.mettreAJourCocheGras(
             this.obtenir(this.etatApplication.gui.controles, "PoliGrasBtnTxt"),
             this.etatApplication.interface.parametres.gras
@@ -309,7 +323,7 @@ export class ControleurInterface {
         }
 
         if (iconeDropdown) {
-            iconeDropdown.text = configurationIconesGUI.fleches.symboles.droite;
+            this.serviceIconesGUI.mettreAJourFleche(iconeDropdown, false);
         }
     }
 
@@ -534,6 +548,19 @@ export class ControleurInterface {
         });
     }
 
+    /** Met à jour un texte dépendant de l'état sans laisser l'AutoFit restaurer le JSON. */
+    afficherValeurBordure(texteValeur, valeur) {
+        if (!texteValeur) return;
+        const texte = String(Math.round(Number(valeur)));
+        texteValeur.metadata = texteValeur.metadata || {};
+        texteValeur.metadata.texteDynamique = true;
+        texteValeur.metadata.responsiveTexteOriginal = texte;
+        delete texteValeur.metadata.texteOriginal;
+        delete texteValeur.metadata.dernierTexteAutoFit;
+        texteValeur.text = texte;
+        texteValeur._markAsDirty?.();
+    }
+
     brancherSliderBordureBoutonDepuisNoms(controles, nomsMenu) {
         const slider = this.obtenir(controles, nomsMenu.bordureBoutonSlider);
         const texteValeur = this.obtenir(controles, nomsMenu.bordureBoutonValeurTxt);
@@ -548,9 +575,7 @@ export class ControleurInterface {
         slider.step = configuration.step;
         slider.value = this.etatApplication.interface.parametres.tailleBorduresBoutons || 1;
 
-        if (texteValeur) {
-            texteValeur.text = String(Math.round(slider.value));
-        }
+        this.afficherValeurBordure(texteValeur, slider.value);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
@@ -559,9 +584,7 @@ export class ControleurInterface {
             this.changerBordureBoutonUC.executer(taille);
             this.serviceStyleInterfaceGUI.appliquerBorduresBoutons(this.etatApplication, taille);
 
-            if (texteValeur) {
-                texteValeur.text = String(taille);
-            }
+            this.afficherValeurBordure(texteValeur, taille);
         });
     }
 
@@ -579,9 +602,7 @@ export class ControleurInterface {
         slider.step = configuration.step;
         slider.value = this.etatApplication.interface.parametres.tailleBorduresMenu || 1;
 
-        if (texteValeur) {
-            texteValeur.text = String(Math.round(slider.value));
-        }
+        this.afficherValeurBordure(texteValeur, slider.value);
 
         slider.onValueChangedObservable.clear();
         slider.onValueChangedObservable.add((valeur) => {
@@ -590,9 +611,7 @@ export class ControleurInterface {
             this.changerBordureMenuUC.executer(taille);
             this.serviceStyleInterfaceGUI.appliquerBorduresMenus(this.etatApplication, taille);
 
-            if (texteValeur) {
-                texteValeur.text = String(taille);
-            }
+            this.afficherValeurBordure(texteValeur, taille);
         });
     }
 
@@ -618,9 +637,9 @@ export class ControleurInterface {
             const texteBordureMenu = this.obtenir(controles, nomsMenu.bordureMenuValeurTxt);
 
             if (sliderBordureBouton) sliderBordureBouton.value = 1;
-            if (texteBordureBouton) texteBordureBouton.text = "1";
+            this.afficherValeurBordure(texteBordureBouton, 1);
             if (sliderBordureMenu) sliderBordureMenu.value = 1;
-            if (texteBordureMenu) texteBordureMenu.text = "1";
+            this.afficherValeurBordure(texteBordureMenu, 1);
 
             this.serviceStyleInterfaceGUI.appliquerTheme(this.etatApplication);
             this.serviceStyleInterfaceGUI.appliquerPositionMenu(this.etatApplication, serviceAnimationGUI);
