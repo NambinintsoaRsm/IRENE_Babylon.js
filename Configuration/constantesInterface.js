@@ -27,7 +27,17 @@ export const constantesInterface = Object.freeze({
     grasTexte: Object.freeze({
         actif: true,
         poidsBase: "400",
-        epaisseurContourPx: 1.6
+        epaisseurContourPx: 1.8
+    }),
+
+    /**
+     * Expérience sans Unicode : espacement proportionnel entre les graphèmes,
+     * uniquement quand Gras est actif. 0.02 = 2 % de la taille de police.
+     * Valeurs suggérées : 0, 0.015, 0.025, 0.04. Pas de valeur en pixels.
+     */
+    espacementGras: Object.freeze({
+        actif: true,
+        ratio: 0.025
     }),
 
     themeDefaut: ThemeInterface.BLANC,

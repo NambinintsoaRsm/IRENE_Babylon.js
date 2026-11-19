@@ -1,6 +1,8 @@
 import { ServiceCentreTxtBtnsGUI } from "./ServiceCentreTxtBtnsGUI.js";
 import { calculerTaillePolicePx } from "../../Domain/interface/CalculTaillePolice.js";
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
+import { ratioEspacementGras } from "../../Domain/interface/EspacementGrasProportionnel.js";
+import { configurerRenduEspacementGras } from "./RenduEspacementGrasGUI.js";
 
 /**
  * Service de gestion du texte de l'interface Babylon GUI.
@@ -227,7 +229,7 @@ export class ServiceTexteGUI {
         const estTexteMultiligne = this.estTexteMultiligne(textBlock);
 
         if (!estTexteDynamique && textBlock.metadata.texteOriginal === undefined) {
-            textBlock.metadata.texteOriginal = textBlock.text;
+            textBlock.metadata.texteOriginal = String(textBlock.text ?? "");
         }
 
         const police = parametres.police || "OpenDyslexic";
@@ -245,7 +247,6 @@ export class ServiceTexteGUI {
         // bien de la nouvelle taille et non de l'ancien résultat réduit.
         textBlock.metadata.fontSizeDemandeeAutoFit = textBlock.fontSize;
         this.appliquerGrasTexte(textBlock, parametres.gras === true);
-        textBlock.characterSpacing = 0;
 
         // La taille demandée vient d'être recalculée (police, slider ou retour
         // au mode standard). L'auto-fit doit repartir de cette nouvelle taille
@@ -261,9 +262,13 @@ export class ServiceTexteGUI {
                 ? textBlock.text
                 : (textBlock.metadata.texteOriginal ?? textBlock.text));
 
-        textBlock.text = estTexteMultiligne
-            ? String(texteSource).replace(/[\u2009\u202F\u00A0]/g, " ")
-            : this.normaliserTexteUneLigne(texteSource);
+        const textePropre = String(texteSource ?? "");
+        const texteNormalise = estTexteMultiligne
+            ? String(textePropre).replace(/[\u2009\u202F\u00A0]/g, " ")
+            : this.normaliserTexteUneLigne(textePropre);
+        // Aucun espace n'est ajouté au contenu. Le dessin est personnalisé.
+        textBlock.text = texteNormalise;
+
 
         if (estBoutonModeleAutoFit) {
             textBlock.resizeToFit = false;
@@ -529,8 +534,12 @@ export class ServiceTexteGUI {
      */
     appliquerGrasTexte(textBlock, grasActif) {
         const reglage = constantesInterface.grasTexte ?? {};
+        // Le tracking est défini en proportion de la taille réelle affichée.
+        textBlock.characterSpacing = 0;
         textBlock.metadata = textBlock.metadata || {};
         const meta = textBlock.metadata;
+        const ratio = grasActif ? ratioEspacementGras(constantesInterface.espacementGras) : 0;
+        configurerRenduEspacementGras(textBlock, ratio);
 
         if (meta.contourGrasOriginal === undefined) {
             meta.contourGrasOriginal = Number(textBlock.outlineWidth) || 0;
