@@ -1,4 +1,5 @@
 import { constantesInterface } from "../../Configuration/constantesInterface.js";
+import { mesurerTexteAvecEspacement } from "../../Domain/interface/EspacementGrasProportionnel.js";
 
 /**
  * Ajustement responsive du texte Babylon GUI.
@@ -726,10 +727,14 @@ export class ServiceTexteResponsiveGUI {
 
     ajusterTextBlock(textBlock) {
         const conserverRetoursLigne = textBlock.metadata?.conserverRetoursLigneAutoFit === true;
-        const source = this.normaliserTexteSource(
+        const sourcePropre = this.normaliserTexteSource(
             this.texteSource(textBlock),
             { conserverRetoursLigne }
         );
+        // Mesurer exactement le texte qui sera dessiné par le TextBlock.
+        const ratioEspacement = Number(textBlock.metadata?.trackingGrasRatio) || 0;
+        const source = sourcePropre;
+        this.ratioEspacementMesure = ratioEspacement;
         if (!source) return false;
 
         const mesure = textBlock._currentMeasure;
@@ -763,7 +768,9 @@ export class ServiceTexteResponsiveGUI {
             Math.round(tailleMin),
             lignesMax,
             String(famille),
-            String(poids)
+            String(poids),
+            // L’espacement participe au rendu et à la signature de calcul.
+            String(ratioEspacement)
         ].join("|");
 
         if (textBlock.metadata.signatureAutoFit === signature
@@ -819,8 +826,7 @@ export class ServiceTexteResponsiveGUI {
             || String(textBlock.fontSize) !== fontSizeFinal
             || textBlock.textWrapping !== textWrappingFinal
             || textBlock.resizeToFit !== false
-            || textBlock.clipContent !== true
-            || Number(textBlock.characterSpacing ?? 0) !== 0;
+            || textBlock.clipContent !== true;
 
         textBlock.metadata.signatureAutoFit = signature;
         textBlock.metadata.dernierTexteAutoFit = texteFinal;
@@ -835,7 +841,7 @@ export class ServiceTexteResponsiveGUI {
         textBlock.textWrapping = textWrappingFinal;
         textBlock.resizeToFit = false;
         textBlock.clipContent = true;
-        textBlock.characterSpacing = 0;
+        // L’espacement est géré par ServiceTexteGUI : ne pas l’annuler ici.
         textBlock.lineSpacing = lineSpacingFinal;
         textBlock._markAsDirty?.();
 
@@ -1293,11 +1299,14 @@ export class ServiceTexteResponsiveGUI {
             : `"${valeur}"`;
 
         this.contexteMesure.font = `${poids || "400"} ${Math.round(taille)}px ${police}`;
+        this.tailleMesurePx = Math.round(taille);
     }
 
     mesurerLargeur(texte) {
         if (!this.contexteMesure) return String(texte ?? "").length * 10;
-        return this.contexteMesure.measureText(String(texte ?? "")).width;
+        return mesurerTexteAvecEspacement(
+            this.contexteMesure, texte, this.ratioEspacementMesure || 0, this.tailleMesurePx || 24
+        );
     }
 
     largeurPadding(textBlock) {
