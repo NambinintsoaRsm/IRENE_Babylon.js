@@ -244,7 +244,7 @@ export class ServiceTexteGUI {
         // l'auto-fit pourra réduire. Ainsi une augmentation ultérieure repart
         // bien de la nouvelle taille et non de l'ancien résultat réduit.
         textBlock.metadata.fontSizeDemandeeAutoFit = textBlock.fontSize;
-        textBlock.fontWeight = parametres.gras ? "700" : this.poidsParDefaut(textBlock);
+        this.appliquerGrasTexte(textBlock, parametres.gras === true);
         textBlock.characterSpacing = 0;
 
         // La taille demandée vient d'être recalculée (police, slider ou retour
@@ -519,6 +519,38 @@ export class ServiceTexteGUI {
         }
 
         return normalise;
+    }
+
+    /**
+     * Le style Bold de TMP dilate un atlas SDF à partir de Regular.
+     * Babylon GUI ne dispose pas de ce shader : outlineWidth réalise une
+     * approximation en pixels sur les glyphes Regular. Ce traitement reste
+     * indépendant de la taille de police et de la mise en page.
+     */
+    appliquerGrasTexte(textBlock, grasActif) {
+        const reglage = constantesInterface.grasTexte ?? {};
+        textBlock.metadata = textBlock.metadata || {};
+        const meta = textBlock.metadata;
+
+        if (meta.contourGrasOriginal === undefined) {
+            meta.contourGrasOriginal = Number(textBlock.outlineWidth) || 0;
+            meta.couleurContourGrasOriginal = textBlock.outlineColor;
+        }
+
+        if (grasActif && reglage.actif === true) {
+            textBlock.fontWeight = String(reglage.poidsBase ?? "400");
+            textBlock.outlineWidth = Math.max(0, Number(reglage.epaisseurContourPx) || 0);
+            textBlock.outlineColor = textBlock.color;
+            meta.grasContourActif = true;
+        } else {
+            textBlock.fontWeight = grasActif ? "700" : this.poidsParDefaut(textBlock);
+            if (meta.grasContourActif === true) {
+                textBlock.outlineWidth = meta.contourGrasOriginal;
+                textBlock.outlineColor = meta.couleurContourGrasOriginal;
+            }
+            meta.grasContourActif = false;
+        }
+        textBlock._markAsDirty?.();
     }
 
     poidsParDefaut(textBlock) {

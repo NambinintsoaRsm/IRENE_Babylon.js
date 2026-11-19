@@ -61,6 +61,14 @@ export class ServiceStyleInterfaceGUI {
         this.corrigerContrasteBoutons(advancedTexture);
         // Dernier passage : seules les listes configurées conservent leur palette.
         this.appliquerPaletteListesDeroulees(advancedTexture);
+        // La bordure servant à simuler le gras doit suivre la couleur finale
+        // (thème, contraste bouton, exception ou palette fixe du dropdown).
+        for (const controle of advancedTexture.getDescendants()) {
+            if (controle instanceof BABYLON.GUI.TextBlock && controle.metadata?.grasContourActif) {
+                controle.outlineColor = controle.color;
+                controle._markAsDirty?.();
+            }
+        }
         advancedTexture.markAsDirty();
 
         return theme;

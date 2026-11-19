@@ -11,13 +11,24 @@
  */
 import { ThemeInterface } from "../Domain/interface/ThemeInterface.js";
 import { PositionMenu } from "../Domain/interface/PositionMenu.js";
-import { NIVEAU_POLICE_MIN, NIVEAU_POLICE_MAX } from "../Domain/interface/NiveauPolice.js";
 
 export const constantesInterface = Object.freeze({
     /** Valeurs chargées lorsqu'aucun profil utilisateur n'est disponible. */
     policeDefaut: "Luciole",
-    taillePoliceDefaut: NIVEAU_POLICE_MIN,
+    taillePoliceDefaut: 1,
     grasDefaut: false,
+
+    /**
+     * Approximation du gras TextMesh Pro : caractères Regular renforcés
+     * par un fin contour, sans basculer sur le fichier Bold natif.
+     * La valeur n'est PAS l'équivalent numérique du _WeightBold Unity.
+     * Pour retrouver le rendu historique, mettre actif à false.
+     */
+    grasTexte: Object.freeze({
+        actif: true,
+        poidsBase: "400",
+        epaisseurContourPx: 1.6
+    }),
 
     themeDefaut: ThemeInterface.BLANC,
     positionMenuDefaut: PositionMenu.DROITE,
@@ -42,10 +53,10 @@ export const constantesInterface = Object.freeze({
         })
     }),
 
-    /** Réglage additif : niveau 1 = taille JSON, niveau maximum = +5 px. */
+    /** Réglage additif : niveau 1 = taille JSON, niveau 6 = +5 px. */
     sliderTaillePolice: Object.freeze({
-        minimum: NIVEAU_POLICE_MIN,
-        maximum: NIVEAU_POLICE_MAX,
+        minimum: 1,
+        maximum: 6,
         step: 1,
         augmentationParNiveauPx: 1,
         debugAutoFit: false
