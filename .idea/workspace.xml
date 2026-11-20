@@ -1,20 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="feat(gui): centraliser les icônes et améliorer la gestion de l'interface&#10;&#10;Centraliser les symboles et les paramètres des icônes dans configurationIconesGUI&#10;&#10;Ajouter ServiceIconesGUI pour mutualiser la création et la gestion des icônes&#10;&#10;Regrouper la génération des icônes PNG et SVG dans l'infrastructure&#10;&#10;Supprimer les symboles de navigation codés en dur dans les contrôleurs&#10;&#10;Conserver les tailles JSON et le centrage optique existant des flèches&#10;&#10;Préserver la compatibilité avec le système additif des tailles de police&#10;&#10;Corriger l'affichage du niveau de police dans ToggleAccessUC&#10;&#10;Supprimer l'ancien format +N% au profit des niveaux numériques 1 à 6&#10;&#10;Actualiser les commentaires obsolètes liés au slider de taille de police&#10;&#10;Augmenter la hauteur du panneau Fichier pour éviter la troncature des éléments">
+    <list default="true" id="3d77c1cc-d599-4334-8e2c-72fdce3c595d" name="Changes" comment="feat(gui) : ajout d'espace entre les letrtres lors de passage en gras avec un system de draw">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Configuration/configurationBorduresGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/configurationBorduresGUI.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Configuration/constantesInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/constantesInterface.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Domain/interface/CalculTaillePolice.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/interface/CalculTaillePolice.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Domain/interface/ParametresInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/interface/ParametresInterface.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Domain/interface/PolitiqueBordures.js" beforeDir="false" afterPath="$PROJECT_DIR$/Domain/interface/PolitiqueBordures.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceStyleInterfaceGUI.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/gui/ServiceTexteGUI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" beforeDir="false" afterPath="$PROJECT_DIR$/Infrastructure/stockage/StockageProfilLocal.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurInterface.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurInterface.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" beforeDir="false" afterPath="$PROJECT_DIR$/Presentation/controleurs/ControleurProfil.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UseCases/accessibiliteUseCases/ToggleAccessUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/accessibiliteUseCases/ToggleAccessUC.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/UseCases/interfaceUseCases/ChangerTaillePoliceUC.js" beforeDir="false" afterPath="$PROJECT_DIR$/UseCases/interfaceUseCases/ChangerTaillePoliceUC.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/gui/guiTexture.json" beforeDir="false" afterPath="$PROJECT_DIR$/assets/gui/guiTexture.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-1/6005793941226.mtl" beforeDir="false" />
@@ -22,7 +12,6 @@
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-2/60057107471833.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-2/60057107471833.mtl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/modeles/Objet-2/60057107471833.obj" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/main.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,19 +28,27 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="version-fluide" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="RESET_MODE" value="HARD" />
     <option name="UPDATE_TYPE" value="REBASE" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;NambinintsoaRsm&quot;
-  }
-}</component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {}
+}]]></component>
+  <component name="GitHubPullRequestState"><![CDATA[{
+  "prStates": [
+    {
+      "id": {
+        "id": "PR_kwDOSqai4M8AAAABQbc1KQ",
+        "number": 2
+      },
+      "lastSeen": 1795101026371
+    }
+  ]
+}]]></component>
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/NambinintsoaRsm/IRENE_Babylon.js.git&quot;,
@@ -94,7 +91,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "version-fluide",
+    "git-widget-placeholder": "version-fluide-espace-regular",
     "javascript.preferred.runtime.type.id": "node",
     "last_opened_file_path": "/home/rasoamanana-nambinintsoa-saotra/WebstormProjects/ANNA_Babylon",
     "nodejs_package_manager_path": "npm",
@@ -452,7 +449,15 @@
       <option name="project" value="LOCAL" />
       <updated>1794925039031</updated>
     </task>
-    <option name="localTasksCounter" value="38" />
+    <task id="LOCAL-00038" summary="feat(gui) : ajout d'espace entre les letrtres lors de passage en gras avec un system de draw">
+      <option name="closed" value="true" />
+      <created>1795100949481</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1795100949481</updated>
+    </task>
+    <option name="localTasksCounter" value="39" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -490,7 +495,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="ajout des modèles en glb" />
     <MESSAGE value="changement en glb" />
     <MESSAGE value="pot ajouté" />
     <MESSAGE value="v2 glb" />
@@ -515,7 +519,8 @@
     <MESSAGE value="feat(gui): implémenter la gestion additive des tailles de police&#10;&#10;- Remplacer l'ancien système de variation en pourcentage par 6 niveaux fixes&#10;- Appliquer une augmentation additive de 0 à 5 px selon le niveau&#10;- Conserver les tailles initiales du JSON comme références&#10;- Centraliser la configuration des niveaux dans constantesInterface&#10;- Ajouter une règle de calcul indépendante de Babylon.js dans le Domain&#10;- Adapter le Use Case et le contrôleur du slider&#10;- Préserver l'AutoFit pour gérer les débordements sans modifier les références&#10;- Assurer la compatibilité temporaire avec les tailles JSON encore en pourcentage&#10;- Adapter la sauvegarde des préférences et la gestion des anciens profils&#10;- Simplifier l'affichage du slider pour afficher uniquement le niveau numérique&#10;&#10;Refactorisation conforme aux principes de la Clean Architecture." />
     <MESSAGE value="feat(gui): implémentation d'un mécanisme de centrage verticale de texte dans les boutons" />
     <MESSAGE value="feat(gui): centraliser les icônes et améliorer la gestion de l'interface&#10;&#10;Centraliser les symboles et les paramètres des icônes dans configurationIconesGUI&#10;&#10;Ajouter ServiceIconesGUI pour mutualiser la création et la gestion des icônes&#10;&#10;Regrouper la génération des icônes PNG et SVG dans l'infrastructure&#10;&#10;Supprimer les symboles de navigation codés en dur dans les contrôleurs&#10;&#10;Conserver les tailles JSON et le centrage optique existant des flèches&#10;&#10;Préserver la compatibilité avec le système additif des tailles de police&#10;&#10;Corriger l'affichage du niveau de police dans ToggleAccessUC&#10;&#10;Supprimer l'ancien format +N% au profit des niveaux numériques 1 à 6&#10;&#10;Actualiser les commentaires obsolètes liés au slider de taille de police&#10;&#10;Augmenter la hauteur du panneau Fichier pour éviter la troncature des éléments" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(gui): centraliser les icônes et améliorer la gestion de l'interface&#10;&#10;Centraliser les symboles et les paramètres des icônes dans configurationIconesGUI&#10;&#10;Ajouter ServiceIconesGUI pour mutualiser la création et la gestion des icônes&#10;&#10;Regrouper la génération des icônes PNG et SVG dans l'infrastructure&#10;&#10;Supprimer les symboles de navigation codés en dur dans les contrôleurs&#10;&#10;Conserver les tailles JSON et le centrage optique existant des flèches&#10;&#10;Préserver la compatibilité avec le système additif des tailles de police&#10;&#10;Corriger l'affichage du niveau de police dans ToggleAccessUC&#10;&#10;Supprimer l'ancien format +N% au profit des niveaux numériques 1 à 6&#10;&#10;Actualiser les commentaires obsolètes liés au slider de taille de police&#10;&#10;Augmenter la hauteur du panneau Fichier pour éviter la troncature des éléments" />
+    <MESSAGE value="feat(gui) : ajout d'espace entre les letrtres lors de passage en gras avec un system de draw" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(gui) : ajout d'espace entre les letrtres lors de passage en gras avec un system de draw" />
     <option name="GROUP_MULTIFILE_MERGE_BY_DIRECTORY" value="true" />
   </component>
 </project>

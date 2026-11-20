@@ -538,7 +538,12 @@ export class ServiceTexteGUI {
         textBlock.characterSpacing = 0;
         textBlock.metadata = textBlock.metadata || {};
         const meta = textBlock.metadata;
-        const ratio = grasActif ? ratioEspacementGras(constantesInterface.espacementGras) : 0;
+        // Un seul tracking actif à la fois : Regular OU Gras, sans cumul.
+        // On réutilise le moteur de dessin/mesure proportionnel existant.
+        const configurationEspacement = grasActif
+            ? constantesInterface.espacementGras
+            : constantesInterface.espacementRegular;
+        const ratio = ratioEspacementGras(configurationEspacement);
         configurerRenduEspacementGras(textBlock, ratio);
 
         if (meta.contourGrasOriginal === undefined) {
