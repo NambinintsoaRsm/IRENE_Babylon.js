@@ -25,9 +25,9 @@ export const constantesInterface = Object.freeze({
      * Pour retrouver le rendu historique, mettre actif à false.
      */
     grasTexte: Object.freeze({
-        actif: true,
+        actif: false,
         poidsBase: "400",
-        epaisseurContourPx: 1.8
+        epaisseurContourPx: 1.6
     }),
 
     /**
@@ -38,6 +38,16 @@ export const constantesInterface = Object.freeze({
     espacementGras: Object.freeze({
         actif: true,
         ratio: 0.025
+    }),
+
+    /**
+     * Espacement proportionnel également en mode Regular (sans gras).
+     * 0.015 = 1,5 % de la taille affichée ; 0 désactive l'effet.
+     * Indépendant du ratio utilisé lorsque Gras est activé.
+     */
+    espacementRegular: Object.freeze({
+        actif: true,
+        ratio: 0.020
     }),
 
     themeDefaut: ThemeInterface.BLANC,
